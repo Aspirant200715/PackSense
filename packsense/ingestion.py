@@ -19,6 +19,7 @@ from openpyxl import load_workbook
 from packsense.contracts import HandlingSeverity, ScenarioInput, StorageType
 from packsense.units import (
     PACK_QUANTITY_UNITS,
+    SCENARIO_REFERENCE_COLUMNS,
     SCENARIO_REQUIRED_COLUMNS,
     SCENARIO_RESPIRATION_COLUMNS,
 )
@@ -182,7 +183,11 @@ def _header(raw: tuple[Any, ...]) -> tuple[tuple[str, ...], tuple[str, ...]]:
     ignored = tuple(
         name
         for name in names
-        if name not in SCENARIO_REQUIRED_COLUMNS + SCENARIO_RESPIRATION_COLUMNS
+        if name not in (
+            SCENARIO_REQUIRED_COLUMNS
+            + SCENARIO_RESPIRATION_COLUMNS
+            + SCENARIO_REFERENCE_COLUMNS
+        )
     )
     return names, ignored
 
@@ -238,7 +243,7 @@ def _parse_row(
     for field in sorted(formula_fields):
         issue(field, "formula_cell", "formulas are not accepted as source values")
     parsed: dict[str, Any] = {}
-    for field in SCENARIO_REQUIRED_COLUMNS + SCENARIO_RESPIRATION_COLUMNS:
+    for field in SCENARIO_REQUIRED_COLUMNS + SCENARIO_RESPIRATION_COLUMNS + SCENARIO_REFERENCE_COLUMNS:
         value = raw.get(field)
         if _missing(value):
             if field in SCENARIO_REQUIRED_COLUMNS:

@@ -28,12 +28,17 @@ SCENARIO_RESPIRATION_COLUMNS = (
     "respiration_reference_temperature_c",
 )
 
+# A source-row key disambiguates commodities that share the same display name.
+# It is optional for a unique exact name match and is never a model feature.
+SCENARIO_REFERENCE_COLUMNS = ("food_reference_id",)
+
 # A unit is None for an identifier or a controlled category. Percentages are
 # stored as values from 0 to 100, not fractions from 0 to 1.
 SCENARIO_UNITS = MappingProxyType(
     {
         "record_id": None,
         "commodity_type": None,
+        "food_reference_id": None,
         "moisture_content_pct": "% wet basis, source basis retained",
         "oil_fat_content_pct": "% of food mass, source basis retained",
         "pH": "dimensionless",
