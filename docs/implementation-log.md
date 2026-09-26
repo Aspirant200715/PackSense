@@ -8,16 +8,17 @@ append dated entries rather than rewriting past decisions.
 
 ## Current position
 
-`main` includes log merge `d0a7149` (PR #13) after technical merge
-`98a792b` (PR #14). It contains the typed data
+`main` includes split-contract merge `ee064da` (PR #15) after log merge
+`d0a7149` (PR #13) and technical merge `98a792b` (PR #14). It contains the typed data
 contracts, structured scenario ingestion and exception auditing, exact food
 reference enrichment, food/material master imports, draft package-structure
 intake, evidence-gated Stop 3 requirement cards, measured-trial *schema*
 intake, an explicitly experimental moisture/fat reference estimator, guarded
 Stop 4 local produce diagnostics, and a source-scoped Stop 5 transfer-budget
-check. These are backend foundations; they do not yet output a validated
-package or predicted shelf life. The same unit-test command passed 105 tests
-on the `main`-synced documentation branch during this status update.
+check, plus a group-separated measured-trial allocation contract. These are
+backend foundations; they do not yet output a validated package or predicted
+shelf life. The unit-test command passed 118 tests on synced `main` during
+this status update.
 
 The Stop 4 and partial Stop 5 PRs were reviewed and merged in dependency order:
 
@@ -78,17 +79,16 @@ or trial labels.
 
 ## Next implementation and evidence gates
 
-1. **Complete a leakage-safe trial split gate.** Accept only reviewed,
-   measured trial outcomes with stable source, trial, batch, food, and package
-   identifiers. Keep replicates and related batches together; detect shared
-   or conflicting group identities before assigning train, validation, and
-   untouched test partitions. Freeze the manifest and source hash before any
-   imputer, encoder, feature selector, calibration, or model is fitted. If
-   independent groups are too few or poorly covered, report `not_ready`
-   rather than manufacturing a 70/15/15 split. The in-progress
-   [split-manifest slice](split-manifest.md) implements a mechanical group
-   allocation gate; external evidence authenticity, structure joins, and
-   training sufficiency still require review before fitting a model.
+1. **Review real trials and freeze an actual leakage-safe split.** The
+   [split-manifest contract](split-manifest.md) now checks stable source,
+   trial, batch, food, and package identifiers; keeps related rows together;
+   and refuses small, overlapping, or event-poor allocations. It has not
+   been applied to real trials because none are supplied. Independently
+   verify source evidence, rights, duplicate experiments across sources,
+   complete structure joins, endpoint meaning, and group independence.
+   Freeze a reviewed manifest before fitting any imputer, encoder, feature
+   selector, calibration, or model. If the groups or coverage remain too
+   weak, report `not_ready` instead of manufacturing a 70/15/15 split.
 2. **Supply real pilot evidence before interpreting Stop 4 as a product
    result.** For a selected respiring food such as the planned tomato pilot,
    review exact food/form identity and independently sourced O2-consumption
@@ -212,6 +212,25 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Next evidence gate: reviewed independent measured trials, verified complete
   package joins, and a prospective pilot. If those are absent, training and
   shelf-life accuracy claims remain `not_ready`.
+
+### 2026-09-26 — grouped split contract merged
+
+- [PR #15](https://github.com/Aspirant200715/PackSense/pull/15) merged as
+  `ee064da`. The scoped six-file diff had no submitted review, inline, or
+  discussion comments; Python 3.11 and 3.13 CI checks both passed.
+- Synced `main` passed `python -m unittest discover -s tests -q` with 118
+  tests. A separate local 3.13 interpreter lacked project dependencies, so
+  its collection failure was environmental; the dependency-installed 3.13
+  CI check passed. The test suite uses test-only constructed trials and does
+  not establish statistical performance.
+- No external dataset, trial outcomes, rights decisions, package approvals,
+  fitted preprocessing, model, holdout score, or shelf-life prediction were
+  added. The split contract is executable, but **no actual train/validation/
+  test allocation exists** until reviewed measured trials are supplied.
+- Decision: keep the model-training gate closed. When evidence arrives, use
+  the frozen group manifest, fit preprocessing on training folds only, select
+  with validation, and evaluate the untouched test once against predeclared
+  metrics and prospective pilots.
 
 ### Template for the next entry
 
