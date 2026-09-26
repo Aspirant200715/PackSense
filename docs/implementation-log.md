@@ -8,16 +8,18 @@ append dated entries rather than rewriting past decisions.
 
 ## Current position
 
-`main` includes handoff merge `0bf9bd6` (PR #16), split-contract merge
-`ee064da` (PR #15), and the earlier Stop 4/5 merges. It contains the typed data
+`main` includes structure-review merge `6a047ec` (PR #17), handoff merge
+`0bf9bd6` (PR #16), split-contract merge `ee064da` (PR #15), and the earlier
+Stop 4/5 merges. It contains the typed data
 contracts, structured scenario ingestion and exception auditing, exact food
 reference enrichment, food/material master imports, draft package-structure
 intake, evidence-gated Stop 3 requirement cards, measured-trial *schema*
 intake, an explicitly experimental moisture/fat reference estimator, guarded
 Stop 4 local produce diagnostics, and a source-scoped Stop 5 transfer-budget
-check, plus a group-separated measured-trial allocation contract. These are
-backend foundations; they do not yet output a validated package or predicted
-shelf life. The unit-test command passed 118 tests on synced `main` during
+check, a group-separated measured-trial allocation contract, and a separate
+complete-structure review gate. These are backend foundations; they do not
+yet output a validated package or predicted shelf life. The unit-test
+command passed 125 tests on synced `main` during
 this status update.
 
 The Stop 4 and partial Stop 5 PRs were reviewed and merged in dependency order:
@@ -61,7 +63,7 @@ withholds that claim.
   measured condition-complete training flags; 60 CO2 values are estimates.
 - No approved complete package-structure catalogue is supplied. The
   [structure importer](structure-catalogue.md) creates drafts, never
-  approval, from exact grade/gauge joins. The in-progress
+  approval, from exact grade/gauge joins. The merged
   [review gate](structure-review.md) checks external declarations but cannot
   authenticate source documents or supply missing complete-structure evidence.
 - No measured food–finished-package–condition trial-outcome dataset is
@@ -253,6 +255,19 @@ PackSense must continue to withhold a real package or shelf-life claim.
   **not** package feasibility or a shelf-life prediction.
 - Remaining gate: obtain and externally verify actual complete-structure
   evidence, then apply scenario-specific Stop 4/5 hard checks before ranking.
+
+### 2026-09-26 — complete-structure review gate merged
+
+- [PR #17](https://github.com/Aspirant200715/PackSense/pull/17) merged as
+  `6a047ec`. The six-file diff had no submitted review, inline, or discussion
+  comments; Python 3.11 and 3.13 CI checks passed.
+- Synced `main` passed `python -m unittest discover -s tests -q` with 125
+  tests. The tests cover mechanical review-register validity, not the truth
+  of external evidence or a real package recommendation.
+- No actual review-attested structures, authenticated source documents,
+  finished-package performance values, or measured food-package trial
+  outcomes were added. Package feasibility and model-training readiness
+  remain closed.
 
 ### Template for the next entry
 
