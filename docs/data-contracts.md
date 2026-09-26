@@ -41,6 +41,11 @@ measurement. Stop 4 needs a sourced respiratory quotient or independent O2
 evidence before converting between them. The architecture examples supply
 temperature and shelf-life-target scenarios, not validated food properties.
 
+`food_reference_id` is an optional traceability key for Stop 2. A unique exact
+commodity name can be resolved without it; a duplicated name cannot. The
+food master has 87 duplicated exact names in the supplied 5,000-row version,
+so a first-match join would attach the wrong source to some cases.
+
 ## Observed source coverage at contract design
 
 The two available 5,000-row food workbook versions each have 720 populated

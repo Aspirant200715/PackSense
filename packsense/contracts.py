@@ -67,12 +67,17 @@ class ScenarioInput:
     respiration_rate: float | None = None
     respiration_rate_unit: str | None = None
     respiration_reference_temperature_c: float | None = None
+    food_reference_id: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.record_id, str) or not isinstance(self.commodity_type, str):
             raise TypeError("record_id and commodity_type must be strings")
         if not self.record_id.strip() or not self.commodity_type.strip():
             raise ValueError("record and commodity identifiers cannot be empty")
+        if self.food_reference_id is not None and (
+            not isinstance(self.food_reference_id, str) or not self.food_reference_id.strip()
+        ):
+            raise ValueError("food_reference_id must be non-empty text when supplied")
         if not isinstance(self.storage_type, StorageType):
             raise TypeError("storage_type must be a StorageType")
         if not isinstance(self.transport_handling_severity, HandlingSeverity):

@@ -12,7 +12,11 @@ from packsense.ingestion import (
     _parse_row,
     audit_scenarios,
 )
-from packsense.units import SCENARIO_REQUIRED_COLUMNS, SCENARIO_RESPIRATION_COLUMNS
+from packsense.units import (
+    SCENARIO_REFERENCE_COLUMNS,
+    SCENARIO_REQUIRED_COLUMNS,
+    SCENARIO_RESPIRATION_COLUMNS,
+)
 
 
 class ColumnTests(unittest.TestCase):
@@ -27,6 +31,10 @@ class ColumnTests(unittest.TestCase):
         _header(SCENARIO_REQUIRED_COLUMNS + SCENARIO_RESPIRATION_COLUMNS)
         with self.assertRaisesRegex(InputSchemaError, "respiration columns"):
             _header(SCENARIO_REQUIRED_COLUMNS + SCENARIO_RESPIRATION_COLUMNS[:1])
+
+    def test_reference_id_is_recognized_not_ignored(self) -> None:
+        _, ignored = _header(SCENARIO_REQUIRED_COLUMNS + SCENARIO_REFERENCE_COLUMNS)
+        self.assertEqual(ignored, ())
 
     def test_header_only_csv_has_no_scenario_records(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

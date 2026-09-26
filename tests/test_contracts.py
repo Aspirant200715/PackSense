@@ -21,6 +21,7 @@ from packsense.contracts import (
 from packsense.units import (
     PACK_QUANTITY_UNITS,
     REFERENCE_RESPIRATION_UNIT,
+    SCENARIO_REFERENCE_COLUMNS,
     SCENARIO_REQUIRED_COLUMNS,
     SCENARIO_RESPIRATION_COLUMNS,
     SCENARIO_UNITS,
@@ -33,7 +34,10 @@ def field_names(model: type) -> set[str]:
 
 class ScenarioSchemaTests(unittest.TestCase):
     def test_columns_match_architecture_contract(self) -> None:
-        expected = set(SCENARIO_REQUIRED_COLUMNS + SCENARIO_RESPIRATION_COLUMNS)
+        expected = set(
+            SCENARIO_REQUIRED_COLUMNS + SCENARIO_RESPIRATION_COLUMNS
+            + SCENARIO_REFERENCE_COLUMNS
+        )
         self.assertEqual(expected, field_names(ScenarioInput))
         self.assertEqual(expected, set(SCENARIO_UNITS))
 
@@ -49,6 +53,10 @@ class ScenarioSchemaTests(unittest.TestCase):
         for name in SCENARIO_RESPIRATION_COLUMNS:
             with self.subTest(column=name):
                 self.assertIsNone(by_name[name].default)
+
+    def test_reference_key_is_optional(self) -> None:
+        by_name = {field.name: field for field in fields(ScenarioInput)}
+        self.assertIsNone(by_name["food_reference_id"].default)
 
     def test_codes_and_units_are_explicit(self) -> None:
         self.assertEqual({item.value for item in StorageType}, {"ambient", "chilled", "frozen"})

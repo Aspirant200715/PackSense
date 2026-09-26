@@ -2,7 +2,7 @@
 
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 
-**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, sourced food/material reference imports, and an experimental food-property estimator are implemented. A finished-package structure catalogue, package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
+**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, sourced food/material reference imports, and an experimental food-property estimator are implemented. A finished-package structure catalogue, package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
 
 The current code uses Python 3.11 or newer and a pinned XLSX reader. From the
 repository root, run `python -m pip install -r requirements.txt` followed by
@@ -11,6 +11,8 @@ for record meanings and [scenario ingestion](docs/ingestion.md) for the batch
 audit and its limits, and [reference imports](docs/reference-imports.md) for
 coverage and evidence-status limitations. [Property estimation](docs/property-estimation.md)
 reports the held-out baseline comparison and when estimates are withheld.
+The [food-reference join](docs/enrichment.md) explains exact identity matching,
+temperature exposures, and the remaining fresh-produce classification gate.
 
 ## Why PackSense exists
 
@@ -58,6 +60,10 @@ transport_handling_severity, net_pack_quantity, net_pack_quantity_unit
 ```
 
 Respiring produce additionally needs `respiration_rate`, `respiration_rate_unit`, and `respiration_reference_temperature_c`. The actual schema will also define allowed categories, units, plausible ranges, source flags, and conditional requirements. In particular, `storage_type = ambient` does not replace an exact temperature, and `transport_max_temperature_c` cannot be below the transport mean.
+
+An optional `food_reference_id` selects a specific source row when two entries
+share the same commodity name. It is a join key, never an ML feature. Without
+it, Stop 2 accepts only a unique exact commodity-name match.
 
 The planned batch output includes:
 

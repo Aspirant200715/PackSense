@@ -32,6 +32,11 @@ unit remain in the in-memory raw row. Formula cells, duplicate IDs, missing
 required values, nonfinite/out-of-range numbers, and contradictory maximum
 temperatures are exceptions. No ambient or chilled temperature is assumed.
 
+The optional `food_reference_id` column is accepted as a source-row key. The
+later Stop 2 join validates it against the food master and checks that its
+commodity name agrees with the scenario. It is not used to infer missing
+storage, transit, pack-size, or target-life values.
+
 The collected 5,000-food workbook can be passed to this command to audit its
 **scenario completeness**, but it must not be interpreted as 5,000 completed
 scenarios. In the USDA-Handbook-enriched version audited for this change
