@@ -17,8 +17,8 @@ from pathlib import Path
 from typing import Any
 from zipfile import BadZipFile
 
-from packsense.contracts import EvidenceBasis, HandlingSeverity
-from packsense.enrichment import EnrichedScenario, enrich_scenarios
+from packsense.contracts import EvidenceBasis, HandlingSeverity, StorageType
+from packsense.enrichment import EnrichedScenario, ExposureCondition, enrich_scenarios
 from packsense.ingestion import InputSchemaError, audit_scenarios
 from packsense.masters import load_food_references
 
@@ -136,6 +136,9 @@ class RequirementCard:
     food_master_sha256: str
     rule_set_version: str
     target_shelf_life_days: float
+    storage_type: StorageType
+    transport_mode: str
+    exposures: tuple[ExposureCondition, ...]
     service_temperature_min_c: float
     service_temperature_max_c: float
     storage_relative_humidity_pct: float
@@ -159,6 +162,18 @@ class RequirementCard:
             "food_master_sha256": self.food_master_sha256,
             "rule_set_version": self.rule_set_version,
             "target_shelf_life_days": self.target_shelf_life_days,
+            "storage_type": self.storage_type.value,
+            "transport_mode": self.transport_mode,
+            "exposures": [
+                {
+                    "phase": item.phase,
+                    "temperature_c": item.temperature_c,
+                    "relative_humidity_pct": item.relative_humidity_pct,
+                    "duration_hours": item.duration_hours,
+                    "safety_check_only": item.safety_check_only,
+                }
+                for item in self.exposures
+            ],
             "service_temperature_min_c": self.service_temperature_min_c,
             "service_temperature_max_c": self.service_temperature_max_c,
             "storage_relative_humidity_pct": self.storage_relative_humidity_pct,
@@ -289,7 +304,9 @@ def derive_requirement_card(
     return RequirementCard(
         scenario.record_id, enriched.food_reference.food_id,
         enriched.food_master_sha256, RULE_SET_VERSION,
-        scenario.desired_shelf_life_days, min(temperatures), max(temperatures),
+        scenario.desired_shelf_life_days, scenario.storage_type,
+        scenario.transport_mode, enriched.exposures,
+        min(temperatures), max(temperatures),
         scenario.storage_relative_humidity_pct, None,
         scenario.transport_duration_hours, None,
         scenario.transport_handling_severity, scenario.net_pack_quantity,

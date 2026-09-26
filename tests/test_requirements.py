@@ -7,7 +7,7 @@ from dataclasses import asdict, replace
 from pathlib import Path
 from types import SimpleNamespace
 
-from packsense.contracts import EvidenceBasis, HandlingSeverity
+from packsense.contracts import EvidenceBasis, HandlingSeverity, StorageType
 from packsense.enrichment import EnrichedScenario, exposure_profile
 from packsense.requirements import (
     AssessmentDecision,
@@ -21,6 +21,7 @@ from packsense.requirements import (
 def _enriched(*, route="unclassified", max_temperature=9.0, quantity=100.0):
     scenario = SimpleNamespace(
         record_id="TEST-ROW", storage_temperature_c=4.0,
+        storage_type=StorageType.CHILLED, transport_mode="test-mode",
         storage_relative_humidity_pct=80.0, transport_temperature_c=6.0,
         transport_max_temperature_c=max_temperature,
         transport_duration_hours=12.0, transport_handling_severity=HandlingSeverity.HIGH,
@@ -60,6 +61,12 @@ class RequirementCardTests(unittest.TestCase):
         report = card.report()
         self.assertEqual(report["service_temperature_min_c"], 4.0)
         self.assertEqual(report["service_temperature_max_c"], 9.0)
+        self.assertEqual(report["storage_type"], "chilled")
+        self.assertEqual(
+            [(item["phase"], item["temperature_c"]) for item in report["exposures"]],
+            [("storage", 4.0), ("transport", 6.0), ("transport_max_excursion", 9.0)],
+        )
+        self.assertTrue(report["exposures"][2]["safety_check_only"])
         self.assertIsNone(report["transport_relative_humidity_pct"])
         self.assertIsNone(report["transport_excursion_duration_hours"])
         self.assertEqual(report["mechanism_status"]["oxygen_ingress"], "unassessed")

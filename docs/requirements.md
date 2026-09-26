@@ -4,7 +4,8 @@ This stage runs after the exact food-reference join and **before** any package
 structure is considered. It records the supplied shelf-life target, fill
 quantity, storage RH, handling severity, and the minimum/maximum of the
 storage, transport, and maximum-excursion temperatures. It does not average
-these temperatures. Transport RH and excursion duration remain unknown.
+these temperatures. The individual exposure records also remain in the card.
+Transport RH and excursion duration remain unknown.
 
 Run a batch with the same scenario and one-sheet food-reference files accepted
 by Stop 2:
