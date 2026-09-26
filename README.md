@@ -2,7 +2,7 @@
 
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 
-**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, sourced food/material reference imports, an experimental food-property estimator, and measured-trial schema intake are implemented. No measured trial outcomes have been supplied or used for training. A finished-package structure catalogue, package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
+**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, sourced food/material reference imports, package-structure draft intake, an experimental food-property estimator, and measured-trial schema intake are implemented. No approved complete structures or measured trial outcomes have been supplied. Package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
 
 The current code uses Python 3.11 or newer and a pinned XLSX reader. From the
 repository root, run `python -m pip install -r requirements.txt` followed by
@@ -15,6 +15,9 @@ The [food-reference join](docs/enrichment.md) explains exact identity matching,
 temperature exposures, and the remaining fresh-produce classification gate.
 [Trial intake](docs/trial-intake.md) defines the observed-outcome schema and why
 passing its checks does not yet authorize model training.
+[Structure catalogue intake](docs/structure-catalogue.md) defines the exact
+grade/gauge join and the separate evidence review required before a package
+can be recommended.
 
 ## Why PackSense exists
 
