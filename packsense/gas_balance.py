@@ -90,7 +90,9 @@ class FinishedPackageGasObservation:
         for prefix in ("initial", "external"):
             o2 = getattr(self, f"{prefix}_o2_pct")
             co2 = getattr(self, f"{prefix}_co2_pct")
-            if not _finite(o2) or not _finite(co2) or not (0 <= o2 <= 100 and 0 <= co2 <= 100 and o2 + co2 <= 100):
+            if not _finite(o2) or not _finite(co2) or not (
+                0 <= o2 <= 100 and 0 <= co2 <= 100 and o2 + co2 <= 100
+            ):
                 raise ValueError(f"{prefix} gas percentages must be physical")
         if not _finite(self.min_o2_pct) or not 0 <= self.min_o2_pct <= 100:
             raise ValueError("min_o2_pct must be physical")
@@ -223,13 +225,15 @@ def audit_gas_profile(
     observations: tuple[FinishedPackageGasObservation, ...],
     oxygen_rate: KineticEvidence,
     carbon_dioxide_rate: KineticEvidence,
+    *, structure_id: str,
 ) -> tuple[GasBalanceResult, ...]:
     """Demand a separate finished-package observation for every exposure."""
+    if not isinstance(structure_id, str) or not structure_id.strip():
+        raise ValueError("structure_id must be non-empty")
     by_phase = {}
-    structure_ids = {item.structure_id for item in observations}
-    if len(structure_ids) > 1:
-        raise ValueError("gas profile mixes structure IDs")
     for observation in observations:
+        if observation.structure_id != structure_id:
+            raise ValueError("gas profile mixes structure IDs")
         if observation.phase in by_phase:
             raise ValueError("duplicate gas observation phase")
         by_phase[observation.phase] = observation
@@ -238,7 +242,7 @@ def audit_gas_profile(
         if exposure.phase in by_phase
         else _unresolved(
             exposure.phase, exposure.temperature_c, "package_gas_observation_missing",
-            enriched.scenario.record_id, next(iter(structure_ids), None),
+            enriched.scenario.record_id, structure_id,
         )
         for exposure in enriched.exposures
     )

@@ -19,6 +19,8 @@ protection limits and why absent evidence cannot become a numeric OTR/WVTR.
 temperature exposures and its reference-atmosphere evidence boundary.
 [Local produce gas balance](docs/gas-balance.md) checks measured O2/CO2
 inventory fluxes without claiming a safe MAP trajectory.
+[Local produce water checks](docs/water-balance.md) combine a source-scoped
+vapor ledger and measured dew-point warning with the gas audit.
 [Trial intake](docs/trial-intake.md) defines the observed-outcome schema and why
 passing its checks does not yet authorize model training.
 [Structure catalogue intake](docs/structure-catalogue.md) defines the exact
