@@ -2,13 +2,14 @@
 
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 
-**Project status:** Backend contracts and Stops 1–2 scenario ingestion/exception auditing are implemented. Food/material reference imports, package filtering, a trained model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
+**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, and sourced food/material reference imports are implemented. A finished-package structure catalogue, package filtering, a trained model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
 
 The current code uses Python 3.11 or newer and a pinned XLSX reader. From the
 repository root, run `python -m pip install -r requirements.txt` followed by
 `python -m unittest discover -s tests -v`. See [backend data contracts](docs/data-contracts.md)
 for record meanings and [scenario ingestion](docs/ingestion.md) for the batch
-audit and its limits.
+audit and its limits, and [reference imports](docs/reference-imports.md) for
+coverage and evidence-status limitations.
 
 ## Why PackSense exists
 
