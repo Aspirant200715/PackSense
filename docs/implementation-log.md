@@ -8,7 +8,8 @@ append dated entries rather than rewriting past decisions.
 
 ## Current position
 
-`main` includes technical merge `98a792b` (PR #14). It contains the typed data
+`main` includes log merge `d0a7149` (PR #13) after technical merge
+`98a792b` (PR #14). It contains the typed data
 contracts, structured scenario ingestion and exception auditing, exact food
 reference enrichment, food/material master imports, draft package-structure
 intake, evidence-gated Stop 3 requirement cards, measured-trial *schema*
@@ -39,7 +40,7 @@ outputs never claim a safe MAP trajectory, condensation quantity, target-
 life success, or a shelf-life prediction. No real reviewed route, kinetics,
 finished-package gas, or finished-package water registers are bundled.
 
-[PR #13](https://github.com/Aspirant200715/PackSense/pull/13) adds this
+[PR #13](https://github.com/Aspirant200715/PackSense/pull/13) added this
 independent log to `main`. Merged PR #14 compares a
 source-reviewed cumulative finished-package transfer finding with one
 applicable food budget under exact scenario and catalogue identifiers. A
@@ -77,14 +78,17 @@ or trial labels.
 
 ## Next implementation and evidence gates
 
-1. **Implement a leakage-safe trial split contract.** Accept only reviewed,
+1. **Complete a leakage-safe trial split gate.** Accept only reviewed,
    measured trial outcomes with stable source, trial, batch, food, and package
    identifiers. Keep replicates and related batches together; detect shared
    or conflicting group identities before assigning train, validation, and
    untouched test partitions. Freeze the manifest and source hash before any
    imputer, encoder, feature selector, calibration, or model is fitted. If
    independent groups are too few or poorly covered, report `not_ready`
-   rather than manufacturing a 70/15/15 split.
+   rather than manufacturing a 70/15/15 split. The in-progress
+   [split-manifest slice](split-manifest.md) implements a mechanical group
+   allocation gate; external evidence authenticity, structure joins, and
+   training sufficiency still require review before fitting a model.
 2. **Supply real pilot evidence before interpreting Stop 4 as a product
    result.** For a selected respiring food such as the planned tomato pilot,
    review exact food/form identity and independently sourced O2-consumption
@@ -190,6 +194,24 @@ PackSense must continue to withhold a real package or shelf-life claim.
   external dataset was imported. Training remains `not_ready`.
 - Next code scope: an immutable trial split manifest and leakage checks that
   refuse to allocate a test set from too few independent measured groups.
+
+### 2026-09-26 — reviewed-trial split contract in progress
+
+- Branch: `data/08-grouped-splits`, based on `main` commit `d0a7149`.
+  Added strict review-register and split-plan contracts, SHA-256 bindings to
+  trial rows/files, source/study-family group checks, refusal diagnostics,
+  and a deterministic non-overwriting allocation manifest. The audit states
+  explicitly that no model was trained or validated.
+- No real data, source approvals, finished-package measurements, or observed
+  trial labels were added. Test-only constructed trial records exercise the
+  contract; they are not training data. Source rights were not newly assessed.
+- Local verification: `python -m unittest discover -s tests -q` passed 118
+  tests. CI and PR review are pending at this entry. The split is **not** a
+  fitted model or a demonstrated non-leaking evaluation; external review of
+  shared experiments across sources remains necessary.
+- Next evidence gate: reviewed independent measured trials, verified complete
+  package joins, and a prospective pilot. If those are absent, training and
+  shelf-life accuracy claims remain `not_ready`.
 
 ### Template for the next entry
 

@@ -52,9 +52,11 @@ cannot pass today. The report deliberately says `training_readiness` is
 `no_valid_trials`, `no_observed_failures`, or `not_assessed`; it never says
 "ready". No split or metric may be claimed from intake alone.
 
-Once there are enough independently grouped, verified trials, freeze the
-train/validation/test split by trial/batch group **before** fitting any
-imputation, physical coefficients, model, or calibration. Evaluate dry and
-fresh-produce mechanisms separately. Use uncensored failures for an initial
-regression comparison and a censor-aware method for right-censored evidence.
-The untouched test set and a prospective pilot remain separate release gates.
+The [split-manifest contract](split-manifest.md) can prepare a group-separated
+train/validation/test allocation only after trial/source/rights/endpoint and
+independence reviews are recorded. It does not establish training readiness.
+Freeze the reviewed allocation **before** fitting imputation, physical
+coefficients, model, or calibration. Evaluate dry and fresh-produce mechanisms
+separately. Use uncensored failures for an initial regression comparison and
+a censor-aware method for right-censored evidence. The untouched test set and
+a prospective pilot remain separate release gates.
