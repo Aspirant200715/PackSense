@@ -73,7 +73,10 @@ mandatory checks are implemented and supported.
 
 The report includes scenario and food-master hashes, an optional assessment
 register hash, the requirement rule version, source and approval IDs for
-applied findings, and row-level exceptions. Reports are written only to a
+applied findings, and row-level exceptions. Each card also carries a
+`scenario_fingerprint` of its exact scenario facts for later source-evidence
+matching; the fingerprint is not proof that a package or source is valid.
+Reports are written only to a
 new path. Exit code 0 means every input row reached a requirement card,
 **not** that the cards are complete or that a package is feasible; 1 means
 some scenario rows were exceptions, and 2 means an input/report error.

@@ -26,6 +26,9 @@ passing its checks does not yet authorize model training.
 [Structure catalogue intake](docs/structure-catalogue.md) defines the exact
 grade/gauge join and the separate evidence review required before a package
 can be recommended.
+[Finished-package transfer checking](docs/candidate-transfer.md) is an early
+Stop 5 component: it can compare an exact-scope sourced cumulative transfer
+with a food budget, but cannot yet declare any complete package feasible.
 
 ## Why PackSense exists
 
