@@ -42,9 +42,10 @@ correction; the importer does not extrapolate one.
 claims such as `all_foods` are refused. A source locator may identify a
 supplier specification or controlled laboratory record; merely supplying a
 locator does not prove its contents. Duplicate structure IDs, missing or
-extra keys, unknown grade IDs, non-finite values, reversed service limits,
-and invalid contact/sealant order are rejected with per-row issues. Drafts
-using grades with estimated barrier observations are counted separately.
+extra structure keys, unknown grade IDs, reversed service limits, and invalid
+contact/sealant order produce per-structure issues. Malformed JSON, including
+literal `NaN` or `Infinity`, rejects the whole file. Drafts using grades with
+estimated barrier observations are counted separately.
 
 ## Approval boundary
 
