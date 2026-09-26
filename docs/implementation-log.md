@@ -8,8 +8,8 @@ append dated entries rather than rewriting past decisions.
 
 ## Current position
 
-`main` includes split-contract merge `ee064da` (PR #15) after log merge
-`d0a7149` (PR #13) and technical merge `98a792b` (PR #14). It contains the typed data
+`main` includes handoff merge `0bf9bd6` (PR #16), split-contract merge
+`ee064da` (PR #15), and the earlier Stop 4/5 merges. It contains the typed data
 contracts, structured scenario ingestion and exception auditing, exact food
 reference enrichment, food/material master imports, draft package-structure
 intake, evidence-gated Stop 3 requirement cards, measured-trial *schema*
@@ -61,7 +61,9 @@ withholds that claim.
   measured condition-complete training flags; 60 CO2 values are estimates.
 - No approved complete package-structure catalogue is supplied. The
   [structure importer](structure-catalogue.md) creates drafts, never
-  approval, from exact grade/gauge joins.
+  approval, from exact grade/gauge joins. The in-progress
+  [review gate](structure-review.md) checks external declarations but cannot
+  authenticate source documents or supply missing complete-structure evidence.
 - No measured food–finished-package–condition trial-outcome dataset is
   supplied. The [trial intake](trial-intake.md) validates a future source
   file's *shape* and censoring flags; passing intake would not itself make
@@ -231,6 +233,26 @@ PackSense must continue to withhold a real package or shelf-life claim.
   the frozen group manifest, fit preprocessing on training folds only, select
   with validation, and evaluate the untouched test once against predeclared
   metrics and prospective pilots.
+
+### 2026-09-26 — complete-structure review gate in progress
+
+- Branch: `feat/06-structure-review`, based on synced `main` commit `0bf9bd6`.
+  A strict review register binds a decision to the exact catalogue, material
+  master, parsed construction, declared source records, food scope, and
+  service-temperature range. Construction, food-contact, sealing/closure,
+  mechanics, and service-temperature checks each require a source hash,
+  reviewer decision, and rights-review ID. Any rejected draft, unmatched
+  review, stale identity, failed check, or widened scope blocks the entire
+  catalogue; no partial structure is promoted.
+- No real external structure register, source documents, rights decisions,
+  finished-package transfer measurements, or trial outcomes were added.
+  Constructed `TEST_ONLY` cases verify the gate and are not training data.
+- Local verification: `python -m unittest discover -s tests -q` passed 125
+  tests. PR review and CI are pending at this entry. A passing declaration
+  is review-attested, **not** independently authenticated by the code and
+  **not** package feasibility or a shelf-life prediction.
+- Remaining gate: obtain and externally verify actual complete-structure
+  evidence, then apply scenario-specific Stop 4/5 hard checks before ranking.
 
 ### Template for the next entry
 
