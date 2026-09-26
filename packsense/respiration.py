@@ -141,6 +141,16 @@ def correct_rate(
         evidence.reference_temperature_c, rel_tol=0, abs_tol=1e-6,
     )):
         return None, "reference_measurement_mismatch"
+    return project_source_rate(evidence, temperature_c, oxygen_pct, carbon_dioxide_pct)
+
+
+def project_source_rate(
+    evidence: KineticEvidence,
+    temperature_c: float,
+    oxygen_pct: float,
+    carbon_dioxide_pct: float,
+) -> tuple[float | None, str]:
+    """Correct one reviewed source rate without treating another gas as its proxy."""
     if not _finite(temperature_c) or not (
         evidence.valid_temperature_min_c <= temperature_c <= evidence.valid_temperature_max_c
     ):
