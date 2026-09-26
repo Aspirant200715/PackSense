@@ -6,8 +6,11 @@ PackSense is a planned decision-support backend for selecting food packaging. It
 
 The current code uses Python 3.11 or newer and a pinned XLSX reader. From the
 repository root, run `python -m pip install -r requirements.txt` followed by
-`python -m unittest discover -s tests -v`. See [backend data contracts](docs/data-contracts.md)
-for record meanings and [scenario ingestion](docs/ingestion.md) for the batch
+`python -m unittest discover -s tests -v`. The
+[living implementation log](docs/implementation-log.md) tracks the current
+handoff, open PR stack, evidence blockers, and update rules. See
+[backend data contracts](docs/data-contracts.md) for record meanings and
+[scenario ingestion](docs/ingestion.md) for the batch
 audit and its limits, and [reference imports](docs/reference-imports.md) for
 coverage and evidence-status limitations. [Property estimation](docs/property-estimation.md)
 reports the held-out baseline comparison and when estimates are withheld.
