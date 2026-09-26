@@ -6,6 +6,7 @@ status, calculate barriers, or make a packaging recommendation.
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 from collections import Counter, defaultdict
@@ -22,6 +23,7 @@ from packsense.ingestion import (
     audit_scenarios,
 )
 from packsense.masters import FoodMasterEntry, MasterAudit, load_food_references
+from packsense.produce_route import ProduceRoute, RouteEvidence, parse_route_register
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +44,8 @@ class EnrichedScenario:
     pH_reference_evidence: str
     produce_route_status: str
     exposures: tuple[ExposureCondition, ...]
+    route_source_id: str | None = None
+    route_approval_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +61,7 @@ class EnrichmentAudit:
     scenario_sha256: str
     food_master_sha256: str
     rows: tuple[EnrichmentRow, ...]
+    route_register_sha256: str | None = None
 
     def report(self) -> dict[str, Any]:
         issues = [issue for row in self.rows for issue in row.issues]
@@ -64,6 +69,7 @@ class EnrichmentAudit:
         return {
             "scenario_sha256": self.scenario_sha256,
             "food_master_sha256": self.food_master_sha256,
+            "route_register_sha256": self.route_register_sha256,
             "total_rows": len(self.rows),
             "enriched_rows": sum(row.enriched is not None for row in self.rows),
             "exception_rows": sum(row.enriched is None for row in self.rows),
@@ -89,6 +95,12 @@ class EnrichmentAudit:
                     ),
                     "produce_route_status": (
                         row.enriched.produce_route_status if row.enriched is not None else None
+                    ),
+                    "route_source_id": (
+                        row.enriched.route_source_id if row.enriched is not None else None
+                    ),
+                    "route_approval_id": (
+                        row.enriched.route_approval_id if row.enriched is not None else None
                     ),
                     "issues": [
                         {"field": issue.field, "code": issue.code, "message": issue.message}
@@ -128,10 +140,15 @@ def exposure_profile(scenario: ScenarioInput) -> tuple[ExposureCondition, ...]:
 
 
 def enrich_scenarios(
-    scenarios: ScenarioAudit, foods: MasterAudit[FoodMasterEntry]
+    scenarios: ScenarioAudit, foods: MasterAudit[FoodMasterEntry],
+    routes: tuple[RouteEvidence, ...] = (),
+    route_register_sha256: str | None = None,
 ) -> EnrichmentAudit:
     """Resolve exact food identity; retain unresolved rows as exceptions."""
     by_id = {entry.reference.food_id: entry for entry in foods.entries}
+    by_route = {entry.food_reference_id: entry for entry in routes}
+    if len(by_route) != len(routes):
+        raise ValueError("duplicate food route evidence")
     by_name: dict[str, list[FoodMasterEntry]] = defaultdict(list)
     for entry in foods.entries:
         by_name[_name_key(entry.reference.commodity_type)].append(entry)
@@ -181,30 +198,52 @@ def enrich_scenarios(
             else:
                 entry = matches[0]
 
+        route_evidence = by_route.get(entry.reference.food_id) if entry is not None else None
         if (
-            entry is not None
-            and entry.reference.respiration_rate is not None
-            and scenario.respiration_rate is None
+            route_evidence is not None
+            and route_evidence.route is ProduceRoute.NON_RESPIRING
+            and (scenario.respiration_rate is not None or entry.reference.respiration_rate is not None)
+        ):
+            issue(
+                "respiration_rate", "route_conflict",
+                "approved non-respiring route conflicts with a reported respiration rate",
+            )
+        if (
+            entry is not None and scenario.respiration_rate is None
+            and (
+                entry.reference.respiration_rate is not None
+                or route_evidence is not None and route_evidence.route is ProduceRoute.RESPIRING
+            )
         ):
             issue(
                 "respiration_rate", "missing_respiration",
-                "this food reference reports respiration; provide rate, unit, and reference temperature",
+                "respiring food needs rate, unit, and reference temperature",
             )
 
         enriched = None
         if not issues and entry is not None:
-            route_status = (
-                "respiration_evidence_present"
-                if scenario.respiration_rate is not None or entry.reference.respiration_rate is not None
-                else "unclassified"
-            )
+            if route_evidence is not None:
+                route_status = (
+                    "confirmed_respiring" if route_evidence.route is ProduceRoute.RESPIRING
+                    else "confirmed_non_respiring"
+                )
+            else:
+                route_status = (
+                    "respiration_evidence_present"
+                    if scenario.respiration_rate is not None or entry.reference.respiration_rate is not None
+                    else "unclassified"
+                )
             enriched = EnrichedScenario(
                 scenario, entry.reference, entry.source_row_number,
                 foods.source_sha256, entry.pH_evidence, route_status,
                 exposure_profile(scenario),
+                route_evidence.source_id if route_evidence else None,
+                route_evidence.approval_id if route_evidence else None,
             )
         rows.append(EnrichmentRow(input_row.row_number, scenario.record_id, enriched, tuple(issues)))
-    return EnrichmentAudit(scenarios.source_sha256, foods.source_sha256, tuple(rows))
+    return EnrichmentAudit(
+        scenarios.source_sha256, foods.source_sha256, tuple(rows), route_register_sha256,
+    )
 
 
 def _record_id(value: Any) -> str | None:
@@ -217,14 +256,18 @@ def main() -> int:
     parser.add_argument("food_master", type=Path)
     parser.add_argument("--scenario-sheet")
     parser.add_argument("--food-sheet")
+    parser.add_argument("--route-register", type=Path, help="reviewed exact-food route JSON")
     parser.add_argument("--report", type=Path, help="new JSON report path")
     args = parser.parse_args()
     try:
         scenario_audit = audit_scenarios(args.scenarios, sheet_name=args.scenario_sheet)
         food_audit = load_food_references(args.food_master, sheet_name=args.food_sheet)
-    except (InputSchemaError, OSError, csv.Error, BadZipFile) as exc:
+        route_bytes = args.route_register.read_bytes() if args.route_register else None
+        routes = parse_route_register(route_bytes) if route_bytes is not None else ()
+        route_hash = hashlib.sha256(route_bytes).hexdigest() if route_bytes is not None else None
+    except (InputSchemaError, OSError, csv.Error, BadZipFile, ValueError, UnicodeError) as exc:
         parser.exit(2, f"input error: {exc}\n")
-    audit = enrich_scenarios(scenario_audit, food_audit)
+    audit = enrich_scenarios(scenario_audit, food_audit, routes, route_hash)
     report = audit.report()
     if args.report:
         try:

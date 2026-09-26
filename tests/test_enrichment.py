@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from packsense.enrichment import enrich_scenarios, exposure_profile
 from packsense.ingestion import IngestionIssue, ParsedScenarioRow, ScenarioAudit
 from packsense.masters import FoodMasterEntry, MasterAudit
+from packsense.produce_route import ProduceRoute, RouteEvidence
 
 
 def _scenario(*, name="REFERENCE A", reference_id=None, respiration=None):
@@ -49,6 +50,35 @@ class ExposureTests(unittest.TestCase):
 
 
 class FoodJoinTests(unittest.TestCase):
+    def test_reviewed_non_respiring_route_is_exact_and_auditable(self) -> None:
+        route = RouteEvidence("FOOD-A", ProduceRoute.NON_RESPIRING,
+                              "SOURCE-A", "SOURCE-A/page-2", "REVIEW-A")
+        audit = enrich_scenarios(*_audits(_scenario(), [_food("FOOD-A")]),
+                                 routes=(route,), route_register_sha256="route-hash")
+        enriched = audit.rows[0].enriched
+        self.assertEqual(enriched.produce_route_status, "confirmed_non_respiring")
+        self.assertEqual(enriched.route_source_id, "SOURCE-A")
+        self.assertEqual(audit.report()["route_register_sha256"], "route-hash")
+
+    def test_route_registry_cannot_overrule_a_respiration_measurement(self) -> None:
+        route = RouteEvidence("FOOD-A", ProduceRoute.NON_RESPIRING,
+                              "SOURCE-A", "SOURCE-A/page-2", "REVIEW-A")
+        audit = enrich_scenarios(*_audits(
+            _scenario(respiration=object()), [_food("FOOD-A", respiration=object())],
+        ), routes=(route,))
+        self.assertIsNone(audit.rows[0].enriched)
+        self.assertEqual(audit.rows[0].issues[0].code, "route_conflict")
+
+    def test_confirmed_respiring_route_needs_rate_in_scenario(self) -> None:
+        route = RouteEvidence("FOOD-A", ProduceRoute.RESPIRING,
+                              "SOURCE-A", "SOURCE-A/page-2", "REVIEW-A")
+        missing = enrich_scenarios(*_audits(_scenario(), [_food("FOOD-A")]), routes=(route,))
+        self.assertEqual(missing.rows[0].issues[0].code, "missing_respiration")
+        provided = enrich_scenarios(*_audits(
+            _scenario(respiration=object()), [_food("FOOD-A")],
+        ), routes=(route,))
+        self.assertEqual(provided.rows[0].enriched.produce_route_status, "confirmed_respiring")
+
     def test_unique_exact_name_joins_and_keeps_hashes(self) -> None:
         audit = enrich_scenarios(*_audits(_scenario(name="  Reference   A "), [_food("FOOD-A")]))
         row = audit.rows[0]

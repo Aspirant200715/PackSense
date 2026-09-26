@@ -8,29 +8,28 @@ append dated entries rather than rewriting past decisions.
 
 ## Current position
 
-`main` is at commit `2fa21e3` (merged PR #8). It contains the typed data
+`main` includes technical merge `98a792b` (PR #14). It contains the typed data
 contracts, structured scenario ingestion and exception auditing, exact food
 reference enrichment, food/material master imports, draft package-structure
 intake, evidence-gated Stop 3 requirement cards, measured-trial *schema*
-intake, and an explicitly experimental moisture/fat reference estimator.
-These are backend foundations; they do not yet output a validated package
-or predicted shelf life.
-The same unit-test command passed 64 tests on the `main`-based documentation
-branch during this status update.
+intake, an explicitly experimental moisture/fat reference estimator, guarded
+Stop 4 local produce diagnostics, and a source-scoped Stop 5 transfer-budget
+check. These are backend foundations; they do not yet output a validated
+package or predicted shelf life. The same unit-test command passed 105 tests
+on the `main`-synced documentation branch during this status update.
 
-Four Stop 4 PRs were open and unmerged at this status check. They are stacked
-in this order, so review and merge them from the bottom of the stack upward:
+The Stop 4 and partial Stop 5 PRs were reviewed and merged in dependency order:
 
 1. [#9 — reviewed produce-route classification](https://github.com/Aspirant200715/PackSense/pull/9), based on `main`.
 2. [#10 — source-scoped respiration temperature correction](https://github.com/Aspirant200715/PackSense/pull/10), based on #9.
 3. [#11 — local produce gas-inventory balance](https://github.com/Aspirant200715/PackSense/pull/11), based on #10.
-4. [#12 — local water checks and combined batch audit](https://github.com/Aspirant200715/PackSense/pull/12), based on #11.
+4. [#12 — local water checks and combined batch audit](https://github.com/Aspirant200715/PackSense/pull/12), retargeted from #11 to `main`.
+5. [#14 — finished-package transfer-budget check](https://github.com/Aspirant200715/PackSense/pull/14), retargeted from #12 to `main`.
 
-The top branch passed `python -m unittest discover -s tests -q` locally with
-95 tests at creation. This is **not** a claim that the PRs have passed review
-or CI. The four PRs have deliberately not been reviewed or merged by the
-implementation agent. If a branch changes, rerun its tests and update this
-entry with the new commit and result.
+The Python 3.11 and 3.13 checks were green on every PR head at merge, and
+each retargeted PR was mergeable with only its scoped files. There were no
+submitted review, inline, or discussion comments. The green tests establish
+contract and equation behavior, **not** food/package validation.
 
 The Stop 4 calculations are guarded local diagnostics. The Q10 projection
 is limited to its source reference atmosphere and validated temperatures;
@@ -40,14 +39,12 @@ outputs never claim a safe MAP trajectory, condensation quantity, target-
 life success, or a shelf-life prediction. No real reviewed route, kinetics,
 finished-package gas, or finished-package water registers are bundled.
 
-[PR #13](https://github.com/Aspirant200715/PackSense/pull/13) contains this
-independent log change and is still open. [PR #14](https://github.com/Aspirant200715/PackSense/pull/14)
-is a separate, unmerged Stop 5 building block based on #12. It compares a
+[PR #13](https://github.com/Aspirant200715/PackSense/pull/13) adds this
+independent log to `main`. Merged PR #14 compares a
 source-reviewed cumulative finished-package transfer finding with one
 applicable food budget under exact scenario and catalogue identifiers. A
 within-budget result is **not** package feasibility; the report explicitly
-withholds that claim. The #14 branch passed 105 unit tests locally at commit
-`63228e4`. Its CI and review status have not been assessed here.
+withholds that claim.
 
 ## Evidence inventory and readiness
 
@@ -80,11 +77,14 @@ or trial labels.
 
 ## Next implementation and evidence gates
 
-1. **Review the four open PRs in dependency order.** Verify their diffs,
-   tests, CI, source boundaries, and branch bases. Address findings on the
-   corresponding branch, then merge #9, #10, #11, and #12 in order only
-   after the project owner authorizes merging. Update this snapshot when
-   `main` changes. This log does not itself authorize a merge.
+1. **Implement a leakage-safe trial split contract.** Accept only reviewed,
+   measured trial outcomes with stable source, trial, batch, food, and package
+   identifiers. Keep replicates and related batches together; detect shared
+   or conflicting group identities before assigning train, validation, and
+   untouched test partitions. Freeze the manifest and source hash before any
+   imputer, encoder, feature selector, calibration, or model is fitted. If
+   independent groups are too few or poorly covered, report `not_ready`
+   rather than manufacturing a 70/15/15 split.
 2. **Supply real pilot evidence before interpreting Stop 4 as a product
    result.** For a selected respiring food such as the planned tomato pilot,
    review exact food/form identity and independently sourced O2-consumption
@@ -174,6 +174,22 @@ PackSense must continue to withhold a real package or shelf-life claim.
   validated produce safety, and measured trial outcomes remain absent.
 - Owner decision requested: choose whether to review and merge the open PRs
   in dependency order, or continue with additional stacked backend PRs.
+
+### 2026-09-26 — Stop 4 and first Stop 5 slice merged
+
+- The owner authorized review and merge. PRs #9, #10, #11, #12, and #14 were
+  reviewed and merged in dependency order. Their merge commits are
+  `52bec0b`, `670dc04`, `c4fbd02`, `099d3f5`, and `98a792b` respectively.
+- Each PR head had successful Python 3.11 and 3.13 CI checks, a clean scoped
+  diff after retargeting, and no submitted review, inline, or discussion
+  comments. The top technical branch passed 105 local tests; the synced log
+  branch also passed 105 local tests. No approved package or model result was
+  claimed from those tests.
+- No real data, source approvals, finished-package measurements, or observed
+  trial labels were added. Source rights were not assessed because no new
+  external dataset was imported. Training remains `not_ready`.
+- Next code scope: an immutable trial split manifest and leakage checks that
+  refuse to allocate a test set from too few independent measured groups.
 
 ### Template for the next entry
 

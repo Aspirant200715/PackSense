@@ -18,11 +18,20 @@ The [food-reference join](docs/enrichment.md) explains exact identity matching,
 temperature exposures, and the remaining fresh-produce classification gate.
 [Food requirement cards](docs/requirements.md) explain the source-scoped
 protection limits and why absent evidence cannot become a numeric OTR/WVTR.
+[Produce respiration correction](docs/respiration.md) records the distinct
+temperature exposures and its reference-atmosphere evidence boundary.
+[Local produce gas balance](docs/gas-balance.md) checks measured O2/CO2
+inventory fluxes without claiming a safe MAP trajectory.
+[Local produce water checks](docs/water-balance.md) combine a source-scoped
+vapor ledger and measured dew-point warning with the gas audit.
 [Trial intake](docs/trial-intake.md) defines the observed-outcome schema and why
 passing its checks does not yet authorize model training.
 [Structure catalogue intake](docs/structure-catalogue.md) defines the exact
 grade/gauge join and the separate evidence review required before a package
 can be recommended.
+[Finished-package transfer checking](docs/candidate-transfer.md) is an early
+Stop 5 component: it can compare an exact-scope sourced cumulative transfer
+with a food budget, but cannot yet declare any complete package feasible.
 
 ## Why PackSense exists
 
