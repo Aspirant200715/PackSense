@@ -40,6 +40,15 @@ outputs never claim a safe MAP trajectory, condensation quantity, target-
 life success, or a shelf-life prediction. No real reviewed route, kinetics,
 finished-package gas, or finished-package water registers are bundled.
 
+[PR #13](https://github.com/Aspirant200715/PackSense/pull/13) contains this
+independent log change and is still open. [PR #14](https://github.com/Aspirant200715/PackSense/pull/14)
+is a separate, unmerged Stop 5 building block based on #12. It compares a
+source-reviewed cumulative finished-package transfer finding with one
+applicable food budget under exact scenario and catalogue identifiers. A
+within-budget result is **not** package feasibility; the report explicitly
+withholds that claim. The #14 branch passed 105 unit tests locally at commit
+`63228e4`. Its CI and review status have not been assessed here.
+
 ## Evidence inventory and readiness
 
 - The provisional food reference imports 5,000 rows. Moisture is present for
@@ -144,6 +153,27 @@ PackSense must continue to withhold a real package or shelf-life claim.
   catalogue, or independent measured shelf-life trials.
 - Decision: document the boundary clearly; do not train a package or
   shelf-life model from the two reference workbooks.
+
+### 2026-09-26 — first Stop 5 transfer check opened
+
+- Branch/PR: `feat/06-candidates`, [#14](https://github.com/Aspirant200715/PackSense/pull/14),
+  based on `feat/05-produce-water` / #12; commit `63228e4`.
+- Added an exact-scope cumulative whole-package transfer comparison and a
+  strict register contract. Stop 3 cards now emit a scenario fingerprint for
+  matching; a changed food, route, package catalogue, quantity, temperature
+  envelope, or target life cannot silently reuse a value.
+- No real source files, approvals, measured package transfers, trial outcomes,
+  or training rows were added. Source rights were not assessed because no
+  external data was imported.
+- Local verification: `python -m unittest discover -s tests -q` passed 105
+  tests on #14. `git diff --cached --check` passed before commit. CI and PR
+  review have not been assessed; no PR was merged.
+- Capability boundary: `exceeds_budget` can flag a protection failure;
+  `within_budget` covers one mechanism only and never marks a package feasible
+  or predicts shelf life. Approved complete structures, other hard filters,
+  validated produce safety, and measured trial outcomes remain absent.
+- Owner decision requested: choose whether to review and merge the open PRs
+  in dependency order, or continue with additional stacked backend PRs.
 
 ### Template for the next entry
 
