@@ -13,6 +13,7 @@ by Stop 2:
 ```text
 python -m packsense.requirements path/to/scenarios.csv path/to/food.xlsx --report path/to/new-requirements.json
 python -m packsense.requirements path/to/scenarios.csv path/to/food.xlsx --assessments path/to/reviewed-assessments.json --report path/to/new-requirements.json
+python -m packsense.requirements path/to/scenarios.csv path/to/food.xlsx --route-register path/to/reviewed-routes.json --report path/to/new-requirements.json
 ```
 
 The optional JSON register is a **manually reviewed collection of source
@@ -65,8 +66,8 @@ The card also records explicit gaps for light-sensitivity assessment, seal
 integrity, mechanical verification at the supplied handling severity, and
 food-contact compatibility. It does not treat pH or moisture content alone
 as microbial-safety clearance. Respiring foods retain a pending Stop 4 gas
-balance; foods without respiration evidence remain `unclassified` rather
-than being silently called non-respiring. Candidate screening remains
+balance; foods without respiration evidence remain `unclassified` unless an
+exact reviewed route register confirms them as non-respiring. Candidate screening remains
 disabled by this stage, even if a barrier assessment exists, until the later
 mandatory checks are implemented and supported.
 

@@ -11,6 +11,7 @@ Run it on a scenario CSV/XLSX and the one-sheet food reference workbook:
 ```text
 python -m packsense.enrichment path/to/scenarios.csv path/to/food.xlsx
 python -m packsense.enrichment path/to/scenarios.xlsx path/to/food.xlsx --scenario-sheet "Scenarios" --report path/to/new-audit.json
+python -m packsense.enrichment path/to/scenarios.csv path/to/food.xlsx --route-register path/to/reviewed-routes.json
 ```
 
 The JSON report gives source hashes, exception counts, row IDs, match IDs, and
@@ -39,10 +40,24 @@ If the matched food row reports respiration, the scenario must provide its
 rate, unit, and measurement temperature. If neither row reports respiration,
 the produce route remains `unclassified`, not automatically
 `non_respiring`. A trusted commodity classification is still needed before
-Stop 4 can be skipped. Reported reference pH, especially proxy or range
+Stop 4 can be skipped; the optional reviewed register below can supply it.
+Reported reference pH, especially proxy or range
 midpoint pH, is retained as reference evidence only; the scenario pH has no
 measurement provenance in the current input contract. These facts cannot
 support automatic microbial-safety or MAP claims at this stage.
+
+An optional reviewed route register resolves only exact `food_reference_id`
+matches. Its JSON object contains `schema_version: 1` and a `routes` array;
+each entry has `food_reference_id`, `route` (`respiring` or `non_respiring`),
+`source_id`, `source_locator`, and `approval_id`. Duplicate IDs, blank
+provenance, unknown route codes, and duplicate JSON keys are rejected. A
+`non_respiring` declaration that conflicts with a reported respiration rate
+creates a row exception. A `respiring` declaration still requires a rate,
+unit, and measurement temperature in the scenario. The register hash and
+applied source/approval IDs are carried into the audit. The approval ID
+must refer to an actual external evidence review; its presence alone cannot
+make an incorrect classification true. No route entries are bundled or
+inferred from food names or groups.
 
 This branch remains CPU-only. The separate experimental moisture estimator
 may provide labelled exploratory values, but its wide intervals do not

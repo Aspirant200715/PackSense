@@ -21,6 +21,7 @@ from packsense.contracts import EvidenceBasis, HandlingSeverity, StorageType
 from packsense.enrichment import EnrichedScenario, ExposureCondition, enrich_scenarios
 from packsense.ingestion import InputSchemaError, audit_scenarios
 from packsense.masters import load_food_references
+from packsense.produce_route import parse_route_register
 
 
 RULE_SET_VERSION = "requirements-v1"
@@ -149,6 +150,8 @@ class RequirementCard:
     net_pack_quantity: float
     net_pack_quantity_unit: str
     produce_route_status: str
+    route_source_id: str | None
+    route_approval_id: str | None
     mechanism_status: tuple[tuple[ProtectionMechanism, str], ...]
     transfer_budgets: tuple[TransferBudget, ...]
     applied_assessments: tuple[AppliedAssessment, ...]
@@ -184,6 +187,8 @@ class RequirementCard:
             "net_pack_quantity": self.net_pack_quantity,
             "net_pack_quantity_unit": self.net_pack_quantity_unit,
             "produce_route_status": self.produce_route_status,
+            "route_source_id": self.route_source_id,
+            "route_approval_id": self.route_approval_id,
             "mechanism_status": {key.value: value for key, value in self.mechanism_status},
             "transfer_budgets": [
                 {
@@ -292,8 +297,10 @@ def derive_requirement_card(
 
     if enriched.produce_route_status == "unclassified":
         gaps.append("respiration_route_unclassified")
-    elif enriched.produce_route_status == "respiration_evidence_present":
+    elif enriched.produce_route_status in ("respiration_evidence_present", "confirmed_respiring"):
         gaps.append("produce_gas_balance_pending_stop_4")
+    elif enriched.produce_route_status == "confirmed_non_respiring":
+        pass
     else:
         raise ValueError("unknown produce route status")
     gaps.extend((
@@ -311,6 +318,7 @@ def derive_requirement_card(
         scenario.transport_duration_hours, None,
         scenario.transport_handling_severity, scenario.net_pack_quantity,
         scenario.net_pack_quantity_unit, enriched.produce_route_status,
+        enriched.route_source_id, enriched.route_approval_id,
         tuple(statuses), tuple(budgets), tuple(applied), tuple(gaps), False,
     )
 
@@ -370,12 +378,16 @@ def main() -> int:
     parser.add_argument("food_master", type=Path)
     parser.add_argument("--scenario-sheet")
     parser.add_argument("--food-sheet")
+    parser.add_argument("--route-register", type=Path, help="reviewed exact-food route JSON")
     parser.add_argument("--assessments", type=Path, help="reviewed source-assessment JSON")
     parser.add_argument("--report", type=Path, help="new JSON report path")
     args = parser.parse_args()
     try:
         scenario_audit = audit_scenarios(args.scenarios, sheet_name=args.scenario_sheet)
         food_audit = load_food_references(args.food_master, sheet_name=args.food_sheet)
+        raw_routes = args.route_register.read_bytes() if args.route_register else None
+        routes = parse_route_register(raw_routes) if raw_routes is not None else ()
+        route_sha256 = hashlib.sha256(raw_routes).hexdigest() if raw_routes is not None else None
         raw_assessments = args.assessments.read_bytes() if args.assessments else None
         assessments = (
             _parse_protection_assessments(raw_assessments)
@@ -387,7 +399,7 @@ def main() -> int:
         )
     except (InputSchemaError, OSError, csv.Error, BadZipFile, ValueError, UnicodeError) as exc:
         parser.exit(2, f"input error: {exc}\n")
-    enrichment = enrich_scenarios(scenario_audit, food_audit)
+    enrichment = enrich_scenarios(scenario_audit, food_audit, routes, route_sha256)
     rows = []
     for row in enrichment.rows:
         rows.append({
@@ -405,6 +417,7 @@ def main() -> int:
         "rule_set_version": RULE_SET_VERSION,
         "scenario_sha256": enrichment.scenario_sha256,
         "food_master_sha256": enrichment.food_master_sha256,
+        "route_register_sha256": route_sha256,
         "assessment_register_sha256": assessment_sha256,
         "assessment_count": len(assessments),
         "total_rows": len(rows),

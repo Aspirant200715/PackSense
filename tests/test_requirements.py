@@ -119,6 +119,11 @@ class RequirementCardTests(unittest.TestCase):
         self.assertIn("produce_gas_balance_pending_stop_4", card.gaps)
         self.assertNotIn("respiration_route_unclassified", card.gaps)
 
+    def test_confirmed_non_respiring_route_has_no_produce_gap(self):
+        card = derive_requirement_card(_enriched(route="confirmed_non_respiring"))
+        self.assertNotIn("respiration_route_unclassified", card.gaps)
+        self.assertNotIn("produce_gas_balance_pending_stop_4", card.gaps)
+
     def test_unmatched_food_assessment_is_not_borrowed(self):
         card = derive_requirement_card(
             _enriched(), (_assessment(food_reference_id="OTHER-FOOD"),),
