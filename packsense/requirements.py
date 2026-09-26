@@ -162,6 +162,7 @@ class RequirementCard:
         return {
             "record_id": self.record_id,
             "food_reference_id": self.food_reference_id,
+            "scenario_fingerprint": scenario_fingerprint(self),
             "food_master_sha256": self.food_master_sha256,
             "rule_set_version": self.rule_set_version,
             "target_shelf_life_days": self.target_shelf_life_days,
@@ -217,6 +218,29 @@ class RequirementCard:
             "otr_target": None,
             "wvtr_target": None,
         }
+
+
+def scenario_fingerprint(card: RequirementCard) -> str:
+    """Hash scenario facts so later evidence cannot be reused for a changed route."""
+    fields = {
+        "record_id": card.record_id,
+        "food_reference_id": card.food_reference_id,
+        "target_shelf_life_days": card.target_shelf_life_days,
+        "storage_type": card.storage_type.value,
+        "transport_mode": card.transport_mode,
+        "transport_duration_hours": card.transport_duration_hours,
+        "handling_severity": card.handling_severity.value,
+        "net_pack_quantity": card.net_pack_quantity,
+        "net_pack_quantity_unit": card.net_pack_quantity_unit,
+        "exposures": [
+            (item.phase, item.temperature_c, item.relative_humidity_pct,
+             item.duration_hours, item.safety_check_only)
+            for item in card.exposures
+        ],
+    }
+    return hashlib.sha256(
+        json.dumps(fields, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    ).hexdigest()
 
 
 def _number(value: object) -> bool:
