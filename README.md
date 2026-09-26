@@ -2,7 +2,12 @@
 
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 
-**Project status:** This repository is at the documentation stage. The backend, trained model, API, and frontend have not been implemented here yet. The architecture and implementation sequence below are the contract for that work; they are not claims that the system already produces validated recommendations.
+**Project status:** Backend implementation has started with typed data contracts, a unit dictionary, schema-only tests, and CI. Ingestion, package filtering, a trained model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
+
+The current code uses Python 3.11 or newer and only the standard library. From
+the repository root, run `python -m unittest discover -s tests -v` to check the
+contracts. See [backend data contracts](docs/data-contracts.md) for the source
+coverage and the distinction between scenarios, reference rows, and trials.
 
 ## Why PackSense exists
 
@@ -85,9 +90,9 @@ Every training run will record input-data hashes, trial and split IDs, feature s
 
 ## Backend-first branch and PR sequence
 
-No implementation branch or PR is open yet. The following are planned **after the project owner says to start**. Each PR should include tests, a small batch fixture, a reproducible command, and an example output; merge one reviewable change at a time.
+Implementation began after the project owner's approval. The sequence below remains the review order; do not treat a planned branch as completed work. Each PR should include relevant tests and a reproducible command. Data fixtures must be sourced and traceable, and example outputs belong only where a working stage can produce them. Merge one reviewable change at a time.
 
-1. `feat/01-contracts` — repository tooling and CI; typed input, reference, trial, and output schemas; units and frozen example fixtures.
+1. `feat/01-contracts` — repository tooling and CI; typed input, reference, trial, and output schemas; units and schema-only tests. Any future data fixtures must be sourced and traceable.
 2. `feat/02-ingestion` — Stops 1–2 batch loading, schema/range/cross-field checks, unit conversion, and exception report.
 3. `feat/03-masters` — versioned food/material imports, property source flags, structure catalogue, and compatibility joins.
 4. `feat/04-requirements` — Stop 3 barrier, seal, mechanical, contact, and temperature requirement calculations.
