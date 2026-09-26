@@ -94,6 +94,7 @@ class GasBalanceTests(unittest.TestCase):
             _enriched(), (_observation(),),
             _rate("mg O2/kg/h", O2_MOLAR_MASS_G_MOL),
             _rate("mg CO2/kg/h", CO2_MOLAR_MASS_G_MOL),
+            structure_id="TEST-STRUCTURE",
         )
         self.assertEqual([item.phase for item in results],
                          ["storage", "transport", "transport_max_excursion"])
