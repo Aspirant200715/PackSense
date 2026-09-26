@@ -62,3 +62,11 @@ available may Stop 5 promote and filter a structure. Temperature correction,
 produce gas balance, hard filters, ranking, and shelf-life prediction are not
 implemented by this intake. Its test-only identifiers are validation fixtures,
 not catalogue entries or training data.
+
+The separate [complete-structure review gate](structure-review.md) now checks
+whether human review declarations bind to an exact accepted draft, construction
+and food-contact sources, narrowed food/temperature scopes, and required
+evidence decisions. Its output is still not a feasible package: document
+authenticity and applicability need external review, and finished-package
+transfer, sealing, handling, produce safety, and target-life checks remain
+separate gates.
