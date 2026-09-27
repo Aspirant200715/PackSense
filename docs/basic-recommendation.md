@@ -13,6 +13,8 @@ loss, and its food route is confirmed non-respiring. It also requires an
 approved structure-review audit tied to the current material master. Each
 candidate must have an exact reviewed commodity scope, service-temperature
 coverage across the storage, transit, and maximum-excursion envelope, and
+an explicit reviewed mechanical handling scope covering the scenario severity.
+Legacy reviews without that scope remain unresolved. The candidate also needs
 applicable whole-package transfer evidence for every source-limited mechanism.
 That evidence must match the exact scenario fingerprint, package, quantity,
 target period, temperature envelope, and transport-humidity scope.
@@ -51,6 +53,8 @@ Stop 6 ranking: cost and sustainability are not in the current material master
 and are not ranked. Light sensitivity is reported as an open warning.
 
 The output always sets `package_feasible` and `shelf_life_predicted` to false.
+The handling-scope check is necessary, not proof of real-route mechanical
+performance or a finished-package certification.
 It does not calculate MAP gas composition, approve produce films, predict
 shelf life, or replace food-contact and supplier review. Respiring produce
 remains out of this first slice until its complete Stop 4 gas/water safety

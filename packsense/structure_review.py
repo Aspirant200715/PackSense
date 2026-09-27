@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 from zipfile import BadZipFile
 
-from packsense.contracts import PackageStructure, StructureLayer
+from packsense.contracts import HandlingSeverity, PackageStructure, StructureLayer
 from packsense.ingestion import InputSchemaError
 from packsense.masters import load_material_grades
 from packsense.structures import (
@@ -25,7 +25,12 @@ from packsense.structures import (
 )
 
 
-REVIEW_VERSION = "structure-review-v1"
+REVIEW_VERSION = "structure-review-v2"
+_HANDLING_RANK = {
+    HandlingSeverity.LOW: 0,
+    HandlingSeverity.MEDIUM: 1,
+    HandlingSeverity.HIGH: 2,
+}
 CHECK_KINDS = frozenset({
     "construction", "food_contact", "seal_closure", "mechanical",
     "service_temperature",
@@ -36,11 +41,12 @@ _CHECK_FIELDS = frozenset({
     "kind", "source_id", "source_locator", "source_sha256", "review_id",
     "rights_review_id", "decision",
 })
-_REVIEW_FIELDS = frozenset({
+_REVIEW_FIELDS_V1 = frozenset({
     "structure_id", "draft_digest", "review_id", "reviewer_id",
     "reviewed_food_scope", "service_temperature_min_c",
     "service_temperature_max_c", "checks",
 })
+_REVIEW_FIELDS_V2 = _REVIEW_FIELDS_V1 | {"max_reviewed_handling_severity"}
 _REGISTER_FIELDS = frozenset({
     "schema_version", "catalogue_sha256", "material_master_sha256",
     "catalogue_version", "reviews",
@@ -115,6 +121,7 @@ class StructureReview:
     service_temperature_min_c: float
     service_temperature_max_c: float
     checks: tuple[EvidenceCheck, ...]
+    max_reviewed_handling_severity: HandlingSeverity | None = None
 
     def __post_init__(self) -> None:
         for field in ("structure_id", "review_id", "reviewer_id"):
@@ -131,6 +138,9 @@ class StructureReview:
         high = _temperature(self.service_temperature_max_c, "service_temperature_max_c")
         if low > high:
             raise ValueError("reviewed service temperature range is reversed")
+        if (self.max_reviewed_handling_severity is not None
+                and not isinstance(self.max_reviewed_handling_severity, HandlingSeverity)):
+            raise ValueError("max_reviewed_handling_severity must be low, medium, or high")
         if not isinstance(self.checks, tuple) or any(
             not isinstance(item, EvidenceCheck) for item in self.checks
         ):
@@ -166,6 +176,7 @@ class ReviewAttestedStructure:
     evidence_check_ids: tuple[str, ...]
     estimated_barrier_grade_ids: tuple[str, ...]
     evidence_checks: tuple[EvidenceCheck, ...] = ()
+    max_reviewed_handling_severity: HandlingSeverity | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,12 +200,32 @@ class StructureReviewAudit:
             "catalogue_sha256": self.catalogue_sha256,
             "review_register_sha256": self.review_register_sha256,
             "review_attested_structures": len(self.reviewed),
+            "handling_scope_declared_structures": sum(
+                item.max_reviewed_handling_severity is not None
+                for item in self.reviewed
+            ),
             "structure_ids": [item.structure.structure_id for item in self.reviewed],
             "issues": [asdict(issue) for issue in self.issues],
             "evidence_authenticity_verified_by_code": False,
             "package_feasible": False,
             "shelf_life_predicted": False,
         }
+
+
+def handling_scope_gap(
+    reviewed: ReviewAttestedStructure, required: HandlingSeverity,
+) -> str | None:
+    """Require source-reviewed mechanical scope at the scenario severity."""
+    if not isinstance(required, HandlingSeverity):
+        raise ValueError("scenario handling severity is invalid")
+    supported = reviewed.max_reviewed_handling_severity
+    if supported is None:
+        return "mechanical_handling_scope_missing"
+    if not isinstance(supported, HandlingSeverity):
+        return "structure_review_handling_scope_invalid"
+    if _HANDLING_RANK[supported] < _HANDLING_RANK[required]:
+        return "mechanical_handling_out_of_scope"
+    return None
 
 
 def _valid_attested_structure(structure: object) -> bool:
@@ -266,6 +297,10 @@ def attestation_integrity_gaps(audit: StructureReviewAudit) -> tuple[str, ...]:
             gaps.add("structure_review_version_binding_invalid")
         if not isinstance(reviewed.review_id, str) or not reviewed.review_id.strip():
             gaps.add("structure_review_identity_invalid")
+        if (reviewed.max_reviewed_handling_severity is not None
+                and not isinstance(reviewed.max_reviewed_handling_severity,
+                                   HandlingSeverity)):
+            gaps.add("structure_review_handling_scope_invalid")
         checks = reviewed.evidence_checks
         if (not isinstance(checks, tuple)
                 or len(checks) != len(CHECK_KINDS)
@@ -312,14 +347,18 @@ def parse_structure_review_register(raw: bytes) -> StructureReviewRegister:
         json.loads(raw, object_pairs_hook=_unique_object, parse_constant=_invalid_constant),
         _REGISTER_FIELDS, "structure review register",
     )
-    if type(data["schema_version"]) is not int or data["schema_version"] != 1:
+    if type(data["schema_version"]) is not int or data["schema_version"] not in (1, 2):
         raise ValueError("unsupported structure review schema_version")
     if not isinstance(data["reviews"], list):
         raise ValueError("reviews must be an array")
     reviews = []
     seen = set()
     for index, item in enumerate(data["reviews"], start=1):
-        row = _fields(item, _REVIEW_FIELDS, f"review {index}")
+        row = _fields(
+            item,
+            _REVIEW_FIELDS_V2 if data["schema_version"] == 2 else _REVIEW_FIELDS_V1,
+            f"review {index}",
+        )
         if not isinstance(row["reviewed_food_scope"], list) or not isinstance(
             row["checks"], list
         ):
@@ -327,9 +366,17 @@ def parse_structure_review_register(raw: bytes) -> StructureReviewRegister:
         checks = tuple(EvidenceCheck(**_fields(check, _CHECK_FIELDS,
                                                f"review {index} check"))
                        for check in row["checks"])
+        handling = row.get("max_reviewed_handling_severity")
+        if data["schema_version"] == 2:
+            try:
+                handling = HandlingSeverity(handling)
+            except (ValueError, TypeError) as exc:
+                raise ValueError(
+                    f"review {index}: max_reviewed_handling_severity must be low, medium, or high"
+                ) from exc
         review = StructureReview(**{
             **row, "reviewed_food_scope": tuple(row["reviewed_food_scope"]),
-            "checks": checks,
+            "checks": checks, "max_reviewed_handling_severity": handling,
         })
         if review.structure_id in seen:
             raise ValueError(f"review {index}: duplicate structure_id")
@@ -413,6 +460,7 @@ def audit_structure_reviews(
             evidence_check_ids=tuple(check.review_id for check in review.checks),
             estimated_barrier_grade_ids=draft.estimated_barrier_grade_ids,
             evidence_checks=review.checks,
+            max_reviewed_handling_severity=review.max_reviewed_handling_severity,
         ))
     if issues:
         return StructureReviewAudit("not_approved", catalogue.source_sha256,

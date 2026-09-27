@@ -13,6 +13,7 @@ from enum import StrEnum
 from math import isclose
 from typing import Any, Iterable
 
+from packsense.contracts import HandlingSeverity
 from packsense.candidate_transfer import (
     FinishedPackageTransferEvidence,
     TransferCheck,
@@ -27,10 +28,11 @@ from packsense.structure_review import (
     ReviewAttestedStructure,
     StructureReviewAudit,
     attestation_integrity_gaps,
+    handling_scope_gap,
 )
 
 
-RECOMMENDATION_VERSION = "basic-recommendation-v2"
+RECOMMENDATION_VERSION = "basic-recommendation-v3"
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
 _STRUCTURE_GAPS_RESOLVED_BY_REVIEW = frozenset({
     "seal_integrity_pending_structure",
@@ -64,6 +66,7 @@ class CandidateScreen:
     compatible_food_scope: tuple[str, ...] = ()
     service_temperature_min_c: float | None = None
     service_temperature_max_c: float | None = None
+    max_reviewed_handling_severity: HandlingSeverity | None = None
     sealant_grade_id: str | None = None
     catalogue_sha256: str | None = None
     material_master_sha256: str | None = None
@@ -95,6 +98,10 @@ class CandidateScreen:
                 "material_master_sha256": self.material_master_sha256,
                 "review_register_sha256": self.review_register_sha256,
                 "review_id": self.review_id,
+                "max_reviewed_handling_severity": (
+                    self.max_reviewed_handling_severity.value
+                    if self.max_reviewed_handling_severity is not None else None
+                ),
                 "evidence_check_ids": list(self.evidence_check_ids),
                 "source_checks": [
                     {
@@ -196,6 +203,7 @@ def _review_context(reviewed: ReviewAttestedStructure) -> dict[str, Any]:
         "compatible_food_scope": structure.compatible_food_scope,
         "service_temperature_min_c": structure.service_temperature_min_c,
         "service_temperature_max_c": structure.service_temperature_max_c,
+        "max_reviewed_handling_severity": reviewed.max_reviewed_handling_severity,
         "sealant_grade_id": structure.sealant_grade_id,
         "catalogue_sha256": reviewed.catalogue_sha256,
         "material_master_sha256": reviewed.material_master_sha256,
@@ -421,6 +429,21 @@ def screen_package_candidates(
                 structure.structure_id, structure.pack_format,
                 CandidateStatus.EXCLUDED, ("service_temperature_out_of_scope",), (), None,
                 **_review_context(reviewed),
+            ))
+            continue
+        handling_gap = handling_scope_gap(reviewed, card.handling_severity)
+        if handling_gap == "mechanical_handling_scope_missing":
+            candidates.append(CandidateScreen(
+                structure.structure_id, structure.pack_format,
+                CandidateStatus.UNRESOLVED, (handling_gap,),
+                (), None, **_review_context(reviewed),
+            ))
+            continue
+        if handling_gap is not None:
+            candidates.append(CandidateScreen(
+                structure.structure_id, structure.pack_format,
+                CandidateStatus.EXCLUDED, (handling_gap,),
+                (), None, **_review_context(reviewed),
             ))
             continue
 

@@ -725,6 +725,28 @@ PackSense must continue to withhold a real package or shelf-life claim.
   compileall and diff checks passed. CI and PR review remain pending, and
   neither model training nor package certification occurred.
 
+### 2026-09-27 — reviewed handling-scope gate
+
+- Branch: `feat/handling-scope-gate`, based on merged `main` at `6517eae`.
+  The existing structure review could carry a passing mechanical check without
+  saying whether its source covered the scenario's low, medium, or high
+  transport handling severity. Review register schema version 2 now requires
+  `max_reviewed_handling_severity`; legacy version-1 registers remain readable
+  but have unknown handling scope.
+- The preliminary non-respiring shortlist now marks a missing scope unresolved
+  and excludes a structure whose reviewed maximum is below the scenario
+  severity. The suitability-label intake applies the same bound before a
+  label can enter the exploratory ranker. Direct in-memory attestations are
+  checked for invalid severity types. Neither a passing declaration nor the
+  ordinal comparison authenticates mechanical testing or certifies a package.
+- No real structure reviews, scenario rows, measured package transfers,
+  suitability labels, or model artifacts were added. All new cases are
+  `TEST_ONLY` guardrails. Real-data training and package release remain
+  `not_ready`; source documents, rights, route/pack-mass applicability, and
+  independent outcomes still require review.
+- Local verification: 214 Python unit tests passed; compile and diff checks
+  passed. PR CI and external evidence review remain separate.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
