@@ -42,7 +42,9 @@ APPLICATION_FIELDS = frozenset({
     "bag_width_mm", "bag_length_mm", "use_note",
 })
 TEMPERATURE_FIELDS = frozenset({"min_c", "max_c"})
-RECORD_KINDS = frozenset({"laminate_film", "tray_component", "produce_bag"})
+RECORD_KINDS = frozenset({
+    "laminate_film", "tray_component", "produce_bag", "finished_pouch",
+})
 BARRIER_UNITS = {
     "otr": frozenset({"cm3/m2/24h", "cm3/100in2/24h"}),
     "co2tr": frozenset({"cm3/m2/24h", "cm3/100in2/24h"}),
@@ -276,8 +278,15 @@ def load_candidate_catalogue(path: str | Path) -> tuple[dict[str, Any], str]:
                 raise InputSchemaError(f"{name}.seal_observation.strength_unit is unsupported")
             if row["strength_method"] is not None:
                 _text(row["strength_method"], f"{name}.seal_observation.strength_method")
-            _range(row["process_temperature_min_c"], row["process_temperature_max_c"],
-                   f"{name}.seal_observation.process_temperature", temperature=True)
+            process_low = row["process_temperature_min_c"]
+            process_high = row["process_temperature_max_c"]
+            if (process_low is None) != (process_high is None):
+                raise InputSchemaError(
+                    f"{name}.seal_observation.process_temperature bounds must be paired"
+                )
+            if process_low is not None:
+                _range(process_low, process_high,
+                       f"{name}.seal_observation.process_temperature", temperature=True)
         if item["food_contact_claim"] is not None:
             _text(item["food_contact_claim"], f"{name}.food_contact_claim")
         scope = [_text(food, f"{name}.claimed_food_scope") for food in _list(
@@ -305,6 +314,32 @@ def load_candidate_catalogue(path: str | Path) -> tuple[dict[str, Any], str]:
                 raise InputSchemaError(f"{name} repeats an application for the same food and amount")
             application_keys.add(key)
     return root, _sha256(source_path)
+
+
+def candidate_promotion_gaps(item: dict[str, Any]) -> list[str]:
+    """Name evidence still needed for a validated public candidate record.
+
+    A populated supplier claim does not clear a gap that requires independent
+    review or measured whole-package evidence.
+    """
+    missing = ["exact_material_grade_join", "reviewed_food_contact_document",
+               "verified_service_temperature_limit", "reviewed_finished_package_seal_and_handling",
+               "tested_complete_package_transfer", "reviewed_source_rights"]
+    if not item["layers"] or any(layer["gauge_min"] is None for layer in item["layers"]):
+        missing.append("complete_exact_layer_construction")
+    if (item["reported_total_gauge"] is not None and
+            item["reported_total_gauge"]["basis"] == "size_expression_interpretation"):
+        missing.append("gauge_interpretation_needs_supplier_confirmation")
+    if item["record_kind"] == "produce_bag":
+        missing.append("sku_level_o2_and_co2_transfer_at_use_temperature")
+    if item["seal_observation"] is None:
+        missing.append("seal_strength_evidence")
+    if any(obs["basis"] == "supplier_indicative"
+           for obs in item["barrier_observations"]):
+        missing.append("indicative_barrier_not_measured_package_transfer")
+    if item["pack_format"] == "box inner liner":
+        missing.append("required_outer_package_definition")
+    return missing
 
 
 def audit_candidate_catalogue(path: str | Path) -> dict[str, Any]:
@@ -336,24 +371,11 @@ def audit_candidate_catalogue(path: str | Path) -> dict[str, Any]:
             for item in candidates
         ),
     }
-    blockers = []
-    for item in candidates:
-        missing = ["exact_material_grade_join", "reviewed_food_contact_document",
-                   "verified_service_temperature_limit", "reviewed_finished_package_seal_and_handling",
-                   "tested_complete_package_transfer",
-                   "reviewed_source_rights"]
-        if not item["layers"] or any(layer["gauge_min"] is None for layer in item["layers"]):
-            missing.append("complete_exact_layer_construction")
-        if (item["reported_total_gauge"] is not None and
-                item["reported_total_gauge"]["basis"] == "size_expression_interpretation"):
-            missing.append("gauge_interpretation_needs_supplier_confirmation")
-        if item["record_kind"] == "produce_bag":
-            missing.append("sku_level_o2_and_co2_transfer_at_use_temperature")
-        if item["seal_observation"] is None:
-            missing.append("seal_strength_evidence")
-        if item["pack_format"] == "box inner liner":
-            missing.append("required_outer_package_definition")
-        blockers.append({"candidate_id": item["candidate_id"], "missing_for_promotion": missing})
+    blockers = [
+        {"candidate_id": item["candidate_id"],
+         "missing_for_promotion": candidate_promotion_gaps(item)}
+        for item in candidates
+    ]
     return {
         "catalogue_id": catalogue["catalogue_id"],
         "catalogue_sha256": source_sha256,

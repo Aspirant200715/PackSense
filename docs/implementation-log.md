@@ -747,6 +747,51 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Local verification: 214 Python unit tests passed; compile and diff checks
   passed. PR CI and external evidence review remain separate.
 
+### 2026-09-27 — exact PouchDirect SKU 179 candidate
+
+- Branch: `data/pouchdirect-sku179-candidate`, based on `main` at `cb76843`.
+  The supplier's direct SKU 179 TDS became accessible through its own product
+  page, resolving the earlier HTTP 403 intake hold for this one sheet. One
+  source and one candidate were added to the separate public-claim register;
+  the register now has five sources and ten candidates. Catalogue SHA-256:
+  `103af32842aee9845f3dcc3a7ff74edc564e81931a45f5915ae6657f963b071f`.
+  The candidate JSON is pinned to LF on checkout so its raw-byte source hash
+  is reproducible across Windows and Linux.
+- The source states a 12/12/80 µm PET/metallized-PET/LLDPE stand-up pouch,
+  104 µm total gauge, ≥20 N/15 mm seal strength, and laboratory-conditioned
+  OTR/WVTR **indicative** ranges. The intake now accepts a sourced seal-
+  strength claim when its process-temperature range is absent, without
+  inventing that range. It flags the indicative barrier as not measured
+  complete-package transfer. No food-specific use, verified service limit,
+  reviewed conformity declaration, exact material-grade join, source rights
+  approval, or scenario outcome was supplied.
+- The candidate remains unapproved and cannot enter the structure catalogue,
+  supplier-application lookup, suitability labels, shortlist, or model fit.
+  The TDS's 60-month packaging-product storage life is not food shelf life. No other
+  manufacturer record, food reference, or Kaggle input changed.
+- Local verification: 216 Python tests, compilation, catalogue audit, and
+  diff check passed. CI and independent document/rights review are separate.
+
+### 2026-09-27 — one-candidate pilot evidence trace
+
+- Continued on `data/pouchdirect-sku179-candidate` (PR #34). The batch now
+  accepts `--pilot-candidate-id` with the public candidate register and
+  attaches an exact candidate/source evidence trace to each valid scenario.
+  Unknown IDs fail; invalid scenario rows stay exceptions. Published
+  food/quantity/temperature matches are visible but never become approvals.
+  The separate public-candidate promotion gaps are reused without altering
+  structure review, recommendation, or model-training gates.
+- A primary [peanut-kernel comparison](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0190377)
+  provides real food/package research evidence, but its experimental
+  PET/AL/PA/PE bag cannot be identified as PouchDirect SKU 179. No result,
+  food limit, or package property was borrowed across those structures.
+  The repository still has no genuine fully specified pilot scenario, reviewed
+  package, food-protection assessment, or measured complete-package transfer.
+- Tests use only `TEST_ONLY` scenario objects. No source workbook, Kaggle
+  input, training label, or model artifact changed. Local verification:
+  221 Python tests passed; compile, CLI, and diff checks are recorded with
+  this PR. CI and independent source review remain separate.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

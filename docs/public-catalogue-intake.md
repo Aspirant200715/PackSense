@@ -2,8 +2,8 @@
 
 The first source-backed candidate register is
 [`data/public_catalogue_candidates.v1.json`](../data/public_catalogue_candidates.v1.json).
-It contains **nine selected product records from four directly accessible
-manufacturer sources**. These are traceable claims, not approved complete
+It contains **ten selected product records from five directly accessible
+supplier sources**. These are traceable claims, not approved complete
 structures, food/package suitability labels, measured trial outcomes, or
 model-training rows. No values were filled from polymer-family averages.
 
@@ -13,7 +13,7 @@ cannot yet pass that importer: no disclosed layer can be joined to an exact
 manufacturer-grade ID in the current 81-row material master, and missing
 construction, service, contact, or finished-package transfer evidence cannot
 be supplied by matching a generic polymer name. A read-only comparison found
-**zero manufacturer-name overlap** between the pilot's three suppliers and
+**zero manufacturer-name overlap** between the pilot's four suppliers and
 the nine manufacturers in the current 81-row material master; polymer-level
 similarity was not treated as a grade match. `claimed_food_scope` records
 only a manufacturer's broad wording; `applications` records the narrower
@@ -29,14 +29,21 @@ quantity and temperature conditions expressly listed for a SKU.
   Its Etalab Open License 2.0 is documented by the publisher. Relevant
   food-limit records may be curated into Stop 3 only with their food,
   temperature, RH, criterion, units, and source context preserved.
-- **PouchDirect stock pouches — good structure leads, held from this batch.**
-  The supplier's [red stand-up pouch listing](https://www.pouchdirect.com/stand-up-pouches/standup-pouch-red)
-  links a SKU 179 technical sheet with layer gauges, seal strength and
-  OTR/WVTR test conditions. The technical sheet itself explicitly describes
-  barrier ranges as *indicative*. Direct retrieval returned HTTP 403 during
-  this intake, so no PouchDirect facts were admitted to the JSON until the
-  exact document can be retained and reviewed. Food-contact declarations
-  are offered separately by the supplier.
+- **PouchDirect SKU 179 — included as one unapproved finished-pouch lead.**
+  The supplier's [exact two-page TDS](https://www.pouchdirect.com/amfile/file/download/file/1877/product/179/)
+  became directly accessible through its [red stand-up pouch listing](https://www.pouchdirect.com/stand-up-pouches/standup-pouch-red).
+  It identifies a 120 × 200 + {40 + 40} mm pouch with 12 µm PET / 12 µm metallized PET /
+  80 µm LLDPE, a 104 µm total gauge, and a ≥20 N/15 mm seal-strength claim.
+  It supplies OTR 0.5–5 at 23°C/50% RH and WVTR 0.5–3 at 38°C/90% RH in
+  cm³/m²/day and g/m²/day respectively. The TDS explicitly calls both
+  barrier ranges *indicative structure-type values* that may vary; they are
+  not measured transfer results for this finished pouch or this food. Its
+  direct-food-contact statement is a claim, while the separate Declaration
+  of Conformity is available per invoice and has not been reviewed. No
+  food-specific application, numerical service-temperature envelope,
+  sealing-process temperature, or handling-strength scope is supplied.
+  The TDS's 60-month shelf life is a packaging-product storage claim, not a
+  measured shelf life for food packed in it. Source rights remain pending.
 - **The Packaging Lab laminate — included as one film candidate.** The
   directly accessible [v3.4 specification](https://www.thepkglab.com/1799044271/Handler/CSSOverride/GetImage/4/PkgLab-spec_ThickCLRMatteBOPP_v3.pdf)
   states three layers, gauges, typical OTR/WVTR, seal strength, sealing
@@ -135,6 +142,34 @@ coverage and per-candidate blockers. It always reports zero approved packages
 and zero suitability labels. The audit does **not** authenticate URLs, prove
 scientific applicability or turn a manufacturer claim into a measured result.
 
+## One-candidate pilot evidence trace
+
+When an actual, fully specified scenario batch is available, select **one**
+public product ID for a row-level evidence trace:
+
+```powershell
+py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --public-candidates data/public_catalogue_candidates.v1.json --pilot-candidate-id POUCHDIRECT-SKU179 --report new-pilot-audit.json
+```
+
+Each valid row then has `pilot_candidate_audit`: the exact candidate/source
+identity, any supplier-listed food/quantity/temperature application matches,
+and the independently reviewed evidence still required for promotion. Invalid
+scenario rows retain an input exception and have no pilot audit. An unknown
+product ID is rejected. The trace cannot create a `StructureDraft`, review
+declaration, package-transfer observation, suitability label, or recommendation.
+It leaves the ordinary shortlist untouched. For SKU 179, it will report **no
+published food-specific application** and flag the indicative barrier values;
+the separate supplier listing's food-grade and filling-temperature claims are
+not a complete service, migration, or food-specific performance approval.
+
+An [open peer-reviewed peanut-kernel packaging study](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0190377)
+reports a real 10 kg food/package comparison, but its experimental
+PET/AL/PA/PE bag is **not** PouchDirect SKU 179. It also does not disclose a
+complete scenario-specific transport history, exact component grades, or the
+supplier review packet required by our structure gate. Its findings must not
+be transferred to SKU 179 by polymer-family resemblance or inserted into the
+material-training register as a joined outcome.
+
 The next usable tranche should focus on two bounded families:
 
 1. For the dry-food laminate or pouch route, obtain an exact converter and
@@ -155,4 +190,4 @@ The next usable tranche should focus on two bounded families:
 4. Keep the Kaggle training gate closed until independent scenario/structure
    suitability decisions with both suitable and unsuitable examples have
    been reviewed, rights-cleared, and split by source family and food before
-   fitting. These nine candidate records are **not** those decisions.
+   fitting. These ten candidate records are **not** those decisions.

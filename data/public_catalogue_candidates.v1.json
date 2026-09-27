@@ -11,6 +11,14 @@
       "rights_review_status": "pending"
     },
     {
+      "source_id": "POUCHDIRECT-SKU179-TDS-V1.0",
+      "publisher": "Reclosable Packaging B.V. (PouchDirect)",
+      "title": "Technical Data Sheet, Stock Pouch v1.0, product code 179",
+      "url": "https://www.pouchdirect.com/amfile/file/download/file/1877/product/179/",
+      "accessed_on": "2026-09-27",
+      "rights_review_status": "pending"
+    },
+    {
       "source_id": "KURARAY-PLANTIC-FX-WEB",
       "publisher": "Kuraray Plantic Technologies",
       "title": "PLANTIC FX Flexible product information",
@@ -218,6 +226,30 @@
         {"commodity": "apple", "quantity": 10, "quantity_unit": "kg", "storage_temperature_min_c": 1, "storage_temperature_max_c": 10, "excursion_max_c": null, "excursion_max_hours": null, "bag_width_mm": 1050, "bag_length_mm": 990, "use_note": "For use as an inner liner, not as a standalone bag."}
       ],
       "source_note": "Manufacturer explicitly says large bags are designed as inner liners only. The outer box is not specified here."
+    },
+    {
+      "candidate_id": "POUCHDIRECT-SKU179",
+      "source_id": "POUCHDIRECT-SKU179-TDS-V1.0",
+      "source_locator": "page 1, sections 1-4; page 2, section 6",
+      "product_code": "179",
+      "record_kind": "finished_pouch",
+      "pack_format": "stand-up heat-seal pouch",
+      "layers": [
+        {"material": "PET", "gauge_min": 12, "gauge_max": 12, "gauge_unit": "um"},
+        {"material": "Met-Pet", "gauge_min": 12, "gauge_max": 12, "gauge_unit": "um"},
+        {"material": "LLDPE", "gauge_min": 80, "gauge_max": 80, "gauge_unit": "um"}
+      ],
+      "reported_total_gauge": {"value": 104, "unit": "um", "basis": "supplier_reported"},
+      "barrier_observations": [
+        {"property": "otr", "lower": 0.5, "upper": 5, "lower_inclusive": true, "upper_inclusive": true, "unit": "cm3/m2/24h", "test_temperature_c": 23, "test_rh_pct": 50, "method": "DIN 53380 / ASTM F1927", "basis": "supplier_indicative"},
+        {"property": "wvtr", "lower": 0.5, "upper": 3, "lower_inclusive": true, "upper_inclusive": true, "unit": "g/m2/24h", "test_temperature_c": 38, "test_rh_pct": 90, "method": "DIN 53122 / ASTM F1249", "basis": "supplier_indicative"}
+      ],
+      "seal_observation": {"strength_lower": 20, "strength_lower_inclusive": true, "strength_unit": "N/15mm", "strength_method": "ASTM F88 / Method A", "process_temperature_min_c": null, "process_temperature_max_c": null},
+      "food_contact_claim": "The TDS states direct food contact suitability and says a declaration of conformity is available per invoice.",
+      "claimed_food_scope": [],
+      "service_temperature_c": null,
+      "applications": [],
+      "source_note": "The TDS expressly calls OTR/WVTR indicative structure-type values that may vary, not demonstrated measured transfer of this finished pouch. No food-specific scope, numerical operating service-temperature range, sealing process-temperature range, or reviewed handling limit is supplied. Its 60-month shelf life is a packaging-product storage claim, not measured food shelf life. Rights and the separate conformity declaration remain unreviewed."
     }
   ]
 }

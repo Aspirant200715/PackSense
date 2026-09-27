@@ -97,6 +97,9 @@ The reviewed registers can be supplied with `--route-register`,
 adds source-linked supplier application leads to each valid scenario's JSON
 row. These leads never become eligible structures or change `not_ready` into
 a recommendation; see [public catalogue intake](public-catalogue-intake.md).
+With that catalogue, `--pilot-candidate-id EXACT_ID` adds a separate
+one-candidate evidence-gap trace to each valid row; it also cannot change the
+shortlist or declare feasibility. The selected ID must exist in the catalogue.
 The structure catalogue and its review register must be supplied together;
 transfer evidence requires both. The command never creates missing evidence
 from material-grade OTR/WVTR or from the requested shelf life.

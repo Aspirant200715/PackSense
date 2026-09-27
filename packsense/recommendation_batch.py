@@ -18,7 +18,9 @@ from packsense.candidate_transfer import (
     FinishedPackageTransferEvidence, parse_transfer_register,
 )
 from packsense.catalogue_candidates import load_candidate_catalogue
-from packsense.catalogue_leads import find_supplier_application_leads
+from packsense.catalogue_leads import (
+    audit_pilot_candidate, find_supplier_application_leads,
+)
 from packsense.enrichment import enrich_scenarios
 from packsense.gas_balance import FinishedPackageGasObservation, parse_gas_observations
 from packsense.grade_reference import compare_grade_barriers
@@ -70,6 +72,7 @@ def build_batch_recommendations(
     water_observation_register_sha256: str | None = None,
     public_candidates: dict[str, Any] | None = None,
     public_candidate_catalogue_sha256: str | None = None,
+    pilot_candidate_id: str | None = None,
 ) -> dict[str, Any]:
     """Return one auditable exception or recommendation result per input row."""
     if not scenarios.rows:
@@ -99,6 +102,15 @@ def build_batch_recommendations(
         raise ValueError("produce evidence requires include_produce_diagnostics")
     if (public_candidates is None) != (public_candidate_catalogue_sha256 is None):
         raise ValueError("public candidate catalogue and hash must be supplied together")
+    if pilot_candidate_id is not None:
+        if not isinstance(pilot_candidate_id, str) or not pilot_candidate_id.strip():
+            raise ValueError("pilot candidate ID must be non-empty text")
+        if public_candidates is None:
+            raise ValueError("pilot candidate requires a public candidate catalogue")
+        if pilot_candidate_id not in {
+            item["candidate_id"] for item in public_candidates["candidates"]
+        }:
+            raise ValueError(f"unknown public candidate_id: {pilot_candidate_id}")
 
     enriched = enrich_scenarios(scenarios, foods, routes, route_register_sha256)
     produce_rows = (
@@ -142,6 +154,8 @@ def build_batch_recommendations(
                 result_row["produce_local_diagnostics"] = produce_rows[index]
             if public_candidates is not None:
                 result_row["supplier_application_lookup"] = None
+            if pilot_candidate_id is not None:
+                result_row["pilot_candidate_audit"] = None
             rows.append(result_row)
             continue
 
@@ -175,6 +189,10 @@ def build_batch_recommendations(
         if public_candidates is not None:
             result_row["supplier_application_lookup"] = find_supplier_application_leads(
                 row.enriched.scenario, public_candidates,
+            )
+        if pilot_candidate_id is not None:
+            result_row["pilot_candidate_audit"] = audit_pilot_candidate(
+                row.enriched.scenario, public_candidates, pilot_candidate_id,
             )
         rows.append(result_row)
 
@@ -281,6 +299,11 @@ def build_batch_recommendations(
             len(row["supplier_application_lookup"]["leads"])
             for row in rows if row.get("supplier_application_lookup") is not None
         )
+    if pilot_candidate_id is not None:
+        report["pilot_candidate_id"] = pilot_candidate_id
+        report["pilot_candidate_audit_rows"] = sum(
+            row["pilot_candidate_audit"] is not None for row in rows
+        )
     return report
 
 
@@ -310,6 +333,8 @@ def main() -> int:
     )
     parser.add_argument("--public-candidates", type=Path,
                         help="source-backed supplier application leads; never approved packages")
+    parser.add_argument("--pilot-candidate-id",
+                        help="audit one public candidate against each scenario; never approve it")
     parser.add_argument("--report", type=Path, required=True, help="new JSON output path")
     parser.add_argument("--summary-csv", type=Path, help="new one-row-per-scenario CSV path")
     args = parser.parse_args()
@@ -317,6 +342,8 @@ def main() -> int:
         parser.error("--structures and --structure-reviews must be supplied together")
     if args.transfers and not args.structures:
         parser.error("--transfers requires --structures and --structure-reviews")
+    if args.pilot_candidate_id is not None and not args.public_candidates:
+        parser.error("--pilot-candidate-id requires --public-candidates")
     if args.produce_diagnostics and not args.route_register:
         parser.error("--produce-diagnostics requires --route-register")
     if not args.produce_diagnostics and any((
@@ -389,6 +416,7 @@ def main() -> int:
             water_observations=water, water_observation_register_sha256=water_hash,
             public_candidates=public_candidates,
             public_candidate_catalogue_sha256=public_candidate_hash,
+            pilot_candidate_id=args.pilot_candidate_id,
         )
         if args.summary_csv is not None:
             summarize_batch(report)

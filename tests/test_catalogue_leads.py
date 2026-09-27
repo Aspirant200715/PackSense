@@ -5,7 +5,9 @@ from dataclasses import replace
 from pathlib import Path
 
 from packsense.catalogue_candidates import load_candidate_catalogue
-from packsense.catalogue_leads import find_supplier_application_leads
+from packsense.catalogue_leads import (
+    audit_pilot_candidate, find_supplier_application_leads,
+)
 from packsense.contracts import HandlingSeverity, ScenarioInput, StorageType
 
 
@@ -88,6 +90,40 @@ class SupplierApplicationLeadTests(unittest.TestCase):
                                       transport_max_temperature_c=9))
         self.assertEqual("SUMITOMO-PPLUS-PK601", report["leads"][0]["candidate_id"])
         self.assertIn("outer_package_not_specified", report["leads"][0]["reason_codes"])
+
+    def test_exact_published_use_is_a_pilot_lead_not_package_approval(self):
+        audit = audit_pilot_candidate(
+            _scenario(), self.catalogue, "SUMITOMO-PPLUS-EY7K7",
+        )
+        self.assertEqual("published_use_match_unverified", audit["application_status"])
+        self.assertEqual(1, len(audit["published_application_leads"]))
+        self.assertIn("sku_level_o2_and_co2_transfer_at_use_temperature",
+                      audit["missing_for_promotion"])
+        self.assertIsNone(audit["approved_structure_id"])
+        self.assertFalse(audit["recommendation_eligible"])
+        self.assertFalse(audit["model_training_label"])
+
+    def test_finished_pouch_without_food_application_stays_unresolved(self):
+        audit = audit_pilot_candidate(
+            _scenario(), self.catalogue, "POUCHDIRECT-SKU179",
+        )
+        self.assertEqual("no_published_food_application", audit["application_status"])
+        self.assertEqual([], audit["published_application_leads"])
+        self.assertIn("indicative_barrier_not_measured_package_transfer",
+                      audit["missing_for_promotion"])
+        self.assertFalse(audit["recommendation_eligible"])
+
+    def test_unrelated_food_cannot_borrow_published_application(self):
+        audit = audit_pilot_candidate(
+            _scenario(commodity_type="TEST_ONLY_DIFFERENT_FOOD"),
+            self.catalogue, "SUMITOMO-PPLUS-EY7K7",
+        )
+        self.assertEqual("no_published_use_for_this_food", audit["application_status"])
+        self.assertEqual([], audit["published_application_leads"])
+
+    def test_unknown_candidate_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unknown public candidate_id"):
+            audit_pilot_candidate(_scenario(), self.catalogue, "TEST_ONLY_UNKNOWN")
 
 
 if __name__ == "__main__":

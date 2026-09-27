@@ -9,10 +9,12 @@ import re
 from math import isclose
 from typing import Any, Mapping
 
+from packsense.catalogue_candidates import candidate_promotion_gaps
 from packsense.contracts import ScenarioInput
 
 
 LOOKUP_VERSION = "supplier-application-lookup-v1"
+PILOT_AUDIT_VERSION = "public-candidate-pilot-audit-v1"
 _MASS_TO_GRAMS = {"g": 1.0, "kg": 1000.0}
 
 
@@ -134,4 +136,52 @@ def find_supplier_application_leads(
         "approved_structure_count": 0,
         "recommended_structure_id": None,
         "model_prediction_available": False,
+    }
+
+
+def audit_pilot_candidate(
+    scenario: ScenarioInput, validated_catalogue: Mapping[str, Any],
+    candidate_id: str,
+) -> dict[str, Any]:
+    """Bind one public product lead to a scenario without approving it.
+
+    The candidate catalogue contains supplier claims only. This view makes
+    exact published-use mismatches and independent evidence gaps visible in
+    the same batch row; it cannot create a structure review or suitability
+    label from a similar food or polymer family.
+    """
+    candidates = {item["candidate_id"]: item for item in validated_catalogue["candidates"]}
+    if candidate_id not in candidates:
+        raise ValueError(f"unknown public candidate_id: {candidate_id}")
+    candidate = candidates[candidate_id]
+    source = next(item for item in validated_catalogue["sources"]
+                  if item["source_id"] == candidate["source_id"])
+    lookup = find_supplier_application_leads(scenario, validated_catalogue)
+    matching = [lead for lead in lookup["leads"]
+                if lead["candidate_id"] == candidate_id]
+    if not candidate["applications"]:
+        application_status = "no_published_food_application"
+    elif not matching:
+        application_status = "no_published_use_for_this_food"
+    elif any(lead["application_status"] ==
+             "published_food_quantity_temperature_match_unverified"
+             for lead in matching):
+        application_status = "published_use_match_unverified"
+    else:
+        application_status = "published_use_unresolved_or_outside_scope"
+
+    return {
+        "audit_version": PILOT_AUDIT_VERSION,
+        "record_id": scenario.record_id,
+        "candidate_id": candidate_id,
+        "source_id": source["source_id"],
+        "source_url": source["url"],
+        "source_locator": candidate["source_locator"],
+        "source_rights_review_status": source["rights_review_status"],
+        "application_status": application_status,
+        "published_application_leads": matching,
+        "missing_for_promotion": candidate_promotion_gaps(candidate),
+        "approved_structure_id": None,
+        "recommendation_eligible": False,
+        "model_training_label": False,
     }

@@ -416,14 +416,36 @@ class BatchRecommendationTests(unittest.TestCase):
         report = build_batch_recommendations(
             scenarios, foods, materials, public_candidates=candidates,
             public_candidate_catalogue_sha256=digest,
+            pilot_candidate_id="SUMITOMO-PPLUS-VY7K9",
         )
         self.assertEqual("not_ready", report["rows"][0]["status"])
         self.assertEqual(1, report["supplier_application_lead_count"])
         lead = report["rows"][0]["supplier_application_lookup"]["leads"][0]
         self.assertEqual("SUMITOMO-PPLUS-VY7K9", lead["candidate_id"])
         self.assertIn("food_identity_requires_review", lead["reason_codes"])
+        pilot = report["rows"][0]["pilot_candidate_audit"]
+        self.assertEqual("SUMITOMO-PPLUS-VY7K9", report["pilot_candidate_id"])
+        self.assertEqual(1, report["pilot_candidate_audit_rows"])
+        self.assertEqual("published_use_unresolved_or_outside_scope",
+                         pilot["application_status"])
+        self.assertFalse(pilot["recommendation_eligible"])
         self.assertIsNone(report["rows"][0]["recommendation"][
             "preliminary_preferred_structure_id"])
+
+    def test_pilot_candidate_requires_catalogue_and_exact_id(self):
+        with self.assertRaisesRegex(ValueError, "requires a public candidate catalogue"):
+            build_batch_recommendations(
+                *_sources(_scenario()), pilot_candidate_id="POUCHDIRECT-SKU179",
+            )
+        catalogue_path = (Path(__file__).resolve().parents[1] / "data" /
+                          "public_catalogue_candidates.v1.json")
+        candidates, digest = load_candidate_catalogue(catalogue_path)
+        with self.assertRaisesRegex(ValueError, "unknown public candidate_id"):
+            build_batch_recommendations(
+                *_sources(_scenario()), public_candidates=candidates,
+                public_candidate_catalogue_sha256=digest,
+                pilot_candidate_id="TEST_ONLY_UNKNOWN",
+            )
 
     def test_no_external_registers_reports_not_ready(self):
         report = build_batch_recommendations(*_sources(_scenario()))
@@ -459,12 +481,17 @@ class BatchRecommendationTests(unittest.TestCase):
             _transfer(first_card, ProtectionMechanism.OXYGEN_INGRESS, 5.0),
             _transfer(first_card, ProtectionMechanism.MOISTURE_GAIN, 6.0),
         )
+        catalogue_path = (Path(__file__).resolve().parents[1] / "data" /
+                          "public_catalogue_candidates.v1.json")
+        candidates, digest = load_candidate_catalogue(catalogue_path)
         report = build_batch_recommendations(
             scenarios, foods, materials,
             routes=(_route(),), route_register_sha256="1" * 64,
             assessments=assessments, assessment_register_sha256="2" * 64,
             structure_review=_review(), transfer_evidence=transfers,
             transfer_register_sha256="3" * 64,
+            public_candidates=candidates, public_candidate_catalogue_sha256=digest,
+            pilot_candidate_id="POUCHDIRECT-SKU179",
         )
         self.assertEqual(report["total_rows"], 3)
         self.assertEqual(report["preliminary_shortlist_rows"], 1)
@@ -479,6 +506,9 @@ class BatchRecommendationTests(unittest.TestCase):
         self.assertEqual(report["rows"][1]["recommendation"]["candidates"][0]
                          ["reason_codes"], ["finished_package_transfer_missing"])
         self.assertIsNone(report["rows"][2]["recommendation"])
+        self.assertIsNone(report["rows"][2]["pilot_candidate_audit"])
+        self.assertEqual(2, report["pilot_candidate_audit_rows"])
+        self.assertFalse(report["rows"][0]["pilot_candidate_audit"]["recommendation_eligible"])
         self.assertEqual(report["rows"][2]["issues"][0]["code"], "missing_value")
         self.assertEqual(report["transfer_register_sha256"], "3" * 64)
         json.dumps(report, allow_nan=False)
