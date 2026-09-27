@@ -2,7 +2,7 @@
 
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 
-**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, Stop 3 evidence-gated requirement cards, sourced food/material reference imports, package-structure draft intake and review gate, guarded local Stop 4 produce checks, a limited Stop 5 transfer-budget check, an experimental food-property estimator, measured-trial schema intake, a trial group-split contract, and an evidence-gated exploratory shelf-life training runner are implemented. A public measured-quality dataset is now audited separately, but it contains sampled quality indicators rather than shelf-life failure or censoring outcomes. No approved food-protection limits, review-attested complete structures, or measured failure/censoring outcomes have been supplied. No shelf-life model has been trained or validated. Full package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
+**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, Stop 3 evidence-gated requirement cards, sourced food/material reference imports, package-structure draft intake and review gate, guarded local Stop 4 produce checks, a limited Stop 5 transfer-budget check, an experimental food-property estimator, measured-trial schema intake, a trial group-split contract, and an evidence-gated exploratory shelf-life training runner are implemented. No approved food-protection limits, review-attested complete structures, or measured trial outcomes have been supplied. No shelf-life model has been trained or validated. Full package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
 
 The current code uses Python 3.11 or newer and a pinned XLSX reader. From the
 repository root, run `python -m pip install -r requirements.txt` followed by
@@ -28,9 +28,6 @@ inventory fluxes without claiming a safe MAP trajectory.
 vapor ledger and measured dew-point warning with the gas audit.
 [Trial intake](docs/trial-intake.md) defines the observed-outcome schema and why
 passing its checks does not yet authorize model training.
-[Public measured quality data](docs/measured-quality-dataset.md) documents the
-separate source-specific audit, lineage checks, and limits of the smoked
-catfish/rabbit quality observations.
 [Trial split manifests](docs/split-manifest.md) define source-family-separated
 train/validation/test allocation and its refusal gates; no real split exists yet.
 [Shelf-life training](docs/shelf-life-training.md) documents the reviewed-trial
@@ -110,8 +107,6 @@ The planned batch output includes:
 The existing food-input workbook is a **commodity reference**: it helps describe foods, but its rows are not complete package trials or complete storage scenarios. The packaging-material workbook is a **material-grade reference**: it supplies reported properties and clearly flagged estimates, but it does not by itself establish the performance of a finished multilayer package. The backend also needs a catalogue of actual manufacturable structures and validated food-contact/compatibility evidence.
 
 The supervised training target requires a separate **trial-outcomes dataset**. One record must link a known food, complete package and gauge, pack area/headspace/fill mass, storage and transport exposure, trial/batch/source identifiers, a stated quality-failure criterion, and the observed time to failure. It must record whether failure was actually observed. If the package is still acceptable when observation ends, that observation is *right-censored*; the last observed day is not its failure day.
-
-The separate Mendeley smoked-catfish/rabbit study supplies package-level quality measurements at days 30, 60, and 90. Its 72 package observations can support only an exploratory within-study quality-indicator experiment. The 672-row long file also contains shared day-0 baselines, which are not extra package trials. The study does not identify a failure endpoint, exact row-level temperature, complete package structure, or processing-run IDs, and it explicitly is not a commercial shelf-life or food-safety validation dataset. See [the source-specific audit](docs/measured-quality-dataset.md); do not pass these observations to the shelf-life trainer as failure labels.
 
 `desired_shelf_life_days` is a requirement from the input scenario, **not** the observed shelf-life label. Generic storage-life guidance, proxy pH values, screening estimates of material permeability, and illustrative examples must not be converted into measured labels. A Cartesian join between the food and material sheets creates possible combinations, not real experimental outcomes.
 

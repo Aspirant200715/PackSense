@@ -368,33 +368,6 @@ PackSense must continue to withhold a real package or shelf-life claim.
   estimated CO2 values, so it remains a reference source, not a trustworthy
   supervised target table.
 
-### 2026-09-27 — public measured quality data intake
-
-- Branch: `data/21-public-quality-audit`, based on main at `7cce752`. Added a
-  source-specific audit for the public Mendeley smoked-catfish/rabbit quality
-  dataset. The source DOI is `10.17632/tvsw53j89z.1` and its repository licence
-  is CC BY 4.0. The audit keeps this data type separate from `TrialOutcome`.
-- Audited the supplied 672-row long file (SHA-256
-  `ee223130b71977148f75e1b7c2b578c7df99c20aa76419f6e06271aedfd47d7a`) and
-  72-row package-level file (SHA-256
-  `b399afbbe0cb44b16f63e9123a7ee88845924e70eb9f69ddecd5f7605611aa38`). The
-  72 package records contain seven observed quality indicators each. All 504
-  post-baseline values match their raw-file line references. The long file's
-  168 day-0 entries are shared starting baselines, not extra package trials.
-  The audit found no schema, hash, line-reference, or value mismatch.
-- The observations have no declared failure/censoring endpoint, exact row-level
-  temperature, complete package/gauge, transport/RH data, or processing-run
-  identifiers. The source explicitly excludes commercial shelf-life and
-  food-safety validation claims. It may support only an exploratory
-  within-source quality-indicator study; no shelf-life model was trained.
-- Original data files were not added to Git. Kaggle's existing completed run
-  is still the reference-workbook import at backend commit `fecb787`; it did not
-  train on these observations. Kaggle model fitting remains separate pending
-  a defined quality-response experiment and a leakage-safe grouped evaluation.
-- Local verification: all 137 tests passed with the real-data integration test
-  enabled against the supplied files. `compileall` and `git diff --check` also
-  passed. PR/CI status is pending.
-
 ### Template for the next entry
 
 Add a dated heading, then record:
