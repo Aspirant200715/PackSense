@@ -772,6 +772,26 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Local verification: 216 Python tests, compilation, catalogue audit, and
   diff check passed. CI and independent document/rights review are separate.
 
+### 2026-09-27 — one-candidate pilot evidence trace
+
+- Continued on `data/pouchdirect-sku179-candidate` (PR #34). The batch now
+  accepts `--pilot-candidate-id` with the public candidate register and
+  attaches an exact candidate/source evidence trace to each valid scenario.
+  Unknown IDs fail; invalid scenario rows stay exceptions. Published
+  food/quantity/temperature matches are visible but never become approvals.
+  The separate public-candidate promotion gaps are reused without altering
+  structure review, recommendation, or model-training gates.
+- A primary [peanut-kernel comparison](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0190377)
+  provides real food/package research evidence, but its experimental
+  PET/AL/PA/PE bag cannot be identified as PouchDirect SKU 179. No result,
+  food limit, or package property was borrowed across those structures.
+  The repository still has no genuine fully specified pilot scenario, reviewed
+  package, food-protection assessment, or measured complete-package transfer.
+- Tests use only `TEST_ONLY` scenario objects. No source workbook, Kaggle
+  input, training label, or model artifact changed. Local verification:
+  221 Python tests passed; compile, CLI, and diff checks are recorded with
+  this PR. CI and independent source review remain separate.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

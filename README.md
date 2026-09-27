@@ -54,6 +54,9 @@ manufacturer and research sources and audits a small, source-backed product
 register before any exact-grade join or package approval. The batch runner can
 optionally show supplier-listed food/quantity/temperature application leads;
 these are not model predictions or approved recommendations.
+It can also trace one selected public candidate against each genuine scenario
+to report exact published-use mismatches and the evidence needed for review,
+without promoting a supplier claim into an approved package.
 [Complete-structure review](docs/structure-review.md) checks external review
 declarations against exact draft and source identities, without treating a
 passing declaration as package feasibility. Its version-2 register requires

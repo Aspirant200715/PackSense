@@ -142,6 +142,34 @@ coverage and per-candidate blockers. It always reports zero approved packages
 and zero suitability labels. The audit does **not** authenticate URLs, prove
 scientific applicability or turn a manufacturer claim into a measured result.
 
+## One-candidate pilot evidence trace
+
+When an actual, fully specified scenario batch is available, select **one**
+public product ID for a row-level evidence trace:
+
+```powershell
+py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --public-candidates data/public_catalogue_candidates.v1.json --pilot-candidate-id POUCHDIRECT-SKU179 --report new-pilot-audit.json
+```
+
+Each valid row then has `pilot_candidate_audit`: the exact candidate/source
+identity, any supplier-listed food/quantity/temperature application matches,
+and the independently reviewed evidence still required for promotion. Invalid
+scenario rows retain an input exception and have no pilot audit. An unknown
+product ID is rejected. The trace cannot create a `StructureDraft`, review
+declaration, package-transfer observation, suitability label, or recommendation.
+It leaves the ordinary shortlist untouched. For SKU 179, it will report **no
+published food-specific application** and flag the indicative barrier values;
+the separate supplier listing's food-grade and filling-temperature claims are
+not a complete service, migration, or food-specific performance approval.
+
+An [open peer-reviewed peanut-kernel packaging study](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0190377)
+reports a real 10 kg food/package comparison, but its experimental
+PET/AL/PA/PE bag is **not** PouchDirect SKU 179. It also does not disclose a
+complete scenario-specific transport history, exact component grades, or the
+supplier review packet required by our structure gate. Its findings must not
+be transferred to SKU 179 by polymer-family resemblance or inserted into the
+material-training register as a joined outcome.
+
 The next usable tranche should focus on two bounded families:
 
 1. For the dry-food laminate or pouch route, obtain an exact converter and
