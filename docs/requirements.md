@@ -67,9 +67,12 @@ integrity, mechanical verification at the supplied handling severity, and
 food-contact compatibility. It does not treat pH or moisture content alone
 as microbial-safety clearance. Respiring foods retain a pending Stop 4 gas
 balance; foods without respiration evidence remain `unclassified` unless an
-exact reviewed route register confirms them as non-respiring. Candidate screening remains
-disabled by this stage, even if a barrier assessment exists, until the later
-mandatory checks are implemented and supported.
+exact reviewed route register confirms them as non-respiring. Stop 3 opens the
+preliminary candidate screen only when all three oxygen/moisture mechanisms
+are source-assessed and the food is confirmed non-respiring. This is a narrow
+readiness flag, not a package approval. Structure review and exact-scope
+whole-package transfer checks still gate every candidate; the screen reports
+the remaining light-assessment gap and does not claim package feasibility.
 
 The report includes scenario and food-master hashes, an optional assessment
 register hash, the requirement rule version, source and approval IDs for

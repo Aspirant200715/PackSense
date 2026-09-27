@@ -384,6 +384,59 @@ PackSense must continue to withhold a real package or shelf-life claim.
   estimated CO2 values, so it remains a reference source, not a trustworthy
   supervised target table.
 
+### 2026-09-27 — preliminary package shortlist
+
+- Branch: `feat/07-basic-recommendation`, based on `main` at `7cce752` (PR
+  [#21](https://github.com/Aspirant200715/PackSense/pull/21), open for review).
+  Added a basic source-gated shortlist for confirmed non-respiring
+  foods. It requires all three reviewed oxygen/moisture decisions, an exact
+  food-scope and temperature-matched reviewed complete structure, and exact
+  scenario-matched whole-package transfer evidence. Any approved-limit
+  exceedance excludes that structure. A unique preliminary preference uses
+  only the lowest worst-case fraction of oxygen/moisture budget consumed;
+  cost, sustainability, and light protection are not ranked.
+- The output carries the scenario/food-master identities, structure/review
+  hashes, layer details, source locators, transfer checks, warnings, and
+  explicit `package_feasible=false` / `shelf_life_predicted=false` flags.
+  Respiring foods remain gated behind a validated complete Stop 4 path.
+- No real data or model-training records were added. The supplied 5,000-food
+  and 81-grade masters still have no reviewed complete-structure catalogue,
+  approved food-protection assessment register, or scenario-matched
+  whole-package transfer register, so current project data cannot produce a
+  real shortlist. Unit fixtures are `TEST_ONLY` and are not training data.
+- Local verification: `py -3.11 -m unittest discover -s tests -v` passed all
+  139 tests; `py -3.11 -m compileall -q packsense tests` and `git diff --check`
+  passed. PR #21's head at `1cd6292` passed Python 3.11 and 3.13 CI; no
+  review had been submitted at the time of this update.
+- Remaining gates: source-reviewed food limits, real reviewed package
+  constructions, whole-package measurements across the stated temperature/RH
+  profile, and later cost/sustainability evidence for full Stop 6 ranking.
+  Shelf-life training remains dependent on independent measured trial outcomes.
+
+### 2026-09-27 — structured preliminary recommendation batch
+
+- Continued on `feat/07-basic-recommendation` in [PR #21](https://github.com/Aspirant200715/PackSense/pull/21).
+  Added a backend JSON batch command joining scenario audit, exact food
+  reference, reviewed route, food protection assessment, complete-structure
+  review, and scenario-matched whole-package transfer evidence. Every input
+  row becomes an exception, `not_ready`, or preliminary shortlist result.
+  Summary counts expose input issues, requirement gaps, and screening reasons.
+- The food master at SHA-256
+  `a79069a9bc293753eb610b47979d9eff8df2cb9a776387114eccf60a919efafc`
+  imported 5,000/5,000 rows; the material master at SHA-256
+  `17e2791aacee70a1e30f6b73624c5ac2745e5feed36672a9c980499d77fd2564`
+  imported 81/81 rows. These read-only checks did not create a scenario batch
+  or training labels. No reviewed protection, route, structure, or whole-pack
+  transfer register was supplied, so a real shortlist remains unavailable.
+  The excluded 672-row and 72-row quality CSVs were not used.
+- Local verification: `py -3.11 -m unittest discover -s tests -q` passed all
+  143 tests; compileall, `git diff --check`, and the batch CLI help check
+  passed. New PR-head CI and review are checked separately on GitHub.
+- Remaining gates: a real structured scenario batch and source-reviewed food
+  limits, route decisions, package constructions, and matched package transfer
+  measurements. Shelf-life training still needs independent measured trials;
+  no shelf-life model was fitted by this change.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

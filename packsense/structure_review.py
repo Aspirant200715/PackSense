@@ -165,6 +165,7 @@ class ReviewAttestedStructure:
     review_id: str
     evidence_check_ids: tuple[str, ...]
     estimated_barrier_grade_ids: tuple[str, ...]
+    evidence_checks: tuple[EvidenceCheck, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -321,6 +322,7 @@ def audit_structure_reviews(
             review_id=review.review_id,
             evidence_check_ids=tuple(check.review_id for check in review.checks),
             estimated_barrier_grade_ids=draft.estimated_barrier_grade_ids,
+            evidence_checks=review.checks,
         ))
     if issues:
         return StructureReviewAudit("not_approved", catalogue.source_sha256,

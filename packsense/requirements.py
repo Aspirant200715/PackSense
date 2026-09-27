@@ -331,6 +331,16 @@ def derive_requirement_card(
         "light_sensitivity_unassessed", "seal_integrity_pending_structure",
         "mechanical_verification_pending_structure", "food_contact_pending_structure",
     ))
+    requirements_complete = all(
+        status in ("source_limit", "source_assessed_not_required")
+        for _, status in statuses
+    )
+    # This first screening slice supports only foods reviewed as non-respiring.
+    # Respiring foods must pass their separate Stop 4 gas/water path first.
+    candidate_screening_allowed = (
+        requirements_complete
+        and enriched.produce_route_status == "confirmed_non_respiring"
+    )
     temperatures = [exposure.temperature_c for exposure in enriched.exposures]
     return RequirementCard(
         scenario.record_id, enriched.food_reference.food_id,
@@ -343,7 +353,8 @@ def derive_requirement_card(
         scenario.transport_handling_severity, scenario.net_pack_quantity,
         scenario.net_pack_quantity_unit, enriched.produce_route_status,
         enriched.route_source_id, enriched.route_approval_id,
-        tuple(statuses), tuple(budgets), tuple(applied), tuple(gaps), False,
+        tuple(statuses), tuple(budgets), tuple(applied), tuple(gaps),
+        candidate_screening_allowed,
     )
 
 
