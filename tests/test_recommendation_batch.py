@@ -281,6 +281,28 @@ class BatchRecommendationTests(unittest.TestCase):
         self.assertIn("material_master_version_mismatch", binding["reason_codes"])
         self.assertFalse(report["produce_diagnostic_structure_review_joined"])
 
+    def test_observed_gas_limit_breach_is_visible_without_approving_package(self):
+        scenarios, foods, materials, route, kinetics, gas, water = _produce_sources()
+        kinetics = tuple(replace(item, reference_o2_pct=2.0) for item in kinetics)
+        gas = tuple(replace(item, initial_o2_pct=2.0) for item in gas)
+        report = build_batch_recommendations(
+            scenarios, foods, materials, routes=(route,),
+            route_register_sha256="1" * 64, structure_review=_review(),
+            include_produce_diagnostics=True, kinetics=kinetics,
+            kinetics_register_sha256="2" * 64, gas_observations=gas,
+            gas_observation_register_sha256="3" * 64,
+            water_observations=water, water_observation_register_sha256="4" * 64,
+        )
+        diagnostic = report["rows"][0]["produce_local_diagnostics"]
+        self.assertTrue(diagnostic["observed_initial_gas_limit_violation"])
+        self.assertEqual(diagnostic["structures"][0]["violating_phases"], [
+            "storage", "transport", "transport_max_excursion",
+        ])
+        self.assertEqual(report["produce_observed_initial_gas_limit_violation_rows"], 1)
+        self.assertTrue(report["produce_diagnostic_structure_review_joined"])
+        self.assertEqual(report["rows"][0]["status"], "not_ready")
+        self.assertFalse(report["produce_safety_certified"])
+
     def test_optional_produce_audit_keeps_route_and_package_status_separate(self):
         scenarios, foods, materials = _sources(_scenario())
         unresolved = build_batch_recommendations(

@@ -624,11 +624,13 @@ PackSense must continue to withhold a real package or shelf-life claim.
   catalogue hashes, and resolved local condition checks. It reports per-
   structure binding gaps and aggregate counts. This is an identity/scope
   join only; the ordinary recommendation still blocks respiring produce and
-  `produce_safety_certified` stays false.
+  `produce_safety_certified` stays false. Observed initial O2/CO2 limit
+  breaches are separately counted and listed by phase without declaring the
+  package universally unsuitable.
 - No genuine scenarios, complete-package observations, suitability labels,
   training data, or model artifact were added. New tests use `TEST_ONLY`
   observations, never training records. Legacy and changed-hash evidence is
-  verified to remain unbound. Local Python 3.11 verification passed 179
+  verified to remain unbound. Local Python 3.11 verification passed 180
   tests, compileall, and `git diff --check`. System Python 3.13 lacks the
   pinned project dependencies, so its full-suite result awaits dependency-
   installed CI. Source authenticity still requires external review.

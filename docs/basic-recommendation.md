@@ -143,6 +143,13 @@ recommendation remains `not_ready` for respiring produce, and an apparently
 clear local gas/water snapshot still cannot prove a safe trajectory or the
 requested shelf life.
 
+An initial O₂/CO₂ limit breach measured in an observation is explicitly
+reported as `observed_initial_gas_limit_violation`, with affected phases and
+a batch count. This flag describes that observed starting state, not a
+universal judgement about the package or another MAP gas fill. A successful
+catalogue identity join cannot erase the breach or turn the package into an
+approved recommendation.
+
 For fresh produce, respiration and gas transfer change with temperature,
 food mass and package surface area; a local balance cannot be extrapolated
 across distribution without validated dynamics. See the

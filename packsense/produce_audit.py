@@ -95,6 +95,10 @@ def build_produce_audit(
                             oxygen, carbon, structure_id=structure_id,
                         )
                     combined = combine_produce_profile(gas, water)
+                    violating_phases = [
+                        item.phase for item in combined
+                        if item.gas_status == "initial_limit_violation"
+                    ]
                     if any(item.status == "unresolved" for item in combined):
                         structure_status = "unresolved"
                     elif any(item.status == "local_checks_with_warnings" for item in combined):
@@ -104,6 +108,8 @@ def build_produce_audit(
                     result["structures"].append({
                         "structure_id": structure_id,
                         "status": structure_status,
+                        "observed_initial_gas_limit_violation": bool(violating_phases),
+                        "violating_phases": violating_phases,
                         "phases": [
                             {
                                 "combined": item.report(),
@@ -119,6 +125,9 @@ def build_produce_audit(
                     "local_checks_with_warnings"
                     if "local_checks_with_warnings" in statuses else "local_checks_only"
                 )
+        result["observed_initial_gas_limit_violation"] = any(
+            item["observed_initial_gas_limit_violation"] for item in result["structures"]
+        )
         rows.append(result)
     return tuple(rows)
 
@@ -288,6 +297,9 @@ def main() -> int:
         "warning_rows": sum(
             row["status"] == "local_checks_with_warnings" for row in rows
         ),
+        "observed_initial_gas_limit_violation_rows": sum(
+            row["observed_initial_gas_limit_violation"] for row in rows
+        ),
         "produce_safety_certified": False,
         "shelf_life_predicted": False,
         "rows": rows,
@@ -298,7 +310,9 @@ def main() -> int:
     except OSError as exc:
         parser.exit(2, f"report error: {exc}\n")
     print(json.dumps({key: value for key, value in report.items() if key != "rows"}, indent=2))
-    return 0 if rows and report["unresolved_rows"] == 0 and report["warning_rows"] == 0 else 1
+    return 0 if rows and all(report[key] == 0 for key in (
+        "unresolved_rows", "warning_rows", "observed_initial_gas_limit_violation_rows",
+    )) else 1
 
 
 if __name__ == "__main__":

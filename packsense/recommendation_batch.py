@@ -243,6 +243,9 @@ def build_batch_recommendations(
         report["produce_local_warning_rows"] = sum(
             row["status"] == "local_checks_with_warnings" for row in produce_rows
         )
+        report["produce_observed_initial_gas_limit_violation_rows"] = sum(
+            row["observed_initial_gas_limit_violation"] for row in produce_rows
+        )
         report["produce_review_bound_structure_count"] = sum(
             row["review_bound_structure_count"] for row in produce_rows
         )
