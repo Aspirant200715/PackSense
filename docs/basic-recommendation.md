@@ -110,3 +110,31 @@ report remains the detailed record for source locators, individual transfer
 checks, layer order, and all candidate reasons. The CSV is a decision report,
 not a model-training dataset; external text is protected against spreadsheet
 formula interpretation when opened in Excel.
+
+## Optional local fresh-produce diagnostics
+
+The batch can attach the existing Stop-4 local gas/water audit to the same
+per-scenario JSON report. This is an evidence-gap and instantaneous-condition
+view, **not** a fresh-produce package shortlist or MAP safety result:
+
+```powershell
+py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --route-register reviewed-routes.json --produce-diagnostics --kinetics-register reviewed-kinetics.json --gas-observations reviewed-gas.json --water-observations reviewed-water.json --report new-batch.json
+```
+
+Only `--route-register` is mandatory with `--produce-diagnostics`; absent
+kinetics or observations remain explicit unresolved states. The detailed row
+adds `produce_local_diagnostics`, keyed to the same exact scenario row and
+record ID. The top-level report retains hashes of each supplied register,
+unresolved and warning counts, and `produce_safety_certified: false`. The
+optional CSV and ordinary `recommendation` object do not change. The local
+audit does not join observation structure IDs to the reviewed package
+catalogue, so the report explicitly records
+`produce_diagnostic_structure_review_joined: false`. An apparently clear
+local gas/water snapshot cannot approve a structure, prove a safe trajectory,
+or establish the requested shelf life.
+
+For fresh produce, respiration and gas transfer change with temperature,
+food mass and package surface area; a local balance cannot be extrapolated
+across distribution without validated dynamics. See the
+[USDA-ARS MAP review](https://www.ars.usda.gov/research/publications/publication/?seqNo115=222384)
+and the [gas](gas-balance.md) and [water](water-balance.md) audit contracts.

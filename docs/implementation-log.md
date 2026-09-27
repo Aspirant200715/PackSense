@@ -594,6 +594,24 @@ PackSense must continue to withhold a real package or shelf-life claim.
   compilation, CLI help, and `git diff --check` passed. PR CI and review are
   separate.
 
+### 2026-09-27 — local produce diagnostics in the recommendation batch
+
+- Branch: `feat/produce-batch-diagnostics`, based on the open grade-reference
+  comparison branch. An opt-in path now attaches the existing Stop-4 local
+  gas/water audit to each exact scenario row in the recommendation JSON.
+  The route, kinetics, gas, and water register hashes remain separate, and
+  absent source evidence stays unresolved.
+- A produce audit result never changes the ordinary package shortlist or
+  grade reference comparison. The batch marks `produce_safety_certified=false`
+  and `produce_diagnostic_structure_review_joined=false`; no local gas/water
+  snapshot approves a complete package, dynamic MAP trajectory, or shelf life.
+- No real scenario, source register, package observation, training label, or
+  model artifact was added. New test observations are `TEST_ONLY` fixtures and
+  are not training data. Real package-material learning remains `not_ready`.
+- Local verification: 173 unit tests passed under Python 3.11 and isolated
+  Python 3.13 with pinned requirements; compile checks, CLI help, and
+  `git diff --check` passed. PR CI and review are separate.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

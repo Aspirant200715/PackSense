@@ -22,6 +22,7 @@ from packsense.requirements import (
 from packsense.structure_review import (
     CHECK_KINDS, EvidenceCheck, ReviewAttestedStructure, StructureReviewAudit,
 )
+from packsense.water_balance import FinishedPackageWaterObservation
 
 
 FOOD_HASH = "a" * 64
@@ -133,6 +134,78 @@ def _transfer(card, mechanism, amount):
 
 
 class BatchRecommendationTests(unittest.TestCase):
+    def test_optional_produce_audit_keeps_route_and_package_status_separate(self):
+        scenarios, foods, materials = _sources(_scenario())
+        unresolved = build_batch_recommendations(
+            scenarios, foods, materials, include_produce_diagnostics=True,
+        )
+        self.assertEqual(unresolved["rows"][0]["produce_local_diagnostics"]["status"],
+                         "unresolved_route")
+        self.assertEqual(unresolved["rows"][0]["status"], "not_ready")
+        self.assertFalse(unresolved["produce_safety_certified"])
+        self.assertFalse(unresolved["produce_diagnostic_structure_review_joined"])
+
+        non_respiring = build_batch_recommendations(
+            scenarios, foods, materials, routes=(_route(),),
+            route_register_sha256="1" * 64, include_produce_diagnostics=True,
+        )
+        self.assertEqual(non_respiring["rows"][0]["produce_local_diagnostics"]["status"],
+                         "not_applicable")
+        self.assertEqual(non_respiring["rows"][0]["status"], "not_ready")
+        self.assertEqual(non_respiring["produce_local_unresolved_rows"], 0)
+
+    def test_respiring_water_observation_stays_local_and_unresolved_without_gas(self):
+        scenario = replace(
+            _scenario(), respiration_rate=10.0, respiration_rate_unit="mg CO2/kg/h",
+            respiration_reference_temperature_c=4.0,
+        )
+        scenarios, foods, materials = _sources(scenario)
+        original = foods.entries[0]
+        foods = replace(foods, entries=(replace(
+            original, reference=replace(
+                original.reference, respiration_rate=10.0,
+                respiration_rate_unit="mg CO2/kg/h",
+                respiration_reference_temperature_c=4.0,
+            ),
+        ),))
+        route = RouteEvidence(
+            "TEST_ONLY_FOOD_ID", ProduceRoute.RESPIRING,
+            "TEST_ONLY_ROUTE_SOURCE", "TEST_ONLY_LOCATOR", "TEST_ONLY_REVIEW",
+        )
+        water = FinishedPackageWaterObservation(
+            "TEST_ONLY_CASE", "TEST_ONLY_FOOD_ID", "TEST_ONLY_STRUCTURE",
+            "storage", 4.0, 100.0, 0.2, 0.01, -0.1, False, 0.0, 0.5,
+            80.0, 2.0, 1.0, "TEST_ONLY_TRANS", "TEST_ONLY_RESP",
+            "TEST_ONLY_PACK", "TEST_ONLY_HEADSPACE", "TEST_ONLY_LOCATOR",
+            "TEST_ONLY_APPROVAL", EvidenceBasis.MEASURED,
+        )
+        report = build_batch_recommendations(
+            scenarios, foods, materials, routes=(route,),
+            route_register_sha256="1" * 64,
+            include_produce_diagnostics=True, water_observations=(water,),
+            water_observation_register_sha256="2" * 64,
+        )
+        diagnostic = report["rows"][0]["produce_local_diagnostics"]
+        self.assertEqual(diagnostic["status"], "unresolved")
+        storage = diagnostic["structures"][0]["phases"][0]
+        self.assertEqual(storage["gas"]["status"], "unresolved")
+        self.assertAlmostEqual(storage["water"]["local_vapor_input_g_h"], 0.11)
+        self.assertEqual(report["rows"][0]["status"], "not_ready")
+        self.assertFalse(report["package_feasible"])
+        self.assertFalse(report["shelf_life_predicted"])
+
+    def test_produce_evidence_needs_hash_and_opt_in(self):
+        sources = _sources(_scenario())
+        with self.assertRaisesRegex(ValueError, "source register hash"):
+            build_batch_recommendations(
+                *sources, include_produce_diagnostics=True,
+                water_observations=(object(),),
+            )
+        with self.assertRaisesRegex(ValueError, "include_produce_diagnostics"):
+            build_batch_recommendations(
+                *sources, water_observation_register_sha256="2" * 64,
+            )
+
     def test_no_external_registers_reports_not_ready(self):
         report = build_batch_recommendations(*_sources(_scenario()))
         self.assertEqual(report["total_rows"], 1)
