@@ -6,14 +6,20 @@ specifications, so its records are deliberately separate from TrialOutcome.
 """
 
 import argparse
-import csv
-import hashlib
 import json
 from collections import Counter
 from dataclasses import dataclass
 from math import isfinite
 from pathlib import Path
 from typing import Any
+
+from packsense.ingestion import (
+    InputSchemaError,
+    _TableRow,
+    _read_csv,
+    _sha256,
+)
+
 
 SOURCE_DOI = "10.17632/tvsw53j89z.1"
 SOURCE_LOCATOR = "https://data.mendeley.com/datasets/tvsw53j89z/1"
@@ -56,16 +62,6 @@ class QualityIssue:
     field: str
     code: str
     message: str
-
-
-class QualityInputError(ValueError):
-    """The supplied files cannot be interpreted as this source dataset."""
-
-
-@dataclass(frozen=True, slots=True)
-class _QualityRow:
-    number: int
-    values: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,35 +187,13 @@ class QualityDataAudit:
         }
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _read_csv(path: Path) -> tuple[tuple[str, ...], list[_QualityRow]]:
-    with path.open("r", encoding="utf-8-sig", newline="") as stream:
-        reader = csv.reader(stream, strict=True)
-        try:
-            header = tuple(next(reader))
-        except StopIteration as exc:
-            raise QualityInputError("CSV is empty") from exc
-        rows = [
-            _QualityRow(number, tuple(values))
-            for number, values in enumerate(reader, start=2)
-        ]
-    return header, rows
-
-
 def _columns(raw: tuple[Any, ...], expected: tuple[str, ...], name: str) -> tuple[str, ...]:
     if any(not isinstance(value, str) or not value.strip() for value in raw):
-        raise QualityInputError(f"{name} header names must be non-empty text")
+        raise InputSchemaError(f"{name} header names must be non-empty text")
     names = tuple(value.strip() for value in raw)
     duplicates = sorted(column for column, count in Counter(names).items() if count > 1)
     if duplicates:
-        raise QualityInputError(f"duplicate {name} columns: {', '.join(duplicates)}")
+        raise InputSchemaError(f"duplicate {name} columns: {', '.join(duplicates)}")
     missing = sorted(set(expected) - set(names))
     extra = sorted(set(names) - set(expected))
     if missing or extra:
@@ -228,7 +202,7 @@ def _columns(raw: tuple[Any, ...], expected: tuple[str, ...], name: str) -> tupl
             details.append(f"missing: {', '.join(missing)}")
         if extra:
             details.append(f"unexpected: {', '.join(extra)}")
-        raise QualityInputError(f"invalid {name} columns ({'; '.join(details)})")
+        raise InputSchemaError(f"invalid {name} columns ({'; '.join(details)})")
     return names
 
 
@@ -250,7 +224,7 @@ def _number(value: Any, field: str) -> float:
     return number
 
 
-def _row_map(header: tuple[str, ...], row: _QualityRow) -> dict[str, Any]:
+def _row_map(header: tuple[str, ...], row: _TableRow) -> dict[str, Any]:
     if len(row.values) != len(header):
         raise ValueError("row length differs from header")
     return dict(zip(header, row.values))
@@ -268,10 +242,10 @@ def audit_public_quality_data(
     long_file = Path(long_path).resolve(strict=True)
     package_file = Path(package_path).resolve(strict=True)
     if long_file.suffix.lower() != ".csv" or package_file.suffix.lower() != ".csv":
-        raise QualityInputError("both measured-quality inputs must be CSV files")
+        raise InputSchemaError("both measured-quality inputs must be CSV files")
 
-    long_header_raw, long_rows = _read_csv(long_file)
-    package_header_raw, package_rows = _read_csv(package_file)
+    long_header_raw, long_rows, _ = _read_csv(long_file)
+    package_header_raw, package_rows, _ = _read_csv(package_file)
     long_header = _columns(long_header_raw, LONG_COLUMNS, "long-format")
     package_header = _columns(package_header_raw, PACKAGE_COLUMNS, "package-level")
     long_sha256 = _sha256(long_file)
@@ -465,7 +439,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         audit = audit_public_quality_data(args.long_csv, args.package_csv)
-    except (QualityInputError, OSError, csv.Error) as exc:
+    except (InputSchemaError, OSError) as exc:
         parser.exit(2, f"input error: {exc}\n")
     report = audit.report()
     if args.report:
