@@ -491,7 +491,8 @@ PackSense must continue to withhold a real package or shelf-life claim.
   deliberately left unmerged while that work is deferred. Its Python 3.11
   and 3.13 checks were green at review. The current branch starts from
   `main` at `03cd09b`, not from PR #25.
-- Branch: `feat/material-suitability-intake`. Added a strict, source-versioned
+- Branch: `feat/material-suitability-intake`, [PR #26](https://github.com/Aspirant200715/PackSense/pull/26).
+  Added a strict, source-versioned
   food-scenario/complete-structure suitability-label intake. It records
   explicit suitable/unsuitable decisions and source-family IDs, rejects
   duplicate or mismatched pairs, and checks reviewed food scope and all
