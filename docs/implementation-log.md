@@ -572,7 +572,8 @@ PackSense must continue to withhold a real package or shelf-life claim.
 
 ### 2026-09-27 — optional film-grade reference comparison
 
-- Branch: `feat/grade-reference-comparison`, based on `main` at `c2e2b70`.
+- Branch: `feat/grade-reference-comparison`, [PR #31](https://github.com/Aspirant200715/PackSense/pull/31),
+  based on `main` at `c2e2b70`.
   Added an opt-in, laboratory-condition Pareto comparison for sourced film
   grades after the existing reviewed non-respiring route and food-protection
   gates. It uses only active oxygen/moisture mechanisms, excludes estimated or
