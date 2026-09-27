@@ -570,6 +570,36 @@ PackSense must continue to withhold a real package or shelf-life claim.
   scenario batch, reviewed structure catalogue, or model artifact were added.
   Test fixtures are guardrail checks, never fitted training data.
 
+### 2026-09-27 — public package-catalogue candidate pilot
+
+- Branch: `data/catalogue-evidence-pilot`, based on merged `main` at
+  `c2e2b70`. Compared research, supplier-film, finished-pouch, and
+  produce-bag sources against the existing Stop 2/5 structure requirements.
+- Added `data/public_catalogue_candidates.v1.json`: nine selected real
+  supplier product claims from four directly accessible sources (The
+  Packaging Lab v3.4, two Kuraray Plantic pages, and Sumitomo P-Plus).
+  Catalogue SHA-256 at intake: `a6f55f0e73fe3b146d7f05d77c93918dd54e5754167caad574c4d66e7dda43af`.
+  Supplier rights review remains pending. No source document or workbook was
+  overwritten or bundled; the existing 81-row material master was compared
+  read-only and had no manufacturer overlap with the candidate suppliers.
+- Added a strict, offline candidate audit, tests, comparison guide, and
+  README link. It preserves supplier units and test conditions, separates
+  narrow produce/quantity/temperature applications from broad claims, and
+  marks six P-Plus gauge interpretations for supplier confirmation. It
+  reports three OTR/WVTR claim records, six exact produce-use records, no
+  CO2TR, no verified service limit, zero approved structures, and zero
+  suitability training labels. PouchDirect was held because its TDS returned
+  HTTP 403 on direct retrieval; ePoP pairings remain research leads rather
+  than finished-package tests.
+- Local verification: 177 Python 3.11 unit tests passed; package/test compile
+  checks and `git diff --check` passed. CI and independent source/rights
+  review remain separate. No model was trained, no Kaggle data was changed,
+  and no package was released as a recommendation.
+- Next promotion work is exact grade/gauge identification, reviewed contact
+  and service-temperature documents, complete-package transfer and seal
+  evidence, and produce SKU-level O2/CO2 measurements. The candidate
+  catalogue must not be loaded as a `StructureDraft` or training register.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

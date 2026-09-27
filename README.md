@@ -47,6 +47,9 @@ cannot train it.
 [Structure catalogue intake](docs/structure-catalogue.md) defines the exact
 grade/gauge join and the separate evidence review required before a package
 can be recommended.
+[Public catalogue candidate intake](docs/public-catalogue-intake.md) compares
+manufacturer and research sources and audits a small, source-backed product
+register before any exact-grade join or package approval.
 [Complete-structure review](docs/structure-review.md) checks external review
 declarations against exact draft and source identities, without treating a
 passing declaration as package feasibility.
