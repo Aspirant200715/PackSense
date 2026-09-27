@@ -2,6 +2,9 @@
 
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
+
+import numpy as np
 
 from packsense.material_model import (
     FEATURE_COLUMNS, MaterialTrainingConfig, train_material_suitability,
@@ -56,6 +59,92 @@ class MaterialModelGateTests(unittest.TestCase):
             self.assertNotIn(excluded, FEATURE_COLUMNS)
         self.assertIn("storage_temperature_c", FEATURE_COLUMNS)
         self.assertIn("transport_max_temperature_c", FEATURE_COLUMNS)
+
+    def test_exploratory_test_score_is_not_called_model_validation(self):
+        # TEST_ONLY objects exercise report semantics; no fixture is shipped
+        # as a PackSense suitability register or fitted production model.
+        hashes = {
+            "scenario_sha256": "1" * 64,
+            "food_master_sha256": "2" * 64,
+            "material_master_sha256": "3" * 64,
+            "structure_catalogue_sha256": "4" * 64,
+            "structure_review_sha256": "5" * 64,
+        }
+        decisions = ("unsuitable", "suitable") * 3
+        groups = ("TRAIN_NEG", "TRAIN_POS", "VAL_NEG", "VAL_POS",
+                  "TEST_NEG", "TEST_POS")
+        accepted = tuple(SimpleNamespace(
+            label_id=f"TEST_ONLY_{index}", scenario_record_id=f"TEST_ONLY_{index}",
+            structure_id="TEST_ONLY_STRUCTURE", source_family_id=groups[index],
+            decision=decision,
+        ) for index, decision in enumerate(decisions))
+        labels = SimpleNamespace(
+            register=SimpleNamespace(source_sha256="a" * 64, **hashes),
+            issues=(), accepted=accepted,
+        )
+        partitions = {
+            name: {
+                "label_ids": [accepted[i].label_id for i in indices],
+                "source_family_ids": [groups[i] for i in indices],
+            }
+            for name, indices in (
+                ("train", (0, 1)), ("validation", (2, 3)), ("test", (4, 5)),
+            )
+        }
+        split = SimpleNamespace(
+            status="allocation_prepared", reasons=(),
+            manifest={**hashes, "manifest_sha256": "b" * 64,
+                      "suitability_register_sha256": "a" * 64,
+                      "partitions": partitions},
+        )
+        enriched = SimpleNamespace(
+            scenario_sha256=hashes["scenario_sha256"],
+            food_master_sha256=hashes["food_master_sha256"],
+            rows=tuple(SimpleNamespace(
+                record_id=label.scenario_record_id,
+                enriched=SimpleNamespace(
+                    scenario=SimpleNamespace(record_id=label.scenario_record_id),
+                ),
+            ) for label in accepted),
+        )
+        structures = SimpleNamespace(
+            status="review_attested", issues=(),
+            catalogue_sha256=hashes["structure_catalogue_sha256"],
+            review_register_sha256=hashes["structure_review_sha256"],
+            reviewed=(SimpleNamespace(
+                structure=SimpleNamespace(structure_id="TEST_ONLY_STRUCTURE"),
+            ),),
+        )
+
+        class TestOnlyEstimator:
+            def fit(self, matrix, targets):
+                return self
+
+            def predict_proba(self, matrix):
+                positive = np.asarray(matrix[:, len(FEATURE_COLUMNS) - 1],
+                                      dtype=float)
+                positive = np.where(positive > 0, 0.9, 0.1)
+                return np.column_stack((1 - positive, positive))
+
+        def feature_row(scenario, reviewed, grades):
+            index = int(scenario.scenario.record_id.rsplit("_", 1)[1])
+            return {name: (1.0 if index % 2 else -1.0)
+                    for name in FEATURE_COLUMNS}
+
+        with patch("packsense.material_model.attestation_integrity_gaps", return_value=()), \
+                patch("packsense.material_model._feature_row", side_effect=feature_row), \
+                patch("packsense.material_model._model", return_value=TestOnlyEstimator()):
+            result = train_material_suitability(
+                labels, split, enriched, structures, {},
+                source_and_rights_review_approved=True,
+            )
+        self.assertEqual("exploratory_test_evaluated", result.report["status"])
+        self.assertTrue(result.report["model_trained"])
+        self.assertTrue(result.report["model_evaluated"])
+        self.assertFalse(result.report["model_validated"])
+        self.assertTrue(result.report["test"]["brier_baseline_beaten"])
+        self.assertEqual(hashes, result.report["source_hashes"])
+        self.assertIsNotNone(result.estimator)
 
 
 if __name__ == "__main__":

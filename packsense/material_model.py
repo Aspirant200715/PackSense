@@ -22,10 +22,17 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+from packsense.candidate_transfer import TransferDecision
 from packsense.contracts import MaterialGrade
 from packsense.enrichment import EnrichedScenario, EnrichmentAudit
 from packsense.material_split import MaterialSplitAudit
 from packsense.material_suitability import SuitabilityAudit, SuitabilityLabel
+from packsense.recommendation import (
+    BasicRecommendation, CandidateStatus, RecommendationStatus,
+)
+from packsense.requirements import (
+    ProtectionMechanism, RequirementCard, scenario_fingerprint,
+)
 from packsense.structure_review import (
     ReviewAttestedStructure, StructureReviewAudit, attestation_integrity_gaps,
 )
@@ -199,6 +206,7 @@ def train_material_suitability(
         "source_authenticity_verified_by_code": False,
         "source_and_rights_review_approved": source_and_rights_review_approved,
         "model_trained": False,
+        "model_evaluated": False,
         "model_validated": False,
         "release_status": "withheld",
         "package_feasible": False,
@@ -219,6 +227,9 @@ def train_material_suitability(
         return _not_ready(report, "split_and_label_source_hash_mismatch")
     if manifest.get("suitability_register_sha256") != labels.register.source_sha256:
         return _not_ready(report, "split_and_label_register_hash_mismatch")
+    report["source_hashes"] = {
+        field: getattr(labels.register, field) for field in source_fields
+    }
     if enriched.scenario_sha256 != labels.register.scenario_sha256 or (
         enriched.food_master_sha256 != labels.register.food_master_sha256
     ):
@@ -316,16 +327,154 @@ def train_material_suitability(
     if len(set(y_test)) != 2:
         return _not_ready(report, "test_has_one_decision_class")
     x_test = _matrix([row for _, row in testing])
+    test_candidate = _scores(
+        y_test, selected.predict_proba(x_test)[:, 1], config.decision_threshold,
+    )
+    test_baseline = _scores(
+        y_test, np.full(len(y_test), prevalence), config.decision_threshold,
+    )
     report["test"] = {
         "opened_after_validation_selection": True,
-        "candidate": _scores(
-            y_test, selected.predict_proba(x_test)[:, 1], config.decision_threshold,
-        ),
-        "training_prevalence_baseline": _scores(
-            y_test, np.full(len(y_test), prevalence), config.decision_threshold,
+        "candidate": test_candidate,
+        "training_prevalence_baseline": test_baseline,
+        "brier_baseline_beaten": (
+            test_candidate["brier_score"] < test_baseline["brier_score"]
         ),
     }
     report["status"] = "exploratory_test_evaluated"
-    report["model_validated"] = True
+    report["model_evaluated"] = True
+    # A held-out score measures agreement with reviewed judgements. It does
+    # not establish real-world package suitability or approve deployment.
     report["release_status"] = "withheld_pending_external_performance_and_gate_review"
     return MaterialTrainingResult(report, selected)
+
+
+def score_exploratory_candidates(
+    trained: MaterialTrainingResult,
+    enriched: EnrichedScenario,
+    card: RequirementCard,
+    shortlist: BasicRecommendation,
+    structures: StructureReviewAudit,
+    grades: Mapping[str, MaterialGrade],
+    *,
+    material_master_sha256: str,
+) -> dict[str, Any]:
+    """Score only engineering-screened packages for offline comparison.
+
+    The output cannot set a preferred package or enter the batch recommendation
+    result. It measures agreement with reviewed judgements, not food safety.
+    No current real PackSense data can satisfy the preceding training gate.
+    """
+    report: dict[str, Any] = {
+        "model_version": MODEL_VERSION,
+        "record_id": enriched.scenario.record_id,
+        "status": "not_ready",
+        "reason_codes": [],
+        "scores": [],
+        "engineering_preferred_structure_id": shortlist.preferred_structure_id,
+        "model_preferred_structure_id": None,
+        "recommendation_changed": False,
+        "package_feasible": False,
+        "release_status": "withheld",
+    }
+
+    def refuse(reason: str) -> dict[str, Any]:
+        report["reason_codes"] = [reason]
+        return report
+
+    training_report = trained.report
+    test_report = training_report.get("test")
+    if (trained.estimator is None
+            or training_report.get("model_version") != MODEL_VERSION
+            or training_report.get("status") != "exploratory_test_evaluated"
+            or training_report.get("model_trained") is not True
+            or training_report.get("model_evaluated") is not True
+            or training_report.get("model_validated") is not False
+            or training_report.get("source_and_rights_review_approved") is not True
+            or training_report.get("release_status")
+            != "withheld_pending_external_performance_and_gate_review"
+            or not isinstance(test_report, dict)
+            or test_report.get("brier_baseline_beaten") is not True):
+        return refuse("exploratory_training_gate_not_satisfied")
+    source_hashes = training_report.get("source_hashes")
+    if not isinstance(source_hashes, dict) or any(
+        source_hashes.get(name) != current
+        for name, current in (
+            ("food_master_sha256", enriched.food_master_sha256),
+            ("material_master_sha256", material_master_sha256),
+            ("structure_catalogue_sha256", structures.catalogue_sha256),
+            ("structure_review_sha256", structures.review_register_sha256),
+        )
+    ):
+        return refuse("model_and_current_source_versions_differ")
+    if (shortlist.status is not RecommendationStatus.PRELIMINARY_SHORTLIST
+            or shortlist.record_id != enriched.scenario.record_id
+            or shortlist.food_reference_id != enriched.food_reference.food_id
+            or card.record_id != shortlist.record_id
+            or card.food_reference_id != shortlist.food_reference_id
+            or card.food_master_sha256 != enriched.food_master_sha256
+            or shortlist.food_master_sha256 != enriched.food_master_sha256
+            or shortlist.scenario_fingerprint != scenario_fingerprint(card)):
+        return refuse("engineering_shortlist_scenario_mismatch")
+    if (structures.status != "review_attested" or structures.issues
+            or attestation_integrity_gaps(structures)):
+        return refuse("reviewed_structure_gate_not_satisfied")
+
+    by_structure = {item.structure.structure_id: item for item in structures.reviewed}
+    eligible = [item for item in shortlist.candidates
+                if item.status is CandidateStatus.ELIGIBLE_FOR_SHORTLIST]
+    if not eligible or len(by_structure) != len(structures.reviewed) or (
+        len({item.structure_id for item in shortlist.candidates})
+        != len(shortlist.candidates)
+    ):
+        return refuse("eligible_reviewed_candidates_missing_or_duplicate")
+    feature_rows: list[dict[str, Any]] = []
+    for candidate in eligible:
+        reviewed = by_structure.get(candidate.structure_id)
+        if (reviewed is None
+                or candidate.catalogue_sha256 != structures.catalogue_sha256
+                or candidate.material_master_sha256 != material_master_sha256
+                or candidate.review_register_sha256 != structures.review_register_sha256
+                or candidate.review_id != reviewed.review_id):
+            return refuse("eligible_candidate_review_binding_mismatch")
+        if (len(candidate.transfer_checks) != len(ProtectionMechanism)
+                or {check.mechanism for check in candidate.transfer_checks}
+                != set(ProtectionMechanism)
+                or any(check.decision not in (
+                    TransferDecision.WITHIN_BUDGET, TransferDecision.NOT_REQUIRED,
+                ) for check in candidate.transfer_checks)):
+            return refuse("eligible_candidate_transfer_gate_mismatch")
+        try:
+            feature_rows.append(_feature_row(enriched, reviewed, grades))
+        except KeyError:
+            return refuse("eligible_candidate_material_grade_missing")
+
+    classes = np.asarray(getattr(trained.estimator, "classes_", None))
+    if classes.shape != (2,) or not np.array_equal(classes, [0, 1]):
+        return refuse("model_class_order_unexpected")
+    probabilities = np.asarray(
+        trained.estimator.predict_proba(_matrix(feature_rows)), dtype=float,
+    )
+    if (probabilities.shape != (len(eligible), 2)
+            or not np.all(np.isfinite(probabilities))
+            or np.any(probabilities < 0) or np.any(probabilities > 1)
+            or not np.allclose(probabilities.sum(axis=1), 1.0, atol=1e-9)):
+        return refuse("model_probability_output_invalid")
+    report["status"] = "exploratory_scores_withheld"
+    report["training_register_sha256"] = training_report["register_sha256"]
+    report["split_manifest_sha256"] = training_report["split_manifest_sha256"]
+    report["score_meaning"] = (
+        "uncalibrated_model_probability_of_reviewed_label_not_package_safety"
+    )
+    report["scores"] = [
+        {
+            "structure_id": candidate.structure_id,
+            "exploratory_suitable_label_score": float(probability[1]),
+            "engineering_protection_rank": candidate.protection_rank,
+        }
+        for candidate, probability in sorted(
+            zip(eligible, probabilities),
+            key=lambda pair: (-pair[1][1], pair[0].structure_id),
+        )
+    ]
+    return report

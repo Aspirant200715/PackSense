@@ -163,3 +163,24 @@ five required files are `material-suitability-labels.json`,
 `material-structures.json`, and `material-structure-reviews.json`. The
 notebook reports `not_ready` while any are missing, preserving the reference
 import results without inventing labels or fitting a model.
+
+### Offline candidate-score boundary
+
+After a genuine, reviewed register eventually passes the frozen split and the
+exploratory validation/test sequence, `score_exploratory_candidates` can compare
+the model's uncalibrated score for a **reviewed suitability judgement** on structures
+that already passed the engineering shortlist. It refuses mismatched food,
+scenario fingerprint, master/catalogue/review hashes, missing grade identities,
+unresolved transfer checks, a failed held-out Brier baseline, or invalid model
+probabilities. It never scores supplier-application leads or bypasses the hard
+food-contact, temperature, gas, barrier, seal, and handling gates. It returns a
+separate offline report, never changes the engineering preference, and does
+not produce a deployable model artifact.
+
+The training report now distinguishes `model_evaluated` from `model_validated`.
+An exploratory held-out test can set the former to true, but keeps the latter
+false and release withheld. Even a test Brier score better than the constant
+training-prevalence baseline is evidence about agreement with reviewed labels,
+not proof that the package is safe or suitable in operation. With the current
+real files this scoring path remains `not_ready`; no real suitability register,
+reviewed structure catalogue, split, or trained estimator is present.

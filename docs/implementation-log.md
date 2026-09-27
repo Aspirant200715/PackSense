@@ -608,8 +608,26 @@ PackSense must continue to withhold a real package or shelf-life claim.
   evidence stay visibly unresolved. The shortlist status and preference are
   unchanged; no material model was fitted. The 5,000-row workbook has zero
   populated scenario operating-condition rows, so no real batch result was
-  invented. Local test suite now has 185 passing tests; CI for this update
-  remains to be checked after push.
+  invented. Local test suite had 185 passing tests; both Python CI checks
+  passed for PR #29 head `cbf5a49`.
+
+### 2026-09-27 — exploratory material-score boundary
+
+- Branch: `feat/model-score-boundary`, stacked on PR #29 head `cbf5a49` so
+  the source-catalogue PR can remain open for review. No additional supplier
+  documents, workbook values, scenario rows, suitability labels, or Kaggle
+  training data were created or changed.
+- Corrected training-report semantics: a held-out test sets `model_evaluated`,
+  not `model_validated`, and reports whether its Brier score beats the constant
+  training-prevalence baseline. Release remains withheld even if that metric
+  improves. The checked source hashes are retained for offline comparison.
+- Added a separate exploratory scorer for only engineering-eligible, exact
+  reviewed structures. It refuses source, scenario, review, transfer, class,
+  and probability mismatches and never changes the shortlist preference or
+  reports package feasibility. Test-only estimator fixtures exercise guards;
+  no real model was fit, scored, serialized, or deployed.
+- Local verification: 191 Python 3.11 tests passed, compilation and diff checks
+  passed. CI status will be recorded after publishing the PR.
 
 ### Template for the next entry
 
