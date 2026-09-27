@@ -77,7 +77,7 @@ source review and a frozen independent split are outside this intake.
 This audit is **necessary but not sufficient** for training. Before using
 Kaggle, a reviewer must verify the actual source documents, label meaning,
 rights, independence of source families, and coverage of both decisions. The
-training code will then freeze an approximately 80/20 group-separated holdout
+split validator can then freeze an approximately 80/20 group-separated holdout
 before fitting any encoder, imputer, model, or scoring weight. It must compare
 against the existing engineering shortlist and report false-suitable errors,
 top-k agreement, calibration, and subgroup behavior. Results on expert labels
@@ -92,3 +92,39 @@ commit and attach a versioned suitability register separately. No model is
 fit until those checks pass. CPU is sufficient for the initial tabular model;
 boosted trees use validated boosting iterations rather than arbitrary neural
 network epochs.
+
+## Frozen material split
+
+`packsense.material_split` accepts a separate, predeclared JSON plan with
+exactly `schema_version: 1`, `plan_id`, `suitability_register_sha256`, and
+`train_groups`, `validation_groups`, `test_groups` arrays. Group IDs refer to
+the source-family IDs in the approved suitability register. The plan is
+hashed, so a later training run can identify the exact holdout allocation.
+There is no search over split seeds after seeing model scores.
+
+The validator refuses a plan if the label intake has rejected rows, the
+register hash differs, a group is missing/unknown/repeated across partitions,
+one source ID appears in multiple source families, or the same food reference
+or normalized commodity name appears in more than one partition. Each partition must have explicit suitable
+and unsuitable judgements from independent source families. The code floor is
+8/2/2 source families for train/validation/test, with at least 2/1/1 families
+per decision. The test rows must comprise 15–25% of labels and validation
+15–25% of the remaining development labels; whole groups take precedence over
+an exact row ratio. These are **minimum software checks, not proof of external
+validity**. Near-duplicate foods with different names and unseen-structure
+generalization still require a separate challenge audit.
+
+```powershell
+python -m packsense.material_split labels.json --plan material-split-plan.json --scenarios scenarios.csv --food-master food.xlsx --material-master materials.xlsx --structures structures.json --structure-reviews reviews.json --report new-material-split-audit.json
+```
+
+A passing report contains the frozen label IDs per partition, source hashes,
+plan hash, and manifest hash. It never exports raw workbook or source text,
+trains a model, or certifies suitability. An empty real register returns
+`not_ready`.
+
+The repository now versions a copy of the existing Kaggle notebook in
+`notebooks/`. Its current preflight writes a clear `not_ready` report for the
+absent real labels, split plan, scenario batch, reviewed structures, and newer
+backend bundle. This preserves the notebook's reference import run; it is not
+a substitute for a future model-fitting notebook version.

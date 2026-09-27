@@ -511,6 +511,34 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Next: review a real suitability source set and freeze a group-held-out
   split before updating the Kaggle notebook to train a material ranker.
 
+### 2026-09-27 — material split and Kaggle preflight
+
+- PR #26 was reviewed for scope and CI, had no submitted review comments,
+  passed Python 3.11/3.13 checks, and merged to `main` at `f0fd088`. PR #25
+  remains open and unmerged because shelf-life training is deferred.
+- Branch: `ml/material-split-preflight`, based on the updated `main`. Added
+  a predeclared material-suitability split plan validator. It rejects source-
+  family overlap, source IDs assigned to different families, foods crossing
+  partitions, missing classes, insufficient independent groups, and large
+  deviations from the requested 80/20 holdout. The manifest contains frozen
+  label/group IDs and source hashes, not food rows or fitted parameters.
+- Versioned the existing Kaggle notebook and metadata in `notebooks/`. The
+  notebook still imports only the two hash-checked food/material reference
+  workbooks using the older pinned backend bundle. A material-model preflight
+  now lists missing real suitability inputs and modules and writes
+  `model_trained=false`; it does not fit a model or claim accuracy.
+- No real suitability labels, scenario batch, reviewed package catalogue,
+  source approvals, or model artifact were added. Withdrawn quality CSVs
+  remain excluded. Split unit fixtures are `TEST_ONLY`, not training data.
+- Local verification: `python -m unittest discover -s tests -q` passed 161
+  tests; `python -m compileall -q packsense tests`, notebook code-cell
+  compilation, split CLI help, and `git diff --check` passed.
+- Kaggle notebook version 5 was pushed to the existing kernel and completed.
+  Its output imported 5,000/5,000 food and 81/81 material reference rows,
+  listed the missing label/split/scenario/structure files and newer backend
+  modules, and reported `status=not_ready`, `model_trained=false`.
+- PR link and PR CI are recorded after the branch is pushed.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
