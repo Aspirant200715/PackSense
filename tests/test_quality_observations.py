@@ -1,15 +1,24 @@
 """Contract tests for the source-backed public quality observation intake."""
 
+import csv
 import os
+import tempfile
 import unittest
+from collections import Counter
+from pathlib import Path
 
 from packsense.quality_observations import (
     LONG_COLUMNS,
+    MODEL_FEATURE_COLUMNS,
+    MODEL_GROUP_COLUMN,
+    MODEL_SOURCE_LINES_COLUMN,
+    MODEL_TARGET_COLUMNS,
     PACKAGE_COLUMNS,
     QualityDataAudit,
     QualityInputError,
     _columns,
     _number,
+    _write_kaggle_model_input,
     audit_public_quality_data,
 )
 
@@ -65,6 +74,35 @@ class PublicQualityObservationTests(unittest.TestCase):
         self.assertEqual(report["counts"]["measured_quality_values_reconciled"], 504)
         self.assertEqual(report["readiness"]["shelf_life_prediction"],
                          "not_ready_no_failure_or_censoring_labels")
+
+        with tempfile.TemporaryDirectory() as folder:
+            output_path = Path(folder) / "quality-input.csv"
+            _write_kaggle_model_input(audit, output_path)
+            with output_path.open(encoding="utf-8", newline="") as stream:
+                reader = csv.DictReader(stream)
+                self.assertEqual(
+                    reader.fieldnames,
+                    [*MODEL_FEATURE_COLUMNS, *MODEL_TARGET_COLUMNS,
+                     MODEL_GROUP_COLUMN, MODEL_SOURCE_LINES_COLUMN],
+                )
+                prepared_rows = list(reader)
+
+        self.assertEqual(len(prepared_rows), 72)
+        self.assertEqual(set(Counter(row[MODEL_GROUP_COLUMN] for row in prepared_rows).values()),
+                         {2})
+        for row, observation in zip(prepared_rows, audit.observations):
+            for column in MODEL_FEATURE_COLUMNS:
+                source_value = getattr(observation, {
+                    "food": "food", "package": "package", "storage": "storage",
+                    "assessment_day": "assessment_day",
+                }[column])
+                self.assertEqual(row[column], str(source_value))
+            for column in MODEL_TARGET_COLUMNS:
+                self.assertEqual(float(row[column]), observation.values[column])
+            self.assertEqual(
+                row[MODEL_SOURCE_LINES_COLUMN],
+                ";".join(str(line) for line in observation.source_csv_line_numbers),
+            )
 
 
 if __name__ == "__main__":

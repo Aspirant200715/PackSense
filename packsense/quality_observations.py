@@ -32,6 +32,18 @@ PACKAGE_COLUMNS = (
     "mesophilic_bacteria_cfu_g", "coliform_cfu_g", "yeast_cfu_g",
     "mould_cfu_g",
 )
+MODEL_FEATURE_COLUMNS = ("food", "package", "storage", "assessment_day")
+MODEL_TARGET_COLUMNS = tuple(column for column, _domain in (
+    ("water_activity", "Physicochemical"),
+    ("peroxide_value_meq_kg", "Physicochemical"),
+    ("ph", "Physicochemical"),
+    ("mesophilic_bacteria_cfu_g", "Microbial"),
+    ("coliform_cfu_g", "Microbial"),
+    ("yeast_cfu_g", "Microbial"),
+    ("mould_cfu_g", "Microbial"),
+))
+MODEL_GROUP_COLUMN = "treatment_day_group"
+MODEL_SOURCE_LINES_COLUMN = "source_csv_line_numbers"
 
 OUTCOME_COLUMNS = {
     "Water activity": ("water_activity", "Physicochemical"),
@@ -455,26 +467,109 @@ def audit_public_quality_data(
     )
 
 
+def _locate_kaggle_input(filename: str) -> Path:
+    input_root = Path("/kaggle/input")
+    candidates = list(input_root.rglob(filename))
+    if len(candidates) != 1:
+        available = sorted(
+            str(path.relative_to(input_root))
+            for path in input_root.rglob("*")
+            if path.is_file()
+        )
+        raise QualityInputError(
+            f"expected one {filename!r} under {input_root}, found {len(candidates)}; "
+            f"available files: {available}"
+        )
+    return candidates[0]
+
+
+def _write_kaggle_model_input(audit: QualityDataAudit, output_path: Path) -> None:
+    columns = (*MODEL_FEATURE_COLUMNS, *MODEL_TARGET_COLUMNS,
+               MODEL_GROUP_COLUMN, MODEL_SOURCE_LINES_COLUMN)
+    with output_path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=columns)
+        writer.writeheader()
+        for observation in audit.observations:
+            writer.writerow({
+                "food": observation.food,
+                "package": observation.package,
+                "storage": observation.storage,
+                "assessment_day": observation.assessment_day,
+                **observation.values,
+                MODEL_GROUP_COLUMN: "|".join((
+                    observation.food, observation.package, observation.storage,
+                    str(observation.assessment_day),
+                )),
+                MODEL_SOURCE_LINES_COLUMN: ";".join(
+                    str(line) for line in observation.source_csv_line_numbers
+                ),
+            })
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Audit source-backed measured quality observations; not shelf-life trials"
     )
-    parser.add_argument("long_csv", type=Path)
-    parser.add_argument("package_csv", type=Path)
+    parser.add_argument("long_csv", type=Path, nargs="?")
+    parser.add_argument("package_csv", type=Path, nargs="?")
     parser.add_argument("--report", type=Path, help="write a new JSON audit report")
     args = parser.parse_args()
+
+    kaggle_mode = Path("/kaggle/input").is_dir() and Path("/kaggle/working").is_dir()
     try:
+        if kaggle_mode and args.long_csv is None and args.package_csv is None:
+            args.long_csv = _locate_kaggle_input("packsense_public_measured_quality_raw_672.csv")
+            args.package_csv = _locate_kaggle_input("packsense_public_measured_quality_packages_72.csv")
+        elif args.long_csv is None or args.package_csv is None:
+            parser.error("provide both CSV paths, or run without paths inside the Kaggle kernel")
         audit = audit_public_quality_data(args.long_csv, args.package_csv)
     except (QualityInputError, OSError, csv.Error) as exc:
         parser.exit(2, f"input error: {exc}\n")
     report = audit.report()
-    if args.report:
+
+    if kaggle_mode:
+        if report["audit_status"] != "passed":
+            parser.exit(1, "audit failed; refusing to prepare Kaggle model input\n")
+        output_dir = Path("/kaggle/working")
+        model_input_path = output_dir / "packsense_measured_quality_model_input.csv"
+        _write_kaggle_model_input(audit, model_input_path)
+        report_path = args.report or output_dir / "packsense_measured_quality_prep_report.json"
+        preparation = {
+            "status": "prepared_no_model_fit",
+            "source_doi": SOURCE_DOI,
+            "license": SOURCE_LICENSE,
+            "prepared_file": model_input_path.name,
+            "prepared_rows": len(audit.observations),
+            "feature_columns": list(MODEL_FEATURE_COLUMNS),
+            "target_columns": list(MODEL_TARGET_COLUMNS),
+            "group_split_column": MODEL_GROUP_COLUMN,
+            "provenance_column": MODEL_SOURCE_LINES_COLUMN,
+            "processing": {
+                "shared_day0_baselines": "excluded; not independent package trials",
+                "measurement_values": "preserved as reported; no imputation or synthesis",
+                "microbial_zero_values": (
+                    "preserved; source non-detect transforms are not applied in this file"
+                ),
+                "temperature": "categorical source storage only; no midpoint imputation",
+                "intended_scope": "exploratory within-study quality-indicator prediction only",
+                "shelf_life_training": "not performed; no failure/censoring endpoint",
+                "package_recommendations": "not performed; insufficient package specifications",
+            },
+            "audit": report,
+        }
+        report_to_write = preparation
+    else:
+        report_path = args.report
+        report_to_write = report
+
+    if report_path:
         try:
-            with args.report.open("x", encoding="utf-8") as output:
-                output.write(json.dumps(report, indent=2) + "\n")
-        except FileExistsError:
-            parser.exit(2, "report error: output already exists; choose a new path\n")
-    print(json.dumps({key: value for key, value in report.items() if key != "issues"}, indent=2))
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(json.dumps(report_to_write, indent=2) + "\n", encoding="utf-8")
+        except OSError as exc:
+            parser.exit(2, f"report error: {exc}\n")
+    printable = {key: value for key, value in report_to_write.items() if key != "issues"}
+    print(json.dumps(printable, indent=2))
     return 0 if report["audit_status"] == "passed" else 1
 
 

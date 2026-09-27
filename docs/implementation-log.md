@@ -406,3 +406,25 @@ Add a dated heading, then record:
 - New validated capability, remaining gaps, and any changed release gate.
 - Owner decision required, if any. Never silently turn a planned step into
   a completed one.
+
+### 2026-09-27 — Kaggle measured-quality preparation
+
+- Added a private Kaggle CPU kernel that invokes the repository's standalone
+  source audit, after attaching the private CC BY 4.0 dataset. Kaggle kernel:
+  `aspirant200715/packsense-measured-quality-prep`.
+- The successful Kaggle run completed the lineage audit and emitted a 72-row
+  modeling-input table with seven measured response columns, four observed
+  feature columns, treatment/day grouping, and source-line provenance. All 72
+  rows and all 504 measured response values reconciled; output target fields
+  were complete. No imputations, synthetic samples, or midpoint temperatures
+  were introduced. The output and original dataset remain outside Git.
+- This was preprocessing only. No model was fit: the records still have no
+  failure/censoring endpoint, so they cannot train the architecture's
+  shelf-life predictor or substantiate final packaging recommendations. A
+  separate, explicitly exploratory quality-response experiment remains a
+  possible next step; the result would be within-study research only.
+- GPU was disabled; 72 package units do not warrant accelerator training.
+- Verification: Kaggle kernel version 4 completed; real-source audit returned
+  72 package rows and 504 reconciled measurements. Local full-suite tests passed
+  (137 passed) with the hash-verified Kaggle input copies enabled; CI remains
+  pending on the review PR.
