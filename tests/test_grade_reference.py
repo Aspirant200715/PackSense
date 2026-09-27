@@ -3,7 +3,9 @@
 import json
 import unittest
 from dataclasses import replace
+from pathlib import Path
 
+from packsense.catalogue_candidates import load_candidate_catalogue
 from packsense.contracts import (
     BarrierObservation, EvidenceBasis, FoodReference, HandlingSeverity,
     MaterialGrade, ScenarioInput, StorageType,
@@ -197,11 +199,17 @@ class GradeReferenceTests(unittest.TestCase):
             "TEST_ONLY_FOOD_ID", ProduceRoute.NON_RESPIRING,
             "TEST_ONLY_ROUTE_SOURCE", "TEST_ONLY_LOCATOR", "TEST_ONLY_APPROVAL",
         )
+        candidates, candidate_hash = load_candidate_catalogue(
+            Path(__file__).resolve().parents[1] / "data" /
+            "public_catalogue_candidates.v1.json"
+        )
         report = build_batch_recommendations(
             scenarios, foods, materials, routes=(route,),
             route_register_sha256="d" * 64,
             assessments=_assessments(), assessment_register_sha256="e" * 64,
             include_grade_reference_comparison=True,
+            public_candidates=candidates,
+            public_candidate_catalogue_sha256=candidate_hash,
         )
         row = report["rows"][0]
         self.assertEqual(row["status"], "not_ready")
@@ -209,6 +217,8 @@ class GradeReferenceTests(unittest.TestCase):
                          "reference_comparison")
         self.assertIsNone(row["recommendation"]["preliminary_preferred_structure_id"])
         self.assertEqual(report["grade_reference_frontier_rows"], 1)
+        self.assertEqual(report["supplier_application_lookup_rows"], 1)
+        self.assertEqual(report["supplier_application_lead_count"], 0)
         self.assertFalse(report["package_feasible"])
         self.assertFalse(report["shelf_life_predicted"])
 

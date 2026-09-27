@@ -17,6 +17,8 @@ from zipfile import BadZipFile
 from packsense.candidate_transfer import (
     FinishedPackageTransferEvidence, parse_transfer_register,
 )
+from packsense.catalogue_candidates import load_candidate_catalogue
+from packsense.catalogue_leads import find_supplier_application_leads
 from packsense.enrichment import enrich_scenarios
 from packsense.gas_balance import FinishedPackageGasObservation, parse_gas_observations
 from packsense.grade_reference import compare_grade_barriers
@@ -66,6 +68,8 @@ def build_batch_recommendations(
     gas_observation_register_sha256: str | None = None,
     water_observations: tuple[FinishedPackageWaterObservation, ...] = (),
     water_observation_register_sha256: str | None = None,
+    public_candidates: dict[str, Any] | None = None,
+    public_candidate_catalogue_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Return one auditable exception or recommendation result per input row."""
     if not scenarios.rows:
@@ -93,6 +97,8 @@ def build_batch_recommendations(
         entries or source_hash is not None for entries, source_hash in produce_sources
     ):
         raise ValueError("produce evidence requires include_produce_diagnostics")
+    if (public_candidates is None) != (public_candidate_catalogue_sha256 is None):
+        raise ValueError("public candidate catalogue and hash must be supplied together")
 
     enriched = enrich_scenarios(scenarios, foods, routes, route_register_sha256)
     produce_rows = (
@@ -134,6 +140,8 @@ def build_batch_recommendations(
                 result_row["grade_reference_comparison"] = None
             if include_produce_diagnostics:
                 result_row["produce_local_diagnostics"] = produce_rows[index]
+            if public_candidates is not None:
+                result_row["supplier_application_lookup"] = None
             rows.append(result_row)
             continue
 
@@ -146,6 +154,7 @@ def build_batch_recommendations(
             card, row.enriched.scenario.commodity_type, structure_review,
             transfers_by_record.get(card.record_id, ()),
             current_material_master_sha256=materials.source_sha256,
+            scenario_source_sha256=scenarios.source_sha256,
         )
         reason_counts.update(recommendation.reason_codes)
         result_row = {
@@ -163,6 +172,10 @@ def build_batch_recommendations(
             )
         if include_produce_diagnostics:
             result_row["produce_local_diagnostics"] = produce_rows[index]
+        if public_candidates is not None:
+            result_row["supplier_application_lookup"] = find_supplier_application_leads(
+                row.enriched.scenario, public_candidates,
+            )
         rows.append(result_row)
 
     status_counts = Counter(row["status"] for row in rows)
@@ -259,6 +272,15 @@ def build_batch_recommendations(
                     for row in produce_rows)
         )
         report["produce_safety_certified"] = False
+    if public_candidates is not None:
+        report["public_candidate_catalogue_sha256"] = public_candidate_catalogue_sha256
+        report["supplier_application_lookup_rows"] = sum(
+            row.get("supplier_application_lookup") is not None for row in rows
+        )
+        report["supplier_application_lead_count"] = sum(
+            len(row["supplier_application_lookup"]["leads"])
+            for row in rows if row.get("supplier_application_lookup") is not None
+        )
     return report
 
 
@@ -286,6 +308,8 @@ def main() -> int:
         "--compare-grade-references", action="store_true",
         help="opt-in lab-condition film-grade comparison; never package suitability",
     )
+    parser.add_argument("--public-candidates", type=Path,
+                        help="source-backed supplier application leads; never approved packages")
     parser.add_argument("--report", type=Path, required=True, help="new JSON output path")
     parser.add_argument("--summary-csv", type=Path, help="new one-row-per-scenario CSV path")
     args = parser.parse_args()
@@ -348,6 +372,10 @@ def main() -> int:
         water_raw = args.water_observations.read_bytes() if args.water_observations else None
         water = parse_water_observations(water_raw) if water_raw is not None else ()
         water_hash = hashlib.sha256(water_raw).hexdigest() if water_raw is not None else None
+        public_candidates, public_candidate_hash = (
+            load_candidate_catalogue(args.public_candidates)
+            if args.public_candidates is not None else (None, None)
+        )
         report = build_batch_recommendations(
             scenarios, foods, materials,
             routes=routes, route_register_sha256=route_hash,
@@ -359,6 +387,8 @@ def main() -> int:
             kinetics=kinetics, kinetics_register_sha256=kinetics_hash,
             gas_observations=gas, gas_observation_register_sha256=gas_hash,
             water_observations=water, water_observation_register_sha256=water_hash,
+            public_candidates=public_candidates,
+            public_candidate_catalogue_sha256=public_candidate_hash,
         )
         if args.summary_csv is not None:
             summarize_batch(report)

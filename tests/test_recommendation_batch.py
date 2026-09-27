@@ -3,7 +3,12 @@
 import json
 import unittest
 from dataclasses import replace
+from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
+
+from packsense.catalogue_candidates import load_candidate_catalogue
 from packsense.candidate_transfer import FinishedPackageTransferEvidence
 from packsense.contracts import (
     EvidenceBasis, FoodReference, HandlingSeverity, PackageStructure,
@@ -13,8 +18,13 @@ from packsense.enrichment import enrich_scenarios
 from packsense.gas_balance import FinishedPackageGasObservation
 from packsense.ingestion import IngestionIssue, ParsedScenarioRow, ScenarioAudit
 from packsense.masters import FoodMasterEntry, MasterAudit
+from packsense.material_model import (
+    MODEL_VERSION, MaterialTrainingResult, _engineering_baseline_agreement,
+    score_exploratory_candidates,
+)
 from packsense.produce_route import ProduceRoute, RouteEvidence
 from packsense.recommendation_batch import build_batch_recommendations
+from packsense.recommendation import screen_package_candidates
 from packsense.recommendation_output import summarize_batch
 from packsense.respiration import KineticEvidence
 from packsense.requirements import (
@@ -183,13 +193,23 @@ def _produce_sources(*, catalogue_hash=CATALOGUE_HASH):
 class BatchRecommendationTests(unittest.TestCase):
     def test_produce_diagnostics_bind_only_to_exact_reviewed_catalogue(self):
         scenarios, foods, materials, route, kinetics, gas, water = _produce_sources()
+        materials = replace(materials, entries=(
+            SimpleNamespace(grade=SimpleNamespace(material_id="TEST_ONLY_GRADE")),
+        ))
+        candidates, candidate_hash = load_candidate_catalogue(
+            Path(__file__).resolve().parents[1] / "data" /
+            "public_catalogue_candidates.v1.json"
+        )
         report = build_batch_recommendations(
             scenarios, foods, materials, routes=(route,),
             route_register_sha256="1" * 64, structure_review=_review(),
+            include_grade_reference_comparison=True,
             include_produce_diagnostics=True, kinetics=kinetics,
             kinetics_register_sha256="2" * 64, gas_observations=gas,
             gas_observation_register_sha256="3" * 64,
             water_observations=water, water_observation_register_sha256="4" * 64,
+            public_candidates=candidates,
+            public_candidate_catalogue_sha256=candidate_hash,
         )
         diagnostic = report["rows"][0]["produce_local_diagnostics"]
         binding = diagnostic["structures"][0]["structure_review_binding"]
@@ -199,6 +219,8 @@ class BatchRecommendationTests(unittest.TestCase):
         self.assertTrue(report["produce_diagnostic_structure_review_joined"])
         self.assertEqual(report["produce_review_bound_structure_count"], 1)
         self.assertEqual(report["rows"][0]["status"], "not_ready")
+        self.assertIsNotNone(report["rows"][0]["grade_reference_comparison"])
+        self.assertIsNotNone(report["rows"][0]["supplier_application_lookup"])
         self.assertFalse(report["produce_safety_certified"])
         self.assertFalse(binding["produce_safety_certified"])
 
@@ -375,6 +397,33 @@ class BatchRecommendationTests(unittest.TestCase):
                 *sources, water_observation_register_sha256="2" * 64,
             )
 
+    def test_public_supplier_lookup_does_not_change_recommendation_gate(self):
+        scenario = replace(
+            _scenario(), commodity_type="Broccoli, raw",
+            net_pack_quantity=400.0, transport_temperature_c=8.0,
+            transport_max_temperature_c=25.0, transport_duration_hours=8.0,
+        )
+        scenarios, foods, materials = _sources(scenario)
+        original = foods.entries[0]
+        foods = replace(foods, entries=(replace(
+            original, reference=replace(original.reference,
+                                        commodity_type="Broccoli, raw"),
+        ),))
+        catalogue_path = (Path(__file__).resolve().parents[1] / "data" /
+                          "public_catalogue_candidates.v1.json")
+        candidates, digest = load_candidate_catalogue(catalogue_path)
+        report = build_batch_recommendations(
+            scenarios, foods, materials, public_candidates=candidates,
+            public_candidate_catalogue_sha256=digest,
+        )
+        self.assertEqual("not_ready", report["rows"][0]["status"])
+        self.assertEqual(1, report["supplier_application_lead_count"])
+        lead = report["rows"][0]["supplier_application_lookup"]["leads"][0]
+        self.assertEqual("SUMITOMO-PPLUS-VY7K9", lead["candidate_id"])
+        self.assertIn("food_identity_requires_review", lead["reason_codes"])
+        self.assertIsNone(report["rows"][0]["recommendation"][
+            "preliminary_preferred_structure_id"])
+
     def test_no_external_registers_reports_not_ready(self):
         report = build_batch_recommendations(*_sources(_scenario()))
         self.assertEqual(report["total_rows"], 1)
@@ -423,6 +472,8 @@ class BatchRecommendationTests(unittest.TestCase):
         self.assertEqual(report["preliminary_preferred_rows"], 1)
         self.assertEqual(report["rows"][0]["recommendation"]
                          ["preliminary_preferred_structure_id"], "TEST_ONLY_STRUCTURE")
+        self.assertEqual(report["rows"][0]["recommendation"]
+                         ["scenario_source_sha256"], scenarios.source_sha256)
         self.assertEqual(report["rows"][0]["food_reference_row"], 2)
         self.assertEqual(report["rows"][1]["recommendation"]["candidates"][0]
                          ["reason_codes"], ["finished_package_transfer_missing"])
@@ -445,6 +496,128 @@ class BatchRecommendationTests(unittest.TestCase):
             build_batch_recommendations(
                 scenarios, foods, materials, routes=(_route(),),
             )
+
+
+class _TestOnlyEstimator:
+    classes_ = (0, 1)
+
+    def predict_proba(self, matrix):
+        return np.asarray([[0.1, 0.9]] * len(matrix))
+
+
+class ExploratoryScoringBoundaryTests(unittest.TestCase):
+    def _inputs(self):
+        scenarios, foods, _ = _sources(_scenario())
+        enriched = enrich_scenarios(scenarios, foods, (_route(),), "1" * 64).rows[0].enriched
+        card = derive_requirement_card(enriched, _assessments())
+        transfers = (
+            _transfer(card, ProtectionMechanism.OXYGEN_INGRESS, 5.0),
+            _transfer(card, ProtectionMechanism.MOISTURE_GAIN, 6.0),
+        )
+        review = _review()
+        shortlist = screen_package_candidates(
+            card, "TEST_ONLY_FOOD", review, transfers,
+            current_material_master_sha256=MATERIAL_HASH,
+            scenario_source_sha256=scenarios.source_sha256,
+        )
+        training = MaterialTrainingResult({
+            "model_version": MODEL_VERSION,
+            "status": "exploratory_test_evaluated",
+            "model_trained": True,
+            "model_evaluated": True,
+            "model_validated": False,
+            "source_and_rights_review_approved": True,
+            "release_status": "withheld_pending_external_performance_and_gate_review",
+            "test": {"brier_baseline_beaten": True},
+            "register_sha256": "a" * 64,
+            "split_manifest_sha256": "b" * 64,
+            "source_hashes": {
+                "scenario_sha256": scenarios.source_sha256,
+                "food_master_sha256": FOOD_HASH,
+                "material_master_sha256": MATERIAL_HASH,
+                "structure_catalogue_sha256": CATALOGUE_HASH,
+                "structure_review_sha256": REVIEW_HASH,
+            },
+        }, _TestOnlyEstimator())
+        grades = {"TEST_ONLY_GRADE": SimpleNamespace(material_family="TEST_ONLY_FILM")}
+        return training, enriched, card, shortlist, review, grades
+
+    def _score(self, values):
+        return score_exploratory_candidates(
+            *values, material_master_sha256=MATERIAL_HASH,
+        )
+
+    def test_offline_score_cannot_change_engineering_preference(self):
+        values = self._inputs()
+        preferred = values[3].preferred_structure_id
+        report = self._score(values)
+        self.assertEqual("exploratory_scores_withheld", report["status"])
+        self.assertEqual(0.9, report["scores"][0]["exploratory_suitable_label_score"])
+        self.assertEqual(preferred, report["engineering_preferred_structure_id"])
+        self.assertIsNone(report["model_preferred_structure_id"])
+        self.assertFalse(report["recommendation_changed"])
+        self.assertFalse(report["package_feasible"])
+        self.assertEqual(preferred, values[3].preferred_structure_id)
+
+    def test_actual_card_fingerprint_binds_offline_engineering_comparison(self):
+        training, enriched, _, shortlist, review, _ = self._inputs()
+        label = SimpleNamespace(
+            scenario_record_id="TEST_ONLY_CASE", food_reference_id="TEST_ONLY_FOOD_ID",
+            structure_id="TEST_ONLY_STRUCTURE", decision="suitable",
+        )
+        result = _engineering_baseline_agreement(
+            [(label, {})], {label.scenario_record_id: enriched},
+            {label.scenario_record_id: shortlist},
+            {item.structure.structure_id: item for item in review.reviewed},
+            training.report["source_hashes"],
+        )
+        self.assertEqual(result["status"], "complete_explicit_pair_coverage")
+        self.assertEqual(result["cross_tab_counts"]["eligible_for_shortlist_suitable"], 1)
+        self.assertTrue(result["full_scenario_batch_version_verified_by_code"])
+
+    def test_no_model_or_failed_test_baseline_refuses_scoring(self):
+        values = self._inputs()
+        values = (replace(values[0], estimator=None), *values[1:])
+        self.assertEqual("not_ready", self._score(values)["status"])
+        values = self._inputs()
+        training = replace(values[0], report={
+            **values[0].report, "test": {"brier_baseline_beaten": False},
+        })
+        self.assertEqual("not_ready", self._score((training, *values[1:]))["status"])
+
+    def test_changed_source_or_scenario_refuses_scoring(self):
+        values = self._inputs()
+        source_changed = score_exploratory_candidates(
+            *values, material_master_sha256="f" * 64,
+        )
+        self.assertEqual("model_and_current_source_versions_differ",
+                         source_changed["reason_codes"][0])
+        changed = (*values[:3], replace(values[3], scenario_fingerprint="f" * 64),
+                   *values[4:])
+        self.assertEqual("engineering_shortlist_scenario_mismatch",
+                         self._score(changed)["reason_codes"][0])
+        stale_batch = (*values[:3], replace(values[3], scenario_source_sha256="f" * 64),
+                       *values[4:])
+        self.assertEqual("model_and_current_source_versions_differ",
+                         self._score(stale_batch)["reason_codes"][0])
+
+    def test_unresolved_transfer_cannot_be_scored(self):
+        values = self._inputs()
+        candidate = replace(values[3].candidates[0], transfer_checks=())
+        changed = (*values[:3], replace(values[3], candidates=(candidate,)),
+                   *values[4:])
+        self.assertEqual("eligible_candidate_transfer_gate_mismatch",
+                         self._score(changed)["reason_codes"][0])
+
+    def test_invalid_probability_cannot_be_reported(self):
+        class InvalidEstimator(_TestOnlyEstimator):
+            def predict_proba(self, matrix):
+                return np.asarray([[float("nan"), 1.0]] * len(matrix))
+
+        values = self._inputs()
+        changed = (replace(values[0], estimator=InvalidEstimator()), *values[1:])
+        self.assertEqual("model_probability_output_invalid",
+                         self._score(changed)["reason_codes"][0])
 
 
 if __name__ == "__main__":
