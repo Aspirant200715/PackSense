@@ -331,6 +331,53 @@ def load_material_grades(path: str | Path, *, sheet_name: str | None = None) -> 
     return MasterAudit(str(source), _sha256(source), selected_sheet, total, tuple(entries), tuple(issues))
 
 
+def _barrier_evidence_report(
+    entries: tuple[MaterialMasterEntry, ...], property_name: str,
+) -> dict[str, Any]:
+    """Summarize provenance and condition coverage without promoting references.
+
+    Strict measured candidates require an explicit measured basis and the
+    original test temperature, humidity, and method. Supplier-reported values
+    remain source references, not silently relabelled measurements.
+    """
+    if property_name not in {"otr", "co2tr", "wvtr"}:
+        raise ValueError("unsupported barrier property")
+    observations = [
+        (entry, getattr(entry.grade, property_name)) for entry in entries
+    ]
+    observations = [(entry, value) for entry, value in observations if value is not None]
+    basis_counts = {basis.value: 0 for basis in EvidenceBasis}
+    complete_context = []
+    measured_complete = []
+    for entry, observation in observations:
+        basis_counts[observation.basis.value] += 1
+        method = (observation.test_method or "").strip().casefold()
+        has_context = (
+            observation.test_temperature_c is not None
+            and observation.test_relative_humidity_pct is not None
+            and method not in MISSING_MARKERS | {"", "unknown", "n/a", "na"}
+        )
+        if has_context:
+            complete_context.append(entry)
+        if (observation.basis is EvidenceBasis.MEASURED and has_context
+                and observation.source_url.strip()):
+            measured_complete.append(entry)
+
+    result: dict[str, Any] = {
+        "rows_with_values": len(observations),
+        "evidence_basis_counts": basis_counts,
+        "rows_with_complete_test_context": len(complete_context),
+        "strict_measured_training_candidates": len(measured_complete),
+    }
+    if property_name == "co2tr":
+        declared = [entry for entry in entries if entry.grade.co2_training_label]
+        result["declared_training_label_rows"] = len(declared)
+        result["declared_labels_with_measured_complete_context"] = sum(
+            entry in measured_complete for entry in declared
+        )
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Audit sourced PackSense reference workbooks")
     parser.add_argument("kind", choices=("food", "material"))
@@ -375,6 +422,10 @@ def main() -> int:
                 for x in audit.entries
             ),
             "co2_training_label": sum(x.grade.co2_training_label for x in audit.entries),
+        }
+        report["barrier_evidence"] = {
+            name: _barrier_evidence_report(audit.entries, name)
+            for name in ("otr", "wvtr", "co2tr")
         }
     if args.report:
         try:

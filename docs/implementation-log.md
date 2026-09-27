@@ -269,6 +269,27 @@ PackSense must continue to withhold a real package or shelf-life claim.
   outcomes were added. Package feasibility and model-training readiness
   remain closed.
 
+### 2026-09-27 — material barrier evidence readiness audit
+
+- Branch: `data/10-material-barrier-evidence`, based on current `main`.
+  Material reference audits now report provenance and test-condition coverage
+  separately for OTR, WVTR, and CO2TR. Supplier-reported and estimated values
+  cannot be mistaken for measured model targets.
+- Audited the local 81-row material workbook (SHA-256
+  `17e2791aacee70a1e30f6b73624c5ac2745e5feed36672a9c980499d77fd2564`):
+  OTR/WVTR each have 80 supplier-reported values and one estimate, with zero
+  strict measured training candidates. CO2TR has 60 estimates and 13
+  measured, condition-complete declared training labels. No model was trained
+  on this table; 13 rows are insufficient for credible grouped evaluation.
+  The source workbook and generated audit report remain local/ignored.
+- Local verification: `python -m unittest discover -s tests -q` passed 126
+  tests; `python -m compileall -q packsense tests` and `git diff --check`
+  passed. No real data was added to the repository.
+- Remaining training gate: collect independently measured food/package trials
+  for shelf-life prediction and more consistent barrier observations if a
+  material-property estimator is desired. This audit does not create package
+  recommendations or validate the supplier-reported references.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
