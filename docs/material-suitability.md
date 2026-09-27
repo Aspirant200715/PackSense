@@ -85,13 +85,13 @@ measure agreement with those reviewers, not experimentally proven package
 performance. Weak coverage means `not_ready`, not a training run or accuracy
 claim.
 
-The existing Kaggle notebook currently imports the two reference workbooks
-with a pinned older backend bundle; it contains no suitability labels and has
-not trained a material model. Its next version must pin the reviewed backend
-commit and attach a versioned suitability register separately. No model is
-fit until those checks pass. CPU is sufficient for the initial tabular model;
-boosted trees use validated boosting iterations rather than arbitrary neural
-network epochs.
+The Kaggle notebook pins a reviewed backend source commit, audits the two
+reference workbooks, and then checks for six separate training inputs. The
+current attached datasets contain **none** of those training inputs, so no
+material model has been fit. The CPU baseline is regularized logistic
+regression, selected on a separate validation partition; its solver iteration
+cap is not a neural-network epoch count. No test score or accuracy is reported
+when the gate is not ready.
 
 ## Frozen material split
 
@@ -123,8 +123,43 @@ plan hash, and manifest hash. It never exports raw workbook or source text,
 trains a model, or certifies suitability. An empty real register returns
 `not_ready`.
 
-The repository now versions a copy of the existing Kaggle notebook in
-`notebooks/`. Its current preflight writes a clear `not_ready` report for the
-absent real labels, split plan, scenario batch, reviewed structures, and newer
-backend bundle. This preserves the notebook's reference import run; it is not
-a substitute for a future model-fitting notebook version.
+## Exploratory model gate
+
+`packsense.material_model` accepts the audited label register, frozen split,
+enriched scenarios, reviewed complete structures, and grade references. It
+uses food composition, pH, temperature/humidity, transport, desired life,
+pack quantity, layer-family sequence, and structure geometry. Food IDs,
+structure IDs, source/review IDs, and the judgement are excluded from model
+features. It fits imputation, encoding, scaling, and a regularized logistic
+classifier on **train only**. Validation chooses the regularization strength;
+the test partition is opened only if validation Brier score beats a constant
+training-prevalence baseline. Test reporting includes suitable precision and
+recall, unsuitable recall, false-suitable count/rate, average precision, and
+Brier score. A passing score is agreement with reviewed judgements, not proof
+of safe packaging or readiness to deploy. The estimator is not serialized or
+connected to the recommendation engine.
+
+Training additionally requires an explicit independent source/rights approval.
+The notebook expects `material-training-approval.json` with exactly:
+
+```json
+{
+  "schema_version": 1,
+  "suitability_register_sha256": "<SHA-256 of the exact label JSON>",
+  "split_plan_sha256": "<SHA-256 of the exact split-plan JSON>",
+  "source_documents_checked": true,
+  "label_decisions_checked": true,
+  "data_use_rights_checked": true,
+  "approver_id": "<real reviewer ID>",
+  "approval_scope": "exploratory_material_training"
+}
+```
+
+The approval records a human decision; the code cannot verify that the review
+actually happened. Attach it only after reviewing the original findings,
+decision criteria, independent source families, and usage rights. The other
+five required files are `material-suitability-labels.json`,
+`material-split-plan.json`, `material-scenarios.csv`,
+`material-structures.json`, and `material-structure-reviews.json`. The
+notebook reports `not_ready` while any are missing, preserving the reference
+import results without inventing labels or fitting a model.
