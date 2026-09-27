@@ -594,6 +594,47 @@ PackSense must continue to withhold a real package or shelf-life claim.
   compilation, CLI help, and `git diff --check` passed. PR CI and review are
   separate.
 
+### 2026-09-27 — local produce diagnostics in the recommendation batch
+
+- Branch: `feat/produce-batch-diagnostics`, [PR #32](https://github.com/Aspirant200715/PackSense/pull/32),
+  based on the open grade-reference
+  comparison branch. An opt-in path now attaches the existing Stop-4 local
+  gas/water audit to each exact scenario row in the recommendation JSON.
+  The route, kinetics, gas, and water register hashes remain separate, and
+  absent source evidence stays unresolved.
+- A produce audit result never changes the ordinary package shortlist or
+  grade reference comparison. The batch marks `produce_safety_certified=false`
+  and `produce_diagnostic_structure_review_joined=false`; no local gas/water
+  snapshot approves a complete package, dynamic MAP trajectory, or shelf life.
+- No real scenario, source register, package observation, training label, or
+  model artifact was added. New test observations are `TEST_ONLY` fixtures and
+  are not training data. Real package-material learning remains `not_ready`.
+- Local verification: 173 unit tests passed under Python 3.11 and isolated
+  Python 3.13 with pinned requirements; compile checks, CLI help, and
+  `git diff --check` passed. PR CI and review are separate.
+
+### 2026-09-27 — exact produce-observation catalogue binding
+
+- Continued on `feat/produce-batch-diagnostics` (PR #32). Version-2 gas and
+  water observation registers now require an exact structure-catalogue SHA-256;
+  version-1 registers remain readable as unbound local diagnostics.
+- The recommendation batch checks each observed produce structure against the
+  reviewed catalogue, current material-master version, exact food scope,
+  service-temperature envelope, all three exposure phases, observation
+  catalogue hashes, and resolved local condition checks. It reports per-
+  structure binding gaps and aggregate counts. This is an identity/scope
+  join only; the ordinary recommendation still blocks respiring produce and
+  `produce_safety_certified` stays false. Observed initial O2/CO2 limit
+  breaches are separately counted and listed by phase without declaring the
+  package universally unsuitable.
+- No genuine scenarios, complete-package observations, suitability labels,
+  training data, or model artifact were added. New tests use `TEST_ONLY`
+  observations, never training records. Legacy and changed-hash evidence is
+  verified to remain unbound. Local Python 3.11 verification passed 180
+  tests, compileall, and `git diff --check`. System Python 3.13 lacks the
+  pinned project dependencies, so its full-suite result awaits dependency-
+  installed CI. Source authenticity still requires external review.
+
 ### 2026-09-27 — public package-catalogue candidate pilot
 
 - Branch: `data/catalogue-evidence-pilot`, based on merged `main` at

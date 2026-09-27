@@ -41,9 +41,11 @@ inferring it from commodity moisture percentage alone
 ([humidity-absorbing tray model and validation](https://www.sciencedirect.com/science/article/pii/S0260877418303947),
 [condensation dynamics study](https://www.sciencedirect.com/science/article/pii/S026087741200581X)).
 
-The optional JSON parser accepts exactly `schema_version: 1` and an
+The optional JSON parser accepts `schema_version: 1` or `2` and an
 `observations` array with the fields of `FinishedPackageWaterObservation` in
-`packsense/water_balance.py`. Every value must be tied to the exact
+`packsense/water_balance.py`. Version 1 remains readable but lacks an exact
+package-catalogue binding. Version 2 requires `structure_catalogue_sha256`
+for every observation. Every value must be tied to the exact
 record/food/finished-package/phase; the register retains source IDs, locator,
 approval ID, and measured basis. Estimates and unvalidated corrections are
 not accepted by this first water-observation contract. Duplicate

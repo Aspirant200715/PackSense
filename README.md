@@ -68,6 +68,9 @@ review large batches alongside the detailed JSON report.
 [Film-grade reference comparison](docs/grade-reference-comparison.md) adds an
 opt-in, test-condition-matched Pareto view for reviewed non-respiring food
 needs. It cannot choose or certify a finished package or train a model.
+The same batch can optionally attach the [local fresh-produce gas/water
+diagnostics](docs/basic-recommendation.md#optional-local-fresh-produce-diagnostics)
+without promoting a snapshot to a MAP approval or package recommendation.
 
 ## Why PackSense exists
 

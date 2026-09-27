@@ -121,3 +121,48 @@ report remains the detailed record for source locators, individual transfer
 checks, layer order, and all candidate reasons. The CSV is a decision report,
 not a model-training dataset; external text is protected against spreadsheet
 formula interpretation when opened in Excel.
+
+## Optional local fresh-produce diagnostics
+
+The batch can attach the existing Stop-4 local gas/water audit to the same
+per-scenario JSON report. This is an evidence-gap and instantaneous-condition
+view, **not** a fresh-produce package shortlist or MAP safety result:
+
+```powershell
+py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --route-register reviewed-routes.json --produce-diagnostics --kinetics-register reviewed-kinetics.json --gas-observations reviewed-gas.json --water-observations reviewed-water.json --report new-batch.json
+```
+
+Only `--route-register` is mandatory with `--produce-diagnostics`; absent
+kinetics or observations remain explicit unresolved states. The detailed row
+adds `produce_local_diagnostics`, keyed to the same exact scenario row and
+record ID. The top-level report retains hashes of each supplied register,
+unresolved and warning counts, and `produce_safety_certified: false`. The
+optional CSV and ordinary `recommendation` object do not change. When a
+reviewed package catalogue is supplied, the batch now separately audits
+whether each local gas and water observation belongs to the **exact reviewed
+catalogue version**, food scope, and service-temperature range. This requires
+version-2 gas and water registers with `structure_catalogue_sha256` on every
+storage, transport, and excursion observation. Legacy version-1 observations
+remain usable as local diagnostics but cannot pass this identity join. Each
+observed structure reports `structure_review_binding.status` and explicit
+reason codes; the batch reports bound/unresolved counts. A true
+`produce_diagnostic_structure_review_joined` means internal identity and
+scope checks passed for all observed structures, **not** MAP safety or package
+approval. Missing observations, unreviewed structures, a changed catalogue,
+or out-of-scope conditions leave the binding unresolved. The ordinary
+recommendation remains `not_ready` for respiring produce, and an apparently
+clear local gas/water snapshot still cannot prove a safe trajectory or the
+requested shelf life.
+
+An initial O₂/CO₂ limit breach measured in an observation is explicitly
+reported as `observed_initial_gas_limit_violation`, with affected phases and
+a batch count. This flag describes that observed starting state, not a
+universal judgement about the package or another MAP gas fill. A successful
+catalogue identity join cannot erase the breach or turn the package into an
+approved recommendation.
+
+For fresh produce, respiration and gas transfer change with temperature,
+food mass and package surface area; a local balance cannot be extrapolated
+across distribution without validated dynamics. See the
+[USDA-ARS MAP review](https://www.ars.usda.gov/research/publications/publication/?seqNo115=222384)
+and the [gas](gas-balance.md) and [water](water-balance.md) audit contracts.

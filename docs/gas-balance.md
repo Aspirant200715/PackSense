@@ -38,9 +38,11 @@ can change, so one slope cannot prove a safe trajectory or shelf life.
 Every report says `gas_safety_certified: false` and
 `shelf_life_predicted: false`.
 
-The optional source register parser accepts JSON with exactly
-`schema_version: 1` and an `observations` array. Each observation has the
-fields of `FinishedPackageGasObservation` in `packsense/gas_balance.py`:
+The optional source register parser accepts JSON with `schema_version: 1`
+or `2` and an `observations` array. Version 1 remains readable but does not
+bind an observation to an exact package-catalogue version. Version 2 requires
+`structure_catalogue_sha256`, the SHA-256 of the reviewed catalogue used for
+the observation. The remaining observation fields identify the
 exact record/food/structure IDs, phase, temperature, fill mass, headspace,
 inside/outside gas compositions, signed finished-package transfers, food gas
 limits, source IDs/locator, structure and source approval IDs, and evidence
