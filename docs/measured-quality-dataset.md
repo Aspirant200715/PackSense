@@ -39,15 +39,3 @@ py -3.11 -m packsense.quality_observations `
 ```
 
 The audit passes only when the two schemas, expected study design, file hash, all 504 cross-file measurements, and all source line references agree. A passing audit confirms structural and lineage consistency. It does not authorize shelf-life training, establish food safety, or make the package systems complete catalogue structures.
-
-## Kaggle preparation
-
-The private Kaggle kernel [PackSense Measured Quality Prep](https://www.kaggle.com/code/aspirant200715/packsense-measured-quality-prep) attaches the private dataset `aspirant200715/packsense-public-measured-quality` and runs the same `packsense/quality_observations.py` audit code in CPU mode. To reproduce or update it from the repository root:
-
-```powershell
-kaggle kernels push -p kaggle/measured-quality
-```
-
-On a passing source audit, the kernel writes `packsense_measured_quality_model_input.csv` and `packsense_measured_quality_prep_report.json` under `/kaggle/working`. The CSV contains the four observed features (`food`, `package`, categorical `storage`, and `assessment_day`), the seven measured targets, one treatment/day grouping key for split control, and source CSV line references. It contains no imputed or generated values. Day-0 baselines remain excluded, and recorded temperature categories are not converted to guessed numeric temperatures.
-
-The current kernel only audits and prepares this table; it does not fit a model. A subsequent fit can only be described as exploratory prediction of these measured quality indicators within this one study. It must not be presented as the architecture's shelf-life or packaging recommendation model. GPU is disabled because this dataset is only 72 experimental units and the task is not GPU-scale.
