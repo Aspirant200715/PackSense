@@ -281,8 +281,9 @@ PackSense must continue to withhold a real package or shelf-life claim.
 
 ### 2026-09-27 — first measured-trial shelf-life training runner
 
-- Branch: `ml/09-shelf-life-training-pipeline`, based on `main` at
-  `fecb787`. Added one CPU gradient-boosting training path behind the
+- Branch: `ml/09-shelf-life-training-pipeline`,
+  [PR #19](https://github.com/Aspirant200715/PackSense/pull/19), based on
+  `main` at `fecb787`. Added one CPU gradient-boosting training path behind the
   existing reviewed trial/split gate. It fits only observed failure days,
   requires one failure criterion and threshold, fits preprocessing on train
   data, chooses iterations on validation, compares with a training-median
