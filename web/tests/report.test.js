@@ -28,6 +28,8 @@ function decision(status = "not_ready") {
     screening_reason_codes: [],
     warnings: [],
     target_shelf_life_days: status === "exception" ? null : 30,
+    produce_route_status: status === "exception" ? null : "unclassified",
+    candidate_screening_allowed: status === "exception" ? null : false,
     temperature_exposures: status === "exception" ? [] : [{ phase: "storage", temperature_c: 4, relative_humidity_pct: 80 }],
     screened_candidates: status === "preliminary_shortlist" ? [{ structure_id: "TEST_ONLY_STRUCTURE", status: "eligible_for_shortlist", pack_format: "TEST_ONLY_FORMAT", reason_codes: [], layers: [], protection_rank: 1 }] : [],
     preliminary_preferred_structure_id: status === "preliminary_shortlist" ? "TEST_ONLY_STRUCTURE" : null,
@@ -108,6 +110,15 @@ test("rejects an invalid source fingerprint", () => {
   const source = report();
   source.trace.food_master_sha256 = "unknown";
   assert.throws(() => validateDecisionReport(source), /source fingerprint is invalid/);
+});
+
+test("rejects unsupported route and screening permission values", () => {
+  const source = report();
+  source.rows[0].produce_route_status = "approved_produce";
+  assert.throws(() => validateDecisionReport(source), /invalid produce route status/);
+  source.rows[0].produce_route_status = "unclassified";
+  source.rows[0].candidate_screening_allowed = "yes";
+  assert.throws(() => validateDecisionReport(source), /invalid screening permission/);
 });
 
 test("turns machine reason codes into readable labels without changing the code", () => {

@@ -1,4 +1,5 @@
 import { parseDecisionReport, readableCode, summarizeReport } from "./report.js";
+import { actualPipeline, STAGES, walkthroughStage } from "./pipeline.js";
 
 const VIEWS = new Set(["overview", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
@@ -23,7 +24,13 @@ const state = {
   filter: "all",
   page: 1,
   selectedIndex: null,
+  pipelineMode: "walkthrough",
+  pipelineRoute: "non_respiring",
+  pipelineStep: 0,
+  pipelineRowIndex: 0,
+  pipelineOptionsFor: null,
 };
+let playbackTimer = null;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -79,8 +86,26 @@ function closeMobileMenu() {
   $("#menu-toggle").setAttribute("aria-label", "Open navigation");
 }
 
+function setTheme(theme) {
+  const selected = theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = selected;
+  $("#theme-toggle").setAttribute("aria-pressed", String(selected === "dark"));
+  $("#theme-toggle").setAttribute("aria-label", `Switch to ${selected === "dark" ? "light" : "dark"} mode`);
+  $("#theme-toggle-label").textContent = selected === "dark" ? "Light mode" : "Dark mode";
+  $("meta[name='theme-color']").content = selected === "dark" ? "#0a1020" : "#edf1f7";
+  try { localStorage.setItem("packsense-theme", selected); } catch { /* Private mode may block storage. */ }
+}
+
+function stopPlayback() {
+  if (playbackTimer !== null) clearInterval(playbackTimer);
+  playbackTimer = null;
+  $("#pipeline-play").textContent = "Play walkthrough";
+  $("#pipeline-play").setAttribute("aria-label", "Play walkthrough");
+}
+
 function goTo(view) {
   if (!VIEWS.has(view)) return;
+  if (view !== "pipeline") stopPlayback();
   state.view = view;
   $$(".view").forEach((section) => {
     const active = section.id === `view-${view}`;
@@ -173,7 +198,8 @@ function renderInspector(row) {
     ${renderReasonGroup("Warnings", row.warnings, "neutral")}
     ${renderExposures(row.temperature_exposures)}
     ${row.status !== "exception" ? renderCandidates(row) : ""}
-    <div class="inspector-boundary"><strong>Decision boundary</strong><p>Package feasibility and predicted material are withheld. A requested shelf life is not a predicted shelf life.</p></div>`;
+    <div class="inspector-boundary"><strong>Decision boundary</strong><p>Package feasibility and predicted material are withheld. A requested shelf life is not a predicted shelf life.</p></div>
+    <button type="button" class="text-button inspector-trace-link" data-trace-row="${state.selectedIndex}">Follow this row through the pipeline →</button>`;
 }
 
 function renderDecisions() {
@@ -208,10 +234,81 @@ function renderEvidence() {
   }).join("")}</div>`;
 }
 
+function renderPipeline() {
+  const actualMode = state.pipelineMode === "actual";
+  const hasReport = Boolean(state.report);
+  $$('[data-pipeline-mode]').forEach((button) => {
+    const active = button.dataset.pipelineMode === state.pipelineMode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  $$('[data-route]').forEach((button) => {
+    const active = button.dataset.route === state.pipelineRoute;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  $("#route-control").hidden = actualMode;
+  $("#actual-record-control").hidden = !actualMode || !hasReport;
+  $("#pipeline-mode-note").textContent = actualMode
+    ? "Audited report values only · no new inference is performed"
+    : "Conceptual walkthrough · no food/package result is generated";
+  $("#pipeline-empty").hidden = !actualMode || hasReport;
+  $("#studio-focus").hidden = actualMode && !hasReport;
+
+  if (actualMode && hasReport) {
+    state.pipelineRowIndex = Math.min(state.pipelineRowIndex, state.report.rows.length - 1);
+    if (state.pipelineOptionsFor !== state.report) {
+      $("#pipeline-record-select").innerHTML = state.report.rows.map((row, index) =>
+        `<option value="${index}">Row ${row.source_row_number} · ${escapeHtml(row.scenario?.commodity_type || row.record_id || "Input exception")}</option>`
+      ).join("");
+      state.pipelineOptionsFor = state.report;
+    }
+    $("#pipeline-record-select").value = String(state.pipelineRowIndex);
+  }
+
+  const actualStages = actualMode && hasReport
+    ? actualPipeline(state.report.rows[state.pipelineRowIndex])
+    : null;
+  $("#pipeline-stage-list").innerHTML = STAGES.map((stage, index) => {
+    const active = index === state.pipelineStep;
+    const status = actualStages ? actualStages[index].state : actualMode ? "awaiting_report" : active ? "in_focus" : index < state.pipelineStep ? "viewed" : "upcoming";
+    const statusText = actualMode ? (hasReport ? readableCode(status) : "Awaiting report") : active ? "In focus" : index < state.pipelineStep ? "Explored" : "Up next";
+    return `<button type="button" class="studio-stage${active ? " is-active" : ""}" data-pipeline-index="${index}" ${actualMode && !hasReport ? "disabled" : ""} ${active ? 'aria-current="step"' : ""}><span class="stage-index">${stage.number}</span><span class="stage-text"><strong>${escapeHtml(stage.title)}</strong><small>${escapeHtml(statusText)}</small></span><span class="stage-light stage-${escapeHtml(status)}" aria-hidden="true"></span></button>`;
+  }).join("");
+
+  if (actualMode && !hasReport) return;
+  const stage = actualStages
+    ? { ...STAGES[state.pipelineStep], ...actualStages[state.pipelineStep] }
+    : walkthroughStage(state.pipelineStep, state.pipelineRoute);
+  $("#studio-mode-label").textContent = actualMode ? "ACTUAL REPORT TRACE" : "CONCEPTUAL WALKTHROUGH";
+  $("#studio-progress").textContent = `${stage.number} / 08`;
+  $("#studio-step-number").textContent = stage.number;
+  $("#studio-state-label").textContent = actualMode ? readableCode(stage.state).toUpperCase() : "STEP IN FOCUS";
+  $("#studio-title").textContent = stage.title;
+  $("#studio-statement").textContent = stage.statement;
+  $("#studio-input").textContent = stage.input;
+  $("#studio-check").textContent = stage.check;
+  $("#studio-output").textContent = stage.output;
+  $("#studio-boundary-label").textContent = actualMode ? "READING THIS TRACE" : stage.routeNote ? "ROUTE DECISION" : "EVIDENCE BOUNDARY";
+  $("#studio-boundary-text").textContent = actualMode
+    ? "This stage reflects the imported decision row only. It does not prove package feasibility or run a trained predictor."
+    : stage.routeNote || stage.boundary;
+  const codes = actualMode ? stage.evidence : [];
+  $("#studio-evidence").hidden = !codes?.length;
+  $("#studio-evidence").innerHTML = codes?.length
+    ? `<span>REPORTED CODES</span><div>${codes.map((code) => `<code>${escapeHtml(code)}</code>`).join("")}</div>`
+    : "";
+  $("#studio-step-caption").textContent = `Step ${state.pipelineStep + 1} of 8`;
+  $("#pipeline-previous").disabled = state.pipelineStep === 0;
+  $("#pipeline-next").disabled = state.pipelineStep === STAGES.length - 1;
+  $("#pipeline-play").hidden = actualMode;
+}
+
 function render() {
   renderOverview();
   renderDecisions();
   renderEvidence();
+  renderPipeline();
 }
 
 async function loadFile(file) {
@@ -228,6 +325,8 @@ async function loadFile(file) {
     state.filter = "all";
     state.page = 1;
     state.selectedIndex = 0;
+    state.pipelineRowIndex = 0;
+    state.pipelineOptionsFor = null;
     $("#record-search").value = "";
     $("#record-filter").value = "all";
     render();
@@ -253,8 +352,53 @@ document.addEventListener("click", (event) => {
   if (target.matches("[data-nav]")) goTo(target.dataset.nav);
   else if (target.matches("[data-go]")) goTo(target.dataset.go);
   else if (target.matches("[data-import]")) $("#report-input").click();
-  else if (target.matches("[data-select-row]")) {
+  else if (target.matches("#theme-toggle")) {
+    setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  } else if (target.matches("[data-pipeline-mode]")) {
+    stopPlayback();
+    state.pipelineMode = target.dataset.pipelineMode;
+    state.pipelineStep = 0;
+    renderPipeline();
+  } else if (target.matches("[data-route]")) {
+    stopPlayback();
+    state.pipelineRoute = target.dataset.route;
+    renderPipeline();
+  } else if (target.matches("[data-pipeline-index]")) {
+    stopPlayback();
+    state.pipelineStep = Number(target.dataset.pipelineIndex);
+    renderPipeline();
+  } else if (target.matches("[data-pipeline-step]")) {
+    stopPlayback();
+    state.pipelineStep += target.dataset.pipelineStep === "next" ? 1 : -1;
+    state.pipelineStep = Math.max(0, Math.min(STAGES.length - 1, state.pipelineStep));
+    renderPipeline();
+  } else if (target.matches("#pipeline-play")) {
+    if (playbackTimer !== null) {
+      stopPlayback();
+    } else {
+      if (state.pipelineStep === STAGES.length - 1) state.pipelineStep = 0;
+      target.textContent = "Pause walkthrough";
+      target.setAttribute("aria-label", "Pause walkthrough");
+      renderPipeline();
+      playbackTimer = setInterval(() => {
+        if (state.pipelineStep >= STAGES.length - 1) {
+          stopPlayback();
+          return;
+        }
+        state.pipelineStep += 1;
+        renderPipeline();
+      }, 2400);
+    }
+  } else if (target.matches("[data-trace-row]")) {
+    stopPlayback();
+    state.pipelineRowIndex = Number(target.dataset.traceRow);
+    state.pipelineMode = "actual";
+    state.pipelineStep = 0;
+    renderPipeline();
+    goTo("pipeline");
+  } else if (target.matches("[data-select-row]")) {
     state.selectedIndex = Number(target.dataset.selectRow);
+    state.pipelineRowIndex = state.selectedIndex;
     state.page = Math.floor(filteredRows().findIndex(({ index }) => index === state.selectedIndex) / PAGE_SIZE) + 1;
     renderDecisions();
     goTo("decisions");
@@ -282,6 +426,12 @@ $("#report-input").addEventListener("change", (event) => {
   loadFile(event.target.files?.[0]);
   event.target.value = "";
 });
+$("#pipeline-record-select").addEventListener("change", (event) => {
+  stopPlayback();
+  state.pipelineRowIndex = Number(event.target.value);
+  state.pipelineStep = 0;
+  renderPipeline();
+});
 $("#menu-toggle").addEventListener("click", () => {
   const opened = $("#sidebar").classList.toggle("is-open");
   $("#sidebar-scrim").hidden = !opened;
@@ -300,4 +450,7 @@ document.addEventListener("drop", (event) => {
   }
 });
 
+let storedTheme = "dark";
+try { storedTheme = localStorage.getItem("packsense-theme") || "dark"; } catch { /* Private mode may block storage. */ }
+setTheme(storedTheme);
 render();

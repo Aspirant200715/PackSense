@@ -3,10 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f5f7f6" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="theme-color" content="#0a1020" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
     <meta name="description" content="PackSense decision workspace for auditable food packaging screening." />
     <title>PackSense — Decision workspace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -58,6 +61,11 @@
           </div>
           <div class="topbar-actions">
             <span class="privacy-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Local file only</span>
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
+              <svg class="theme-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+              <svg class="theme-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20.2 15.8A8.7 8.7 0 0 1 8.2 3.8a8.7 8.7 0 1 0 12 12Z"/></svg>
+              <span id="theme-toggle-label">Light mode</span>
+            </button>
             <button type="button" class="button button-primary button-small" data-import>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
               Import report
@@ -67,25 +75,25 @@
 
         <main class="main-content">
           <section class="view is-visible" id="view-overview" aria-labelledby="overview-title">
-            <div class="page-kicker">DECISION INTELLIGENCE / OVERVIEW</div>
+            <div class="page-kicker">PACKSENSE / OPERATIONS DESK</div>
             <div class="hero">
               <div class="hero-copy">
-                <div class="hero-eyebrow"><span class="eyebrow-line"></span> PACKAGING DECISIONS, MADE TRACEABLE</div>
-                <h1 id="overview-title">Know what the evidence supports.</h1>
-                <p>From food properties and temperature exposure to reviewed package structures, see each decision step clearly—and see where more evidence is needed.</p>
+                <div class="hero-eyebrow"><span class="eyebrow-line"></span> EVIDENCE FIRST / EVERY STEP VISIBLE</div>
+                <h1 id="overview-title">Packaging decisions, without the black box.</h1>
+                <p>Follow a food scenario from submitted conditions through protection checks, package screening and an auditable outcome. When evidence stops, the interface shows exactly where.</p>
                 <div class="hero-actions">
-                  <button type="button" class="button button-light" data-import>Open decision report <span aria-hidden="true">↗</span></button>
-                  <button type="button" class="button button-ghost-light" data-go="pipeline">Explore the pipeline <span aria-hidden="true">→</span></button>
+                  <button type="button" class="button button-light" data-go="pipeline">Explore the process <span aria-hidden="true">→</span></button>
+                  <button type="button" class="button button-ghost-light" data-import>Import a real report <span aria-hidden="true">↗</span></button>
                 </div>
-                <div class="hero-disclaimer"><span aria-hidden="true"></span> Preliminary screening is not a validated material prediction.</div>
+                <div class="hero-disclaimer"><span aria-hidden="true"></span> No trained material predictor is deployed.</div>
               </div>
               <div class="decision-path" aria-label="Decision path">
-                <div class="decision-path-heading"><span>HOW A DECISION TAKES SHAPE</span><span class="path-label">01 — 04</span></div>
-                <div class="path-step"><span class="path-number">01</span><span><strong>Food &amp; conditions</strong><small>Commodity, pack size, storage and transit</small></span><span class="path-line"></span></div>
-                <div class="path-step"><span class="path-number">02</span><span><strong>Protection needs</strong><small>Oxygen, moisture and temperature scope</small></span><span class="path-line"></span></div>
-                <div class="path-step"><span class="path-number">03</span><span><strong>Package screening</strong><small>Reviewed structure and transfer evidence</small></span><span class="path-line"></span></div>
-                <div class="path-step path-step-last"><span class="path-number">04</span><span><strong>Auditable outcome</strong><small>Shortlist or a specific evidence gap</small></span></div>
-                <div class="path-footer"><span class="path-footer-mark"></span> Gaps remain visible. Nothing is guessed.</div>
+                <div class="decision-path-heading"><span>PROCESS SIGNAL</span><span class="path-label">EVIDENCE / 4 PHASES</span></div>
+                <div class="path-step"><span class="path-number">01</span><span><strong>Capture the conditions</strong><small>Food, quantity, storage and transport</small></span><span class="path-line"></span></div>
+                <div class="path-step"><span class="path-number">02</span><span><strong>Map protection needs</strong><small>Source-scoped limits and open gaps</small></span><span class="path-line"></span></div>
+                <div class="path-step"><span class="path-number">03</span><span><strong>Screen actual structures</strong><small>Review, transfer and temperature gates</small></span><span class="path-line"></span></div>
+                <div class="path-step path-step-last"><span class="path-number">04</span><span><strong>Keep the conclusion honest</strong><small>Shortlist, evidence gap or exception</small></span></div>
+                <div class="path-footer"><span class="path-footer-mark"></span> Source trace retained at every outcome.</div>
               </div>
             </div>
 
@@ -112,15 +120,6 @@
               </section>
             </div>
 
-            <section class="journey-panel" aria-labelledby="journey-title">
-              <div class="panel-heading"><div><div class="section-kicker">THE WORKFLOW</div><h2 id="journey-title">From scenario to decision</h2></div><button type="button" class="text-button" data-go="pipeline">All eight stages <span aria-hidden="true">→</span></button></div>
-              <div class="journey-grid">
-                <div class="journey-item"><span>01 / INPUT</span><strong>Describe the food</strong><p>Properties, pack quantity and every temperature exposure.</p></div>
-                <div class="journey-item"><span>02 / NEEDS</span><strong>Set protection limits</strong><p>Source-backed food requirements—not guessed targets.</p></div>
-                <div class="journey-item"><span>03 / SCREEN</span><strong>Check real structures</strong><p>Contact, service range, handling and transfer evidence.</p></div>
-                <div class="journey-item"><span>04 / OUTPUT</span><strong>Explain the result</strong><p>A shortlist, a gap or an exception, with its trace.</p></div>
-              </div>
-            </section>
           </section>
 
           <section class="view" id="view-decisions" aria-labelledby="decisions-title" hidden>
@@ -136,18 +135,33 @@
           </section>
 
           <section class="view" id="view-pipeline" aria-labelledby="pipeline-title" hidden>
-            <div class="page-heading"><div><div class="page-kicker">HOW PACKSENSE WORKS</div><h1 id="pipeline-title">A decision in eight steps</h1><p>Every stage either contributes evidence or explains why the process must pause.</p></div><div class="page-counter">01 <span>/</span> 08</div></div>
-            <div class="pipeline-notice"><div class="notice-icon" aria-hidden="true">i</div><div><strong>“Not ready” is a valid result.</strong><p>The pipeline does not fill missing evidence with a guess or present an unvalidated material prediction.</p></div></div>
-            <div class="pipeline-grid">
-              <article class="stage-card"><div class="stage-top"><span class="stage-number">01</span><span class="stage-state state-available">AVAILABLE</span></div><h2>Dataset input</h2><p>Structured scenario rows describe the food, pack quantity, desired life, and storage and transport conditions.</p><div class="stage-output">Output <span>Scenario batch</span></div></article>
-              <article class="stage-card"><div class="stage-top"><span class="stage-number">02</span><span class="stage-state state-available">AVAILABLE</span></div><h2>Validate &amp; enrich</h2><p>Check ranges, units and cross-field consistency. Match food references exactly; keep exceptions separate.</p><div class="stage-output">Output <span>Enriched scenarios or exceptions</span></div></article>
-              <article class="stage-card"><div class="stage-top"><span class="stage-number">03</span><span class="stage-state state-conditional">EVIDENCE-GATED</span></div><h2>Food needs</h2><p>Build an oxygen, moisture and handling requirement card. Numerical limits require food-specific source approval.</p><div class="stage-output">Output <span>Requirement card and gaps</span></div></article>
-              <article class="stage-card"><div class="stage-top"><span class="stage-number">04</span><span class="stage-state state-limited">DIAGNOSTIC ONLY</span></div><h2>Fresh-produce path</h2><p>Consider respiration and local gas and water conditions at storage, transit and excursion temperatures.</p><div class="stage-output">Current boundary <span>No MAP safety clearance</span></div></article>
-              <article class="stage-card"><div class="stage-top"><span class="stage-number">05</span><span class="stage-state state-conditional">EVIDENCE-GATED</span></div><h2>Find packages</h2><p>Screen complete reviewed structures against food scope, service range, handling and exact transfer evidence.</p><div class="stage-output">Output <span>Eligible, excluded or unresolved</span></div></article>
-              <article class="stage-card"><div class="stage-top"><span class="stage-number">06</span><span class="stage-state state-limited">PRELIMINARY</span></div><h2>Compare candidates</h2><p>Compare supported protection budgets without forcing a winner when trade-offs or missing values remain.</p><div class="stage-output">Current boundary <span>No cost or sustainability rank</span></div></article>
-              <article class="stage-card"><div class="stage-top"><span class="stage-number">07</span><span class="stage-state state-blocked">NOT DEPLOYED</span></div><h2>Predict outcomes</h2><p>Material-model training awaits reviewed food–package labels. Shelf-life prediction is a later phase.</p><div class="stage-output">Current boundary <span>No predicted material or life</span></div></article>
-              <article class="stage-card"><div class="stage-top"><span class="stage-number">08</span><span class="stage-state state-available">AVAILABLE</span></div><h2>Auditable output</h2><p>Produce a versioned report with row status, evidence gaps, candidates, exposure segments and source hashes.</p><div class="stage-output">Output <span>Frontend decision JSON</span></div></article>
+            <div class="page-heading"><div><div class="page-kicker">SYSTEM MAP / EIGHT STOPS</div><h1 id="pipeline-title">Inside the decision process</h1><p>Explore the logic, then inspect what a real imported report actually contains.</p></div><div class="page-counter">01 <span>/</span> 08</div></div>
+            <div class="pipeline-mode-switch" role="group" aria-label="Pipeline view">
+              <button type="button" class="mode-button is-active" data-pipeline-mode="walkthrough" aria-pressed="true">Interactive walkthrough <span>Learn the logic</span></button>
+              <button type="button" class="mode-button" data-pipeline-mode="actual" aria-pressed="false">Actual report trace <span>Use imported evidence</span></button>
             </div>
+            <div class="pipeline-toolbar">
+              <div class="route-control" id="route-control"><span>FOLLOW A ROUTE</span><div><button type="button" data-route="non_respiring" class="is-active" aria-pressed="true">Non-respiring food</button><button type="button" data-route="fresh_produce" aria-pressed="false">Fresh produce</button></div></div>
+              <label class="actual-record-control" id="actual-record-control" hidden><span>REPORT RECORD</span><select id="pipeline-record-select"></select></label>
+              <div class="pipeline-mode-note" id="pipeline-mode-note">Conceptual walkthrough · no food/package result is generated</div>
+            </div>
+            <div class="pipeline-studio">
+              <div class="studio-rail"><div class="studio-rail-heading"><span>PROCESS STAGES</span><span>01—08</span></div><div id="pipeline-stage-list"></div></div>
+              <div class="studio-main">
+                <div class="studio-empty" id="pipeline-empty" hidden><div class="studio-empty-line"></div><div class="section-kicker">NO REPORT LOADED</div><h2>Bring in a real decision trace.</h2><p>The actual-report view does not invent a scenario. Import a generated frontend decision JSON file to see where that record progressed and where evidence was withheld.</p><button type="button" class="button button-primary" data-import>Import decision report</button></div>
+                <div class="studio-focus" id="studio-focus" aria-live="polite">
+                  <div class="studio-meta"><span id="studio-mode-label">CONCEPTUAL WALKTHROUGH</span><span id="studio-progress">01 / 08</span></div>
+                  <div class="studio-step-number" id="studio-step-number">01</div>
+                  <div class="studio-title-row"><div><div class="section-kicker" id="studio-state-label">STEP IN FOCUS</div><h2 id="studio-title">Scenario intake</h2></div><div class="studio-signal" aria-hidden="true"><span></span><span></span><span></span></div></div>
+                  <p class="studio-statement" id="studio-statement"></p>
+                  <div class="studio-flow"><div class="flow-unit"><span>01 / RECEIVES</span><strong id="studio-input"></strong></div><div class="flow-connector" aria-hidden="true">→</div><div class="flow-unit"><span>02 / CHECKS</span><strong id="studio-check"></strong></div><div class="flow-connector" aria-hidden="true">→</div><div class="flow-unit flow-unit-result"><span>03 / PRODUCES</span><strong id="studio-output"></strong></div></div>
+                  <div class="studio-boundary"><span id="studio-boundary-label">EVIDENCE BOUNDARY</span><p id="studio-boundary-text"></p></div>
+                  <div class="studio-evidence" id="studio-evidence" hidden></div>
+                  <div class="studio-controls"><button type="button" class="button button-secondary" data-pipeline-step="previous" id="pipeline-previous">← Previous</button><div class="studio-control-center"><span id="studio-step-caption">Step 1 of 8</span><button type="button" class="play-button" id="pipeline-play" aria-label="Play walkthrough">Play walkthrough</button></div><button type="button" class="button button-primary" data-pipeline-step="next" id="pipeline-next">Next step →</button></div>
+                </div>
+              </div>
+            </div>
+            <div class="pipeline-footer-note"><span class="note-marker" aria-hidden="true"></span><p>Educational mode explains the intended flow. Actual mode is derived from one audited row; neither mode computes new barrier values, package suitability or shelf life.</p></div>
           </section>
 
           <section class="view" id="view-evidence" aria-labelledby="evidence-title" hidden>

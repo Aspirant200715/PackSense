@@ -834,6 +834,26 @@ PackSense must continue to withhold a real package or shelf-life claim.
   be completed because no browser surface was available to the UI-check tool.
   PR CI and independent review remain separate.
 
+### 2026-09-27 — frontend process studio and theme revision
+
+- Continued on `feat/frontend-workspace` (PR #36). Replaced the repeated
+  pipeline cards with an eight-stage interactive walkthrough, including
+  separate non-respiring and fresh-produce explanations, step controls and
+  playback. An actual-report mode traces one imported decision row through
+  the existing evidence gates without performing a new screen. The backend
+  projection now includes the requirement card's route status and candidate-
+  screening permission so that trace does not infer either from composition.
+- Restyled the workspace in dark navy/cobalt glass surfaces with a reversible
+  light theme, clearer IBM Plex typography and responsive process rail. The
+  browser stores only the theme choice; report import remains local and in
+  memory. Online fonts have system fallbacks. No real food data, packaging
+  outcomes, suitability labels, estimator or model artifact were changed.
+- Local verification: 227 scoped Python tests and 12 Node tests passed, along
+  with JavaScript syntax and diff checks. A local headless browser rendered
+  dark, light and mobile views; route switching, the actual-mode empty state,
+  and a `TEST_ONLY` report import/trace produced no browser exceptions. The
+  real package recommendation and material prediction gates remain withheld.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

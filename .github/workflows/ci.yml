@@ -45,5 +45,6 @@ jobs:
         run: |
           node --check src/app.js
           node --check src/report.js
+          node --check src/pipeline.js
       - name: Run frontend contract tests
         run: npm test

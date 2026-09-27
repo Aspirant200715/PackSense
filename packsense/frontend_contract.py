@@ -16,6 +16,10 @@ from packsense.recommendation_output import EXPECTED_BATCH_VERSION
 CONTRACT_VERSION = "frontend-decision-v1"
 ROW_STATUSES = frozenset({"exception", "not_ready", "preliminary_shortlist"})
 CANDIDATE_STATUSES = frozenset({"excluded", "unresolved", "eligible_for_shortlist"})
+PRODUCE_ROUTE_STATUSES = frozenset({
+    "unclassified", "confirmed_non_respiring", "confirmed_respiring",
+    "respiration_evidence_present",
+})
 TRACE_FIELDS = (
     "scenario_sha256", "food_master_sha256", "material_master_sha256",
     "route_register_sha256", "assessment_register_sha256",
@@ -106,6 +110,8 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
             preferred = None
             food_reference_id = None
             target_days = None
+            produce_route_status = None
+            candidate_screening_allowed = None
         else:
             if issues:
                 raise ValueError("screened row cannot carry input issues")
@@ -135,6 +141,14 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
                 raise ValueError("preliminary preference is not eligible")
             food_reference_id = recommendation.get("food_reference_id")
             target_days = card.get("target_shelf_life_days")
+            produce_route_status = card.get("produce_route_status")
+            candidate_screening_allowed = card.get("candidate_screening_allowed")
+            if (produce_route_status is not None
+                    and produce_route_status not in PRODUCE_ROUTE_STATUSES):
+                raise ValueError("requirement card has an unsupported produce route")
+            if (candidate_screening_allowed is not None
+                    and type(candidate_screening_allowed) is not bool):
+                raise ValueError("requirement card has an invalid screening permission")
 
         projected.append({
             "source_row_number": row["row_number"],
@@ -147,6 +161,8 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
             "screening_reason_codes": screening_reasons,
             "warnings": warnings,
             "target_shelf_life_days": target_days,
+            "produce_route_status": produce_route_status,
+            "candidate_screening_allowed": candidate_screening_allowed,
             "temperature_exposures": exposure,
             "screened_candidates": candidates,
             "preliminary_preferred_structure_id": preferred,

@@ -54,6 +54,11 @@ type, handling severity, transport mode, and any supplied respiration values.
 It is `null` for input exceptions and may be `null` when opening a report
 generated before this additive field existed. These are input facts, not
 measured packaging outcomes or inferred missing properties.
+Newly projected rows also carry `produce_route_status` and
+`candidate_screening_allowed` from the requirement card. Both are `null` for
+input exceptions; older projections may omit them. The frontend's actual
+pipeline trace treats an absent route as unresolved and never infers screening
+permission from food composition.
 
 In **all** three states of this contract, `recommended_structure_id`,
 `material_prediction`, and `predicted_shelf_life_days` are `null`, and

@@ -1,10 +1,19 @@
 # PackSense decision workspace
 
-A dependency-free frontend for the backend's `frontend-decision-v1` JSON. It
-provides an overview, searchable and paginated decision records, an eight-step
-pipeline explanation, and source-hash inspection. It imports a local file into
-browser memory; it does not upload or persist the report. No demonstration
-food/package rows or model predictions are bundled.
+A build-free frontend for the backend's `frontend-decision-v1` JSON. It
+provides an overview, searchable and paginated decision records, an interactive
+eight-step pipeline walkthrough, a trace of one imported decision row, and
+source-hash inspection. The walkthrough can follow either a reviewed
+non-respiring route or a fresh-produce route and can be played step by step.
+It is an explanation, not a computed recommendation. The actual trace uses
+only fields in the imported report and does not run a new screen or predictor.
+No demonstration food/package rows or model predictions are bundled.
+
+The workspace defaults to a dark theme and has a light-mode toggle. The theme
+choice alone is stored in browser local storage. A report is read into browser
+memory; it is not uploaded or persisted. IBM Plex fonts load from Google Fonts
+when available; system fallbacks are used offline. No report contents are sent
+to the font provider.
 
 From the repository root:
 

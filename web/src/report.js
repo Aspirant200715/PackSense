@@ -4,6 +4,7 @@
 
 const ROW_STATUSES = new Set(["exception", "not_ready", "preliminary_shortlist"]);
 const CANDIDATE_STATUSES = new Set(["excluded", "unresolved", "eligible_for_shortlist"]);
+const PRODUCE_ROUTE_STATUSES = new Set(["unclassified", "confirmed_non_respiring", "confirmed_respiring", "respiration_evidence_present"]);
 const TRACE_FIELDS = [
   "scenario_sha256", "food_master_sha256", "material_master_sha256",
   "route_register_sha256", "assessment_register_sha256",
@@ -57,6 +58,8 @@ export function validateDecisionReport(report) {
       }
     }
     requireCondition(isFiniteOrNull(row.target_shelf_life_days), `${location} has an invalid requested shelf-life target.`);
+    requireCondition(row.produce_route_status === undefined || row.produce_route_status === null || PRODUCE_ROUTE_STATUSES.has(row.produce_route_status), `${location} has an invalid produce route status.`);
+    requireCondition(row.candidate_screening_allowed === undefined || row.candidate_screening_allowed === null || typeof row.candidate_screening_allowed === "boolean", `${location} has an invalid screening permission.`);
     requireCondition(Array.isArray(row.input_issues) && Array.isArray(row.requirement_gaps) && Array.isArray(row.screening_reason_codes) && Array.isArray(row.warnings), `${location} is missing a reason list.`);
     requireCondition(Array.isArray(row.temperature_exposures) && Array.isArray(row.screened_candidates), `${location} is missing its exposure or candidate list.`);
     requireCondition(row.package_feasible === false && row.recommended_structure_id === null && row.material_prediction === null && row.predicted_shelf_life_days === null, `${location} makes a prediction or feasibility claim this contract cannot display.`);
@@ -78,7 +81,7 @@ export function validateDecisionReport(report) {
     });
 
     if (row.status === "exception") {
-      requireCondition(row.input_issues.length > 0 && row.requirement_gaps.length === 0 && row.screening_reason_codes.length === 0 && row.warnings.length === 0 && row.screened_candidates.length === 0 && row.temperature_exposures.length === 0 && row.preliminary_preferred_structure_id === null && row.scenario == null && row.food_reference_id === null && row.target_shelf_life_days === null, `${location} is an inconsistent input exception.`);
+      requireCondition(row.input_issues.length > 0 && row.requirement_gaps.length === 0 && row.screening_reason_codes.length === 0 && row.warnings.length === 0 && row.screened_candidates.length === 0 && row.temperature_exposures.length === 0 && row.preliminary_preferred_structure_id === null && row.scenario == null && row.food_reference_id === null && row.target_shelf_life_days === null && row.produce_route_status == null && row.candidate_screening_allowed == null, `${location} is an inconsistent input exception.`);
     } else {
       requireCondition(row.input_issues.length === 0, `${location} mixes input exceptions with screening.`);
       requireCondition(row.status === "preliminary_shortlist" ? eligibleIds.size > 0 : eligibleIds.size === 0, `${location} has an inconsistent shortlist status.`);
