@@ -371,7 +371,8 @@ PackSense must continue to withhold a real package or shelf-life claim.
 ### 2026-09-27 — preliminary package shortlist
 
 - Branch: `feat/07-basic-recommendation`, based on `main` at `7cce752` (PR
-  pending). Added a basic source-gated shortlist for confirmed non-respiring
+  [#21](https://github.com/Aspirant200715/PackSense/pull/21), open for review).
+  Added a basic source-gated shortlist for confirmed non-respiring
   foods. It requires all three reviewed oxygen/moisture decisions, an exact
   food-scope and temperature-matched reviewed complete structure, and exact
   scenario-matched whole-package transfer evidence. Any approved-limit
