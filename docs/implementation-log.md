@@ -423,9 +423,10 @@ PackSense must continue to withhold a real package or shelf-life claim.
 
 ### 2026-09-27 — preliminary batch CSV summary
 
-- Branch: `feat/08-batch-summary`, based on PR #21 at `c3fd1c0` (stacked PR
-  pending). Added an optional one-row-per-scenario CSV beside the detailed
-  JSON report. The summary preserves input exceptions, missing evidence,
+- Branch: `feat/08-batch-summary`, [PR #23](https://github.com/Aspirant200715/PackSense/pull/23),
+  based on PR #21 at `c3fd1c0`. Added an optional one-row-per-scenario CSV
+  beside the detailed JSON report. The summary preserves input exceptions,
+  missing evidence,
   storage/transit/excursion temperatures, target life, eligible IDs, and
   preliminary structure details. It leaves unsupported fields blank and
   always marks package feasibility and shelf-life prediction false.
