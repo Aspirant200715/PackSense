@@ -85,6 +85,10 @@ py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx
 
 The reviewed registers can be supplied with `--route-register`,
 `--assessments`, `--structures`, `--structure-reviews`, and `--transfers`.
+`--public-candidates data/public_catalogue_candidates.v1.json` optionally
+adds source-linked supplier application leads to each valid scenario's JSON
+row. These leads never become eligible structures or change `not_ready` into
+a recommendation; see [public catalogue intake](public-catalogue-intake.md).
 The structure catalogue and its review register must be supplied together;
 transfer evidence requires both. The command never creates missing evidence
 from material-grade OTR/WVTR or from the requested shelf life.

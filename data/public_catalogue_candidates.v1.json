@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "catalogue_id": "packsense-public-candidates-2026-09-27",
+  "sources": [
+    {
+      "source_id": "PKGLAB-THICK-CLEAR-MATTE-V3.4",
+      "publisher": "The Packaging Lab",
+      "title": "Thick Clear + Matte BOPP Spec Sheet v3.4, July 2024",
+      "url": "https://www.thepkglab.com/1799044271/Handler/CSSOverride/GetImage/4/PkgLab-spec_ThickCLRMatteBOPP_v3.pdf",
+      "accessed_on": "2026-09-27",
+      "rights_review_status": "pending"
+    },
+    {
+      "source_id": "KURARAY-PLANTIC-FX-WEB",
+      "publisher": "Kuraray Plantic Technologies",
+      "title": "PLANTIC FX Flexible product information",
+      "url": "https://plantic.kuraray.com/en/products/plantic-fx-flexible/",
+      "accessed_on": "2026-09-27",
+      "rights_review_status": "pending"
+    },
+    {
+      "source_id": "KURARAY-PLANTIC-RPLUS-WEB",
+      "publisher": "Kuraray Plantic Technologies",
+      "title": "PLANTIC R+ Rigid MAP product information",
+      "url": "https://plantic.kuraray.com/en/products/plantic-rplus-rigid-map/",
+      "accessed_on": "2026-09-27",
+      "rights_review_status": "pending"
+    },
+    {
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "publisher": "Sumitomo Bakelite",
+      "title": "P-Plus standard bag list",
+      "url": "https://www.sumibe.co.jp/product/p-plus/business/standard/index.html",
+      "accessed_on": "2026-09-27",
+      "rights_review_status": "pending"
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "PKGLAB-THICK-CLEAR-MATTE-V3.4",
+      "source_id": "PKGLAB-THICK-CLEAR-MATTE-V3.4",
+      "source_locator": "page 1, Structure and Typical Properties",
+      "product_code": "Thick Clear + Matte BOPP v3.4",
+      "record_kind": "laminate_film",
+      "pack_format": "pouches or rollstock",
+      "layers": [
+        {"material": "matte BOPP", "gauge_min": 1.3, "gauge_max": 1.3, "gauge_unit": "mil"},
+        {"material": "corona-treated PET", "gauge_min": 48, "gauge_max": 48, "gauge_unit": "ga"},
+        {"material": "clear EVOH PE", "gauge_min": 3.0, "gauge_max": 3.0, "gauge_unit": "mil"}
+      ],
+      "reported_total_gauge": {"value": 4.9, "unit": "mil", "basis": "supplier_reported"},
+      "barrier_observations": [
+        {"property": "otr", "lower": null, "upper": 0.06, "lower_inclusive": null, "upper_inclusive": true, "unit": "cm3/100in2/24h", "test_temperature_c": null, "test_rh_pct": null, "method": "ASTM D3985", "basis": "supplier_typical"},
+        {"property": "wvtr", "lower": null, "upper": 0.063, "lower_inclusive": null, "upper_inclusive": true, "unit": "g/100in2/24h", "test_temperature_c": null, "test_rh_pct": null, "method": "ASTM F1249", "basis": "supplier_typical"}
+      ],
+      "seal_observation": {"strength_lower": 9, "strength_lower_inclusive": true, "strength_unit": "lb/in", "strength_method": "ASTM F88", "process_temperature_min_c": 120, "process_temperature_max_c": 180},
+      "food_contact_claim": "Sheet states that all listed constituent materials comply with FDA direct-food-contact regulations.",
+      "claimed_food_scope": [],
+      "service_temperature_c": null,
+      "applications": [],
+      "source_note": "Sheet's 10-26 C storage range is for unused film and is not a food-service temperature limit. Barrier test temperature and RH are not printed."
+    },
+    {
+      "candidate_id": "KURARAY-PLANTIC-FX",
+      "source_id": "KURARAY-PLANTIC-FX-WEB",
+      "source_locator": "High Barrier Flexible; Product Characteristics; Technical Data",
+      "product_code": "PLANTIC FX",
+      "record_kind": "laminate_film",
+      "pack_format": "thermoforming or conventional packaging film",
+      "layers": [
+        {"material": "polyethylene", "gauge_min": null, "gauge_max": null, "gauge_unit": null},
+        {"material": "Plantic starch-based barrier", "gauge_min": 90, "gauge_max": 300, "gauge_unit": "um"},
+        {"material": "polyethylene", "gauge_min": null, "gauge_max": null, "gauge_unit": null}
+      ],
+      "reported_total_gauge": null,
+      "barrier_observations": [
+        {"property": "otr", "lower": 0.2, "upper": 0.7, "lower_inclusive": true, "upper_inclusive": true, "unit": "cm3/m2/24h", "test_temperature_c": 23, "test_rh_pct": 50, "method": "ASTM F1927-98", "basis": "supplier_reported_range"},
+        {"property": "wvtr", "lower": 3.1, "upper": 5.2, "lower_inclusive": true, "upper_inclusive": true, "unit": "g/m2/24h", "test_temperature_c": 38, "test_rh_pct": 90, "method": "ASTM F1249-01", "basis": "supplier_reported_range"}
+      ],
+      "seal_observation": {"strength_lower": 22, "strength_lower_inclusive": false, "strength_unit": "N/15mm", "strength_method": null, "process_temperature_min_c": 120, "process_temperature_max_c": 160},
+      "food_contact_claim": "Manufacturer states FDA food types III, IVA, V, VIIA, VIII and IX under conditions E-G.",
+      "claimed_food_scope": ["meat", "chicken", "fish and seafood", "smallgoods", "fresh pasta", "cheese"],
+      "service_temperature_c": null,
+      "applications": [],
+      "source_note": "The 90-300 um range refers to the Plantic layer, not total film gauge. This is a film component, not an identified sealed package."
+    },
+    {
+      "candidate_id": "KURARAY-PLANTIC-RPLUS-450",
+      "source_id": "KURARAY-PLANTIC-RPLUS-WEB",
+      "source_locator": "Technical Data, 450 um test-result footnote; Thermal Properties",
+      "product_code": "PLANTIC R+",
+      "record_kind": "tray_component",
+      "pack_format": "thermoformed rigid tray or base web",
+      "layers": [],
+      "reported_total_gauge": {"value": 450, "unit": "um", "basis": "supplier_test_sample"},
+      "barrier_observations": [
+        {"property": "otr", "lower": null, "upper": 0.5, "lower_inclusive": null, "upper_inclusive": false, "unit": "cm3/m2/24h", "test_temperature_c": 23, "test_rh_pct": 50, "method": "ASTM F1927-98", "basis": "supplier_450um_test_result"},
+        {"property": "wvtr", "lower": null, "upper": 3, "lower_inclusive": null, "upper_inclusive": false, "unit": "g/m2/24h", "test_temperature_c": 38, "test_rh_pct": 90, "method": "ASTM F1249-01", "basis": "supplier_450um_test_result"}
+      ],
+      "seal_observation": {"strength_lower": 22, "strength_lower_inclusive": false, "strength_unit": "N/15mm", "strength_method": null, "process_temperature_min_c": 130, "process_temperature_max_c": 150},
+      "food_contact_claim": "Manufacturer states FDA food types III, IVA, V, VIIA, VIII and IX under conditions E-G.",
+      "claimed_food_scope": ["meat", "chicken", "fish and seafood", "smallgoods", "fresh pasta", "cheese"],
+      "service_temperature_c": null,
+      "applications": [],
+      "source_note": "The 450 um figure identifies a test sample, not a separate supplier SKU. Barrier results apply to that gauge only. Sealing requires a compatible PE top lid; the complete tray/lid package is not specified."
+    },
+    {
+      "candidate_id": "SUMITOMO-PPLUS-EY7K7",
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "source_locator": "heat-seal table, EY7K7 row",
+      "product_code": "EY7K7",
+      "record_kind": "produce_bag",
+      "pack_format": "heat-seal bag",
+      "layers": [],
+      "reported_total_gauge": {"value": 0.025, "unit": "mm", "basis": "size_expression_interpretation"},
+      "barrier_observations": [],
+      "seal_observation": null,
+      "food_contact_claim": null,
+      "claimed_food_scope": ["edamame"],
+      "service_temperature_c": null,
+      "applications": [
+        {"commodity": "edamame", "quantity": 300, "quantity_unit": "g", "storage_temperature_min_c": 1, "storage_temperature_max_c": 10, "excursion_max_c": 25, "excursion_max_hours": 8, "bag_width_mm": 160, "bag_length_mm": 210, "use_note": "Manufacturer-listed recommended environment."}
+      ],
+      "source_note": "No public SKU-level O2/CO2 transfer, film construction, seal strength or food-contact certificate on this list."
+    },
+    {
+      "candidate_id": "SUMITOMO-PPLUS-AY8K7",
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "source_locator": "heat-seal table, AY8K7 row",
+      "product_code": "AY8K7",
+      "record_kind": "produce_bag",
+      "pack_format": "heat-seal bag",
+      "layers": [],
+      "reported_total_gauge": {"value": 0.025, "unit": "mm", "basis": "size_expression_interpretation"},
+      "barrier_observations": [],
+      "seal_observation": null,
+      "food_contact_claim": null,
+      "claimed_food_scope": ["asparagus"],
+      "service_temperature_c": null,
+      "applications": [
+        {"commodity": "asparagus", "quantity": 150, "quantity_unit": "g", "storage_temperature_min_c": 1, "storage_temperature_max_c": 10, "excursion_max_c": 25, "excursion_max_hours": 8, "bag_width_mm": 100, "bag_length_mm": 340, "use_note": "Manufacturer-listed recommended environment."}
+      ],
+      "source_note": "The listed storage temperatures are application instructions, not independently verified package service limits."
+    },
+    {
+      "candidate_id": "SUMITOMO-PPLUS-VY7K9",
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "source_locator": "heat-seal table, broccoli square bag VY7K9 row",
+      "product_code": "VY7K9",
+      "record_kind": "produce_bag",
+      "pack_format": "heat-seal square bag",
+      "layers": [],
+      "reported_total_gauge": {"value": 0.025, "unit": "mm", "basis": "size_expression_interpretation"},
+      "barrier_observations": [],
+      "seal_observation": null,
+      "food_contact_claim": null,
+      "claimed_food_scope": ["broccoli"],
+      "service_temperature_c": null,
+      "applications": [
+        {"commodity": "broccoli", "quantity": 400, "quantity_unit": "g", "storage_temperature_min_c": 1, "storage_temperature_max_c": 10, "excursion_max_c": 25, "excursion_max_hours": 8, "bag_width_mm": 240, "bag_length_mm": 290, "use_note": "Manufacturer-listed recommended environment."}
+      ],
+      "source_note": "The same SKU also appears in the catalogue for apples; this record captures only the explicit 400 g broccoli use condition."
+    },
+    {
+      "candidate_id": "SUMITOMO-PPLUS-PY805",
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "source_locator": "heat-seal table, PY805 row",
+      "product_code": "PY805",
+      "record_kind": "produce_bag",
+      "pack_format": "heat-seal bag",
+      "layers": [],
+      "reported_total_gauge": {"value": 0.025, "unit": "mm", "basis": "size_expression_interpretation"},
+      "barrier_observations": [],
+      "seal_observation": null,
+      "food_contact_claim": null,
+      "claimed_food_scope": ["ume"],
+      "service_temperature_c": null,
+      "applications": [
+        {"commodity": "ume", "quantity": 500, "quantity_unit": "g", "storage_temperature_min_c": 7, "storage_temperature_max_c": 25, "excursion_max_c": null, "excursion_max_hours": null, "bag_width_mm": 170, "bag_length_mm": 250, "use_note": "Manufacturer-listed recommended environment; no separate excursion is stated."}
+      ],
+      "source_note": "The source names ume specifically; no claim that this range applies to other produce."
+    },
+    {
+      "candidate_id": "SUMITOMO-PPLUS-LZ7K2",
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "source_locator": "zipper table, LZ7K2 row",
+      "product_code": "LZ7K2",
+      "record_kind": "produce_bag",
+      "pack_format": "zipper bag",
+      "layers": [],
+      "reported_total_gauge": {"value": 0.04, "unit": "mm", "basis": "size_expression_interpretation"},
+      "barrier_observations": [],
+      "seal_observation": null,
+      "food_contact_claim": null,
+      "claimed_food_scope": ["okra", "snow peas"],
+      "service_temperature_c": null,
+      "applications": [
+        {"commodity": "okra", "quantity": 100, "quantity_unit": "g", "storage_temperature_min_c": 8, "storage_temperature_max_c": 15, "excursion_max_c": 25, "excursion_max_hours": 8, "bag_width_mm": 125, "bag_length_mm": 175, "use_note": "Catalogue states the bag is shared by okra and snow peas; exact 100 g pack use."},
+        {"commodity": "snow peas", "quantity": 100, "quantity_unit": "g", "storage_temperature_min_c": 8, "storage_temperature_max_c": 15, "excursion_max_c": 25, "excursion_max_hours": 8, "bag_width_mm": 125, "bag_length_mm": 175, "use_note": "Catalogue states the bag is shared by okra and snow peas; exact 100 g pack use."}
+      ],
+      "source_note": "A zipper format is not evidence of heat-seal performance."
+    },
+    {
+      "candidate_id": "SUMITOMO-PPLUS-PK601",
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "source_locator": "large inner-bag table, PK601 row; inner-bag-only footnote",
+      "product_code": "PK601",
+      "record_kind": "produce_bag",
+      "pack_format": "box inner liner",
+      "layers": [],
+      "reported_total_gauge": {"value": 0.025, "unit": "mm", "basis": "size_expression_interpretation"},
+      "barrier_observations": [],
+      "seal_observation": null,
+      "food_contact_claim": null,
+      "claimed_food_scope": ["apple"],
+      "service_temperature_c": null,
+      "applications": [
+        {"commodity": "apple", "quantity": 10, "quantity_unit": "kg", "storage_temperature_min_c": 1, "storage_temperature_max_c": 10, "excursion_max_c": null, "excursion_max_hours": null, "bag_width_mm": 1050, "bag_length_mm": 990, "use_note": "For use as an inner liner, not as a standalone bag."}
+      ],
+      "source_note": "Manufacturer explicitly says large bags are designed as inner liners only. The outer box is not specified here."
+    }
+  ]
+}
