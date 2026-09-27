@@ -271,7 +271,7 @@ PackSense must continue to withhold a real package or shelf-life claim.
 
 ### 2026-09-27 — material barrier evidence readiness audit
 
-- Branch: `data/10-material-barrier-evidence`, based on current `main`.
+- Branch: `data/10-material-barrier-evidence`, [PR #20](https://github.com/Aspirant200715/PackSense/pull/20), based on current `main`.
   Material reference audits now report provenance and test-condition coverage
   separately for OTR, WVTR, and CO2TR. Supplier-reported and estimated values
   cannot be mistaken for measured model targets.
