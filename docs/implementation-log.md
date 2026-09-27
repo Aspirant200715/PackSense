@@ -570,6 +570,30 @@ PackSense must continue to withhold a real package or shelf-life claim.
   scenario batch, reviewed structure catalogue, or model artifact were added.
   Test fixtures are guardrail checks, never fitted training data.
 
+### 2026-09-27 — optional film-grade reference comparison
+
+- Branch: `feat/grade-reference-comparison`, [PR #31](https://github.com/Aspirant200715/PackSense/pull/31),
+  based on `main` at `c2e2b70`.
+  Added an opt-in, laboratory-condition Pareto comparison for sourced film
+  grades after the existing reviewed non-respiring route and food-protection
+  gates. It uses only active oxygen/moisture mechanisms, excludes estimated or
+  incomplete grade observations, and compares grades only within exact
+  property-specific test temperature, RH, method, and unit cohorts.
+- The supplied 81-row material workbook imported with zero rejected rows.
+  A **TEST_ONLY** card used for a read-only coverage check found 71 grades in
+  three multi-grade cohorts, one singleton, and nine grades without complete
+  comparable OTR/WVTR evidence. These counts do not constitute real-food
+  choices or a training evaluation. No data file, suitability label, scenario
+  batch, or approved package structure was added to the repository.
+- The comparison cannot choose a preferred grade, extrapolate to scenario
+  temperature/RH, alter the existing package recommendation, set package
+  feasibility, or claim a trained model. The real-data training gate remains
+  `not_ready`; the 80/20 split is inapplicable without genuine labels.
+- Local verification: 170 unit tests passed under Python 3.11 and in an
+  isolated Python 3.13 environment with pinned requirements; package/test
+  compilation, CLI help, and `git diff --check` passed. PR CI and review are
+  separate.
+
 ### 2026-09-27 — public package-catalogue candidate pilot
 
 - Branch: `data/catalogue-evidence-pilot`, based on merged `main` at

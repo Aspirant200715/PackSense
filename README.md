@@ -65,6 +65,9 @@ reviewed structures and exact-scope transfer evidence for a limited basic
 recommendation. Its batch command reports each structured scenario and any
 missing evidence without inventing a candidate; an optional flat CSV helps
 review large batches alongside the detailed JSON report.
+[Film-grade reference comparison](docs/grade-reference-comparison.md) adds an
+opt-in, test-condition-matched Pareto view for reviewed non-respiring food
+needs. It cannot choose or certify a finished package or train a model.
 
 ## Why PackSense exists
 
