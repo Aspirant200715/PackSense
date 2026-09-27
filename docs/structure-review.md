@@ -22,7 +22,7 @@ range. Every item in the catalogue must pass for the catalogue-level
 
 ## Review register contract
 
-The JSON top level has exactly `schema_version: 1`, `catalogue_sha256`,
+The JSON top level has exactly `schema_version` (`1` or `2`), `catalogue_sha256`,
 `material_master_sha256`, `catalogue_version`, and `reviews`. Those identifiers
 must match the two imported files and catalogue version exactly. Each review
 has exactly:
@@ -32,6 +32,15 @@ structure_id, draft_digest, review_id, reviewer_id,
 reviewed_food_scope, service_temperature_min_c,
 service_temperature_max_c, checks
 ```
+
+Version 2 additionally requires `max_reviewed_handling_severity` on every
+review, with exactly `low`, `medium`, or `high`. This is the highest handling
+severity that the reviewer found supported by the cited mechanical evidence;
+it is not inferred from a passing `mechanical` check. Version-1 registers
+still parse for provenance auditing, but their handling scope is unknown and
+they cannot make a scenario candidate shortlist-eligible or supply a label
+to the suitability ranker intake. The audit reports how many attested
+structures declare this scope.
 
 `draft_digest` is the lowercase SHA-256 from
 `packsense.structure_review.draft_digest(draft)` on the accepted
@@ -70,6 +79,11 @@ draft. Missing, duplicate, unrelated, or failed checks prevent attestation.
 scope; a wildcard cannot become an approval. The reviewed service-temperature
 range may narrow the draft's range but cannot widen it. A later scenario
 check must still cover storage, transit, and excursions within that range.
+The scenario's handling severity must be no higher than the version-2
+reviewed scope. A missing scope remains unresolved; a lower reviewed scope
+excludes the candidate for that scenario. A severity label does not itself
+prove drop, compression, puncture, or seal performance at the actual pack
+mass and route; the reviewer must verify the cited tests.
 The review register's file hash is included in the audit for traceability.
 
 ## What passing means—and does not mean

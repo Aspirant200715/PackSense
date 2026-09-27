@@ -126,6 +126,7 @@ def _review():
     reviewed = ReviewAttestedStructure(
         structure, CATALOGUE_HASH, MATERIAL_HASH, REVIEW_HASH,
         "TEST_ONLY_REVIEW", tuple(check.review_id for check in checks), (), checks,
+        HandlingSeverity.HIGH,
     )
     return StructureReviewAudit(
         "review_attested", CATALOGUE_HASH, REVIEW_HASH, (reviewed,), (),

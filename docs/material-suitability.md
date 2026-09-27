@@ -57,6 +57,10 @@ food reference, a changed source version, an out-of-scope food, or any storage,
 transport, or maximum-excursion temperature outside the structure's reviewed
 service range is rejected. Multiple or conflicting decisions for one exact
 scenario/structure pair are rejected instead of silently resolved.
+The reviewed structure must also have an explicit version-2 mechanical handling
+scope covering the scenario severity. A legacy review with no such scope, or a
+reviewed maximum below the scenario severity, cannot enter the ranker intake;
+this check does not authenticate the underlying test report.
 
 Run the intake after preparing the scenario batch, masters, catalogue, and
 review register:

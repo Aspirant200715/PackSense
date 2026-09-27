@@ -108,6 +108,7 @@ def _reviewed():
     item = ReviewAttestedStructure(
         structure, CATALOGUE_HASH, MATERIAL_HASH, REVIEW_HASH,
         "TEST_ONLY_REVIEW", tuple(check.review_id for check in checks), (), checks,
+        HandlingSeverity.HIGH,
     )
     return StructureReviewAudit("review_attested", CATALOGUE_HASH, REVIEW_HASH,
                                 (item,), ())
@@ -185,6 +186,13 @@ class MaterialSuitabilityTests(unittest.TestCase):
                     service_temperature_max_c=30.0,
                 ),
             ),)), "service_temperature_out_of_scope"),
+            (_label(), replace(_reviewed(), reviewed=(replace(
+                _reviewed().reviewed[0], max_reviewed_handling_severity=None,
+            ),)), "mechanical_handling_scope_missing"),
+            (_label(), replace(_reviewed(), reviewed=(replace(
+                _reviewed().reviewed[0],
+                max_reviewed_handling_severity=HandlingSeverity.LOW,
+            ),)), "mechanical_handling_out_of_scope"),
         )
         for label, review, expected in cases:
             with self.subTest(expected=expected):

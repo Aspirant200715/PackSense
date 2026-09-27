@@ -56,7 +56,9 @@ optionally show supplier-listed food/quantity/temperature application leads;
 these are not model predictions or approved recommendations.
 [Complete-structure review](docs/structure-review.md) checks external review
 declarations against exact draft and source identities, without treating a
-passing declaration as package feasibility.
+passing declaration as package feasibility. Its version-2 register requires
+an explicit reviewed handling-severity scope before a scenario can enter the
+preliminary shortlist or the material-ranker label intake.
 [Finished-package transfer checking](docs/candidate-transfer.md) is an early
 Stop 5 component: it can compare an exact-scope sourced cumulative transfer
 with a food budget, but cannot yet declare any complete package feasible.

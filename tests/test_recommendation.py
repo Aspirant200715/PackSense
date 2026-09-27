@@ -87,6 +87,7 @@ def _reviewed(structure_id, *, scope="Dry snack", low=-5.0, high=35.0):
     return ReviewAttestedStructure(
         structure, CATALOGUE_HASH, MATERIAL_HASH, "d" * 64,
         "TEST_ONLY_REVIEW", tuple(check.review_id for check in checks), (), checks,
+        HandlingSeverity.HIGH,
     )
 
 
@@ -159,6 +160,8 @@ class BasicRecommendationTests(unittest.TestCase):
             ))), "structure_review_structure_invalid"),
             (replace(_audit(reviewed), review_register_sha256="f" * 64),
              "structure_review_version_binding_invalid"),
+            (_audit(replace(reviewed, max_reviewed_handling_severity="high")),
+             "structure_review_handling_scope_invalid"),
         )
         for audit, expected in cases:
             with self.subTest(expected=expected):
@@ -222,6 +225,40 @@ class BasicRecommendationTests(unittest.TestCase):
         candidate = result.candidates[0]
         self.assertEqual(candidate.status, CandidateStatus.UNRESOLVED)
         self.assertIn("finished_package_transfer_missing", candidate.reason_codes)
+
+    def test_reviewed_handling_scope_is_required_for_shortlisting(self):
+        card = _card()
+        evidence = tuple(
+            _evidence(card, structure_id, mechanism, value)
+            for structure_id in ("TEST_ONLY_MISSING", "TEST_ONLY_LOW", "TEST_ONLY_HIGH")
+            for mechanism, value in (
+                (ProtectionMechanism.OXYGEN_INGRESS, 5.0),
+                (ProtectionMechanism.MOISTURE_GAIN, 6.0),
+            )
+        )
+        reviewed = (
+            replace(_reviewed("TEST_ONLY_MISSING"),
+                    max_reviewed_handling_severity=None),
+            replace(_reviewed("TEST_ONLY_LOW"),
+                    max_reviewed_handling_severity=HandlingSeverity.LOW),
+            _reviewed("TEST_ONLY_HIGH"),
+        )
+        result = screen_package_candidates(
+            card, "Dry snack", _audit(*reviewed), evidence,
+            current_material_master_sha256=MATERIAL_HASH,
+        )
+        self.assertEqual([item.status for item in result.candidates], [
+            CandidateStatus.UNRESOLVED, CandidateStatus.EXCLUDED,
+            CandidateStatus.ELIGIBLE_FOR_SHORTLIST,
+        ])
+        self.assertEqual(result.candidates[0].reason_codes,
+                         ("mechanical_handling_scope_missing",))
+        self.assertEqual(result.candidates[1].reason_codes,
+                         ("mechanical_handling_out_of_scope",))
+        self.assertEqual(result.preferred_structure_id, "TEST_ONLY_HIGH")
+        self.assertEqual(result.report()["candidates"][2]["structure_review"][
+            "max_reviewed_handling_severity"], "high")
+        self.assertFalse(result.report()["package_feasible"])
 
     def test_transfer_above_food_limit_excludes_package(self):
         card = _card()

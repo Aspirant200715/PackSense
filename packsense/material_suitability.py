@@ -18,7 +18,7 @@ from packsense.ingestion import InputSchemaError, audit_scenarios
 from packsense.masters import load_food_references, load_material_grades
 from packsense.structure_review import (
     StructureReviewAudit, attestation_integrity_gaps, audit_structure_reviews,
-    parse_structure_review_register,
+    handling_scope_gap, parse_structure_review_register,
 )
 from packsense.structures import audit_structure_catalogue
 
@@ -239,6 +239,10 @@ def audit_suitability_labels(
             for exposure in scenario.exposures
         ):
             code = "service_temperature_out_of_scope"
+        else:
+            code = handling_scope_gap(
+                reviewed, scenario.scenario.transport_handling_severity,
+            )
         if code is None:
             accepted.append(label)
         else:
