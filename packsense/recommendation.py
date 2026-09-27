@@ -264,7 +264,7 @@ def _rank_candidates(
 def screen_package_candidates(
     card: RequirementCard,
     commodity_type: str,
-    structure_review: StructureReviewAudit,
+    structure_review: StructureReviewAudit | None,
     transfer_evidence: Iterable[FinishedPackageTransferEvidence],
     *,
     current_material_master_sha256: str,
@@ -291,6 +291,12 @@ def screen_package_candidates(
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("food_requirements_or_produce_route_incomplete",), warnings,
+            **_report_context(card),
+        )
+    if structure_review is None:
+        return BasicRecommendation(
+            card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
+            None, None, (), ("complete_structure_review_missing",), warnings,
             **_report_context(card),
         )
     if structure_review.status != "review_attested" or structure_review.issues:

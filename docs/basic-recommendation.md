@@ -58,3 +58,32 @@ condition-specific protection limits, and whole-package transfer results.
 The final architecture's later shelf-life prediction still needs independent
 measured food-package trials with failure criteria and observed or
 right-censored outcomes.
+
+## Structured batch run
+
+`packsense.recommendation_batch` connects scenario ingestion, exact food
+reference enrichment, food requirement cards, complete-structure review, and
+the shortlist in one JSON report. A scenario CSV/XLSX must contain actual
+pack size, requested life, and storage/transport conditions as described in
+[scenario ingestion](ingestion.md). The 5,000-row food workbook is a reference
+master; it is not a completed scenario batch.
+
+```powershell
+py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --report outputs/batch-recommendations.json
+```
+
+The reviewed registers can be supplied with `--route-register`,
+`--assessments`, `--structures`, `--structure-reviews`, and `--transfers`.
+The structure catalogue and its review register must be supplied together;
+transfer evidence requires both. The command never creates missing evidence
+from material-grade OTR/WVTR or from the requested shelf life.
+
+The report contains one result per input row: `exception` for invalid or
+unmatched scenarios, `not_ready` with specific evidence gaps, or
+`preliminary_shortlist` with the screened structures. It includes source
+hashes, source-row numbers, requirement cards, review and transfer evidence,
+summary counts, and explicit false package-feasibility and shelf-life flags.
+An existing output path is never overwritten. Exit code 1 means the report
+contains input exception rows; code 2 means input or output creation failed.
+`not_ready` is an expected report result and does not itself make the command
+fail.
