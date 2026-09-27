@@ -18,7 +18,8 @@ from packsense.enrichment import enrich_scenarios
 from packsense.ingestion import IngestionIssue, ParsedScenarioRow, ScenarioAudit
 from packsense.masters import FoodMasterEntry, MasterAudit
 from packsense.material_model import (
-    MODEL_VERSION, MaterialTrainingResult, score_exploratory_candidates,
+    MODEL_VERSION, MaterialTrainingResult, _engineering_baseline_agreement,
+    score_exploratory_candidates,
 )
 from packsense.produce_route import ProduceRoute, RouteEvidence
 from packsense.recommendation_batch import build_batch_recommendations
@@ -217,6 +218,8 @@ class BatchRecommendationTests(unittest.TestCase):
         self.assertEqual(report["preliminary_preferred_rows"], 1)
         self.assertEqual(report["rows"][0]["recommendation"]
                          ["preliminary_preferred_structure_id"], "TEST_ONLY_STRUCTURE")
+        self.assertEqual(report["rows"][0]["recommendation"]
+                         ["scenario_source_sha256"], scenarios.source_sha256)
         self.assertEqual(report["rows"][0]["food_reference_row"], 2)
         self.assertEqual(report["rows"][1]["recommendation"]["candidates"][0]
                          ["reason_codes"], ["finished_package_transfer_missing"])
@@ -261,6 +264,7 @@ class ExploratoryScoringBoundaryTests(unittest.TestCase):
         shortlist = screen_package_candidates(
             card, "TEST_ONLY_FOOD", review, transfers,
             current_material_master_sha256=MATERIAL_HASH,
+            scenario_source_sha256=scenarios.source_sha256,
         )
         training = MaterialTrainingResult({
             "model_version": MODEL_VERSION,
@@ -274,6 +278,7 @@ class ExploratoryScoringBoundaryTests(unittest.TestCase):
             "register_sha256": "a" * 64,
             "split_manifest_sha256": "b" * 64,
             "source_hashes": {
+                "scenario_sha256": scenarios.source_sha256,
                 "food_master_sha256": FOOD_HASH,
                 "material_master_sha256": MATERIAL_HASH,
                 "structure_catalogue_sha256": CATALOGUE_HASH,
@@ -300,6 +305,22 @@ class ExploratoryScoringBoundaryTests(unittest.TestCase):
         self.assertFalse(report["package_feasible"])
         self.assertEqual(preferred, values[3].preferred_structure_id)
 
+    def test_actual_card_fingerprint_binds_offline_engineering_comparison(self):
+        training, enriched, _, shortlist, review, _ = self._inputs()
+        label = SimpleNamespace(
+            scenario_record_id="TEST_ONLY_CASE", food_reference_id="TEST_ONLY_FOOD_ID",
+            structure_id="TEST_ONLY_STRUCTURE", decision="suitable",
+        )
+        result = _engineering_baseline_agreement(
+            [(label, {})], {label.scenario_record_id: enriched},
+            {label.scenario_record_id: shortlist},
+            {item.structure.structure_id: item for item in review.reviewed},
+            training.report["source_hashes"],
+        )
+        self.assertEqual(result["status"], "complete_explicit_pair_coverage")
+        self.assertEqual(result["cross_tab_counts"]["eligible_for_shortlist_suitable"], 1)
+        self.assertTrue(result["full_scenario_batch_version_verified_by_code"])
+
     def test_no_model_or_failed_test_baseline_refuses_scoring(self):
         values = self._inputs()
         values = (replace(values[0], estimator=None), *values[1:])
@@ -321,6 +342,10 @@ class ExploratoryScoringBoundaryTests(unittest.TestCase):
                    *values[4:])
         self.assertEqual("engineering_shortlist_scenario_mismatch",
                          self._score(changed)["reason_codes"][0])
+        stale_batch = (*values[:3], replace(values[3], scenario_source_sha256="f" * 64),
+                       *values[4:])
+        self.assertEqual("model_and_current_source_versions_differ",
+                         self._score(stale_batch)["reason_codes"][0])
 
     def test_unresolved_transfer_cannot_be_scored(self):
         values = self._inputs()

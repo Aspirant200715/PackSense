@@ -638,6 +638,16 @@ PackSense must continue to withhold a real package or shelf-life claim.
   `not_evaluable`. These checks do not change the withheld release status.
   Local Python 3.11 verification passed 193 tests, compileall, and diff checks.
   No real suitability label, model fit, or Kaggle dataset was added.
+- Further same-PR evaluation slice: optional, offline engineering-shortlist
+  comparison now cross-tabs only explicit reviewed scenario/structure labels
+  against eligible, excluded, unresolved, and missing candidate states. It
+  refuses stale source/review/fingerprint bindings and does not infer negative
+  labels from absent candidates. It cannot prove that baseline evidence was
+  independent of the judgements; no model selection or recommendation changes.
+  The batch now places its scenario-file SHA-256 on each shortlist, and both
+  the exploratory scorer and baseline comparison check that source version;
+  row fingerprints alone do not identify a complete batch revision.
+  Local Python 3.11 verification passed 195 tests; no real model fit occurred.
 
 ### Template for the next entry
 

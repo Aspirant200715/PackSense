@@ -147,6 +147,7 @@ class BasicRecommendation:
     warnings: tuple[str, ...]
     food_master_sha256: str | None = None
     scenario_fingerprint: str | None = None
+    scenario_source_sha256: str | None = None
     food_requirement_evidence: tuple[AppliedAssessment, ...] = ()
 
     def report(self) -> dict[str, Any]:
@@ -156,6 +157,7 @@ class BasicRecommendation:
             "food_reference_id": self.food_reference_id,
             "food_master_sha256": self.food_master_sha256,
             "scenario_fingerprint": self.scenario_fingerprint,
+            "scenario_source_sha256": self.scenario_source_sha256,
             "status": self.status.value,
             "preliminary_preferred_structure_id": self.preferred_structure_id,
             "ranking_basis": self.ranking_basis,
@@ -204,10 +206,13 @@ def _review_context(reviewed: ReviewAttestedStructure) -> dict[str, Any]:
     }
 
 
-def _report_context(card: RequirementCard) -> dict[str, Any]:
+def _report_context(
+    card: RequirementCard, scenario_source_sha256: str | None,
+) -> dict[str, Any]:
     return {
         "food_master_sha256": card.food_master_sha256,
         "scenario_fingerprint": scenario_fingerprint(card),
+        "scenario_source_sha256": scenario_source_sha256,
         "food_requirement_evidence": card.applied_assessments,
     }
 
@@ -269,6 +274,7 @@ def screen_package_candidates(
     transfer_evidence: Iterable[FinishedPackageTransferEvidence],
     *,
     current_material_master_sha256: str,
+    scenario_source_sha256: str | None = None,
 ) -> BasicRecommendation:
     """Return a preliminary shortlist only where each evidence gate is met.
 
@@ -283,6 +289,12 @@ def screen_package_candidates(
     if (not isinstance(current_material_master_sha256, str)
             or not _HASH.fullmatch(current_material_master_sha256)):
         raise ValueError("current_material_master_sha256 must be a lowercase SHA-256")
+    if scenario_source_sha256 is not None and (
+        not isinstance(scenario_source_sha256, str)
+        or not _HASH.fullmatch(scenario_source_sha256)
+    ):
+        raise ValueError("scenario_source_sha256 must be a lowercase SHA-256")
+    report_context = _report_context(card, scenario_source_sha256)
     evidence_by_key = _unique_transfer_evidence(transfer_evidence)
     warnings = tuple(sorted(
         gap for gap in card.gaps if gap in _NON_BLOCKING_WARNINGS
@@ -292,32 +304,32 @@ def screen_package_candidates(
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("food_requirements_or_produce_route_incomplete",), warnings,
-            **_report_context(card),
+            **report_context,
         )
     if structure_review is None:
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("complete_structure_review_missing",), warnings,
-            **_report_context(card),
+            **report_context,
         )
     if structure_review.status != "review_attested" or structure_review.issues:
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("complete_structure_review_not_approved",), warnings,
-            **_report_context(card),
+            **report_context,
         )
     if not structure_review.reviewed:
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("no_reviewed_complete_structures",), warnings,
-            **_report_context(card),
+            **report_context,
         )
     review_gaps = attestation_integrity_gaps(structure_review)
     if review_gaps:
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), review_gaps, warnings,
-            **_report_context(card),
+            **report_context,
         )
 
     unresolved_card_gaps = tuple(sorted(
@@ -329,7 +341,7 @@ def screen_package_candidates(
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), unresolved_card_gaps, warnings,
-            **_report_context(card),
+            **report_context,
         )
 
     candidates: list[CandidateScreen] = []
@@ -419,5 +431,5 @@ def screen_package_candidates(
             reason for item in result_candidates for reason in item.reason_codes
         })) or ("no_applicable_structure_candidates",),
         warnings,
-        **_report_context(card),
+        **report_context,
     )

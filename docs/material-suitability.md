@@ -152,6 +152,18 @@ ranking result is `not_evaluable`, not zero or an invented accuracy. These
 metrics cover only judged alternatives and do not treat unlabelled packages
 as negatives or establish performance on the full candidate catalogue.
 
+The trainer can optionally receive the existing engineering shortlists for
+an **offline validation/test cross-tab** on those same explicitly judged
+scenario/structure pairs. It rechecks food and scenario fingerprints,
+the source scenario-file hash, reviewed structure identities, source hashes,
+and eligible transfer gates.
+Eligible, excluded, unresolved, and absent candidates remain separate counts;
+an absent candidate is never labelled unsuitable. This comparison does not
+change model selection or recommendations, and eligibility is not itself a
+scientific suitability label. Code cannot verify that engineering evidence
+was curated independently of the reviewed judgements. A human must inspect
+that provenance before interpreting the cross-tab.
+
 Training additionally requires an explicit independent source/rights approval.
 The notebook expects `material-training-approval.json` with exactly:
 

@@ -1,16 +1,23 @@
 """Guardrails for the material model; fixtures are never training rows."""
 
 import unittest
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
 
 from packsense.material_model import (
-    FEATURE_COLUMNS, MaterialTrainingConfig, _labelled_pair_ranking,
+    FEATURE_COLUMNS, MaterialTrainingConfig, _engineering_baseline_agreement,
+    _labelled_pair_ranking,
     _split_identity_gaps,
     train_material_suitability,
 )
+from packsense.candidate_transfer import TransferDecision
+from packsense.recommendation import (
+    BasicRecommendation, CandidateScreen, CandidateStatus, RecommendationStatus,
+)
+from packsense.requirements import ProtectionMechanism
 
 
 class MaterialModelGateTests(unittest.TestCase):
@@ -145,6 +152,7 @@ class MaterialModelGateTests(unittest.TestCase):
             result = train_material_suitability(
                 labels, split, enriched, structures, {},
                 source_and_rights_review_approved=True,
+                engineering_shortlists={},
             )
         self.assertEqual("exploratory_test_evaluated", result.report["status"])
         self.assertTrue(result.report["model_trained"])
@@ -153,6 +161,10 @@ class MaterialModelGateTests(unittest.TestCase):
         self.assertTrue(result.report["test"]["brier_baseline_beaten"])
         self.assertEqual(
             result.report["test"]["labelled_pair_ranking"]["status"], "not_evaluable"
+        )
+        self.assertEqual(
+            result.report["test"]["engineering_screen_comparison"]["status"],
+            "not_evaluable",
         )
         self.assertEqual(hashes, result.report["source_hashes"])
         self.assertIsNotNone(result.estimator)
@@ -220,6 +232,88 @@ class MaterialModelGateTests(unittest.TestCase):
         self.assertFalse(result["unlabelled_candidates_evaluated"])
         with self.assertRaisesRegex(ValueError, "aligned"):
             _labelled_pair_ranking(rows, np.asarray([0.8]))
+
+    def test_engineering_screen_comparison_keeps_unknown_pairs_unknown(self):
+        checks = tuple(SimpleNamespace(
+            mechanism=mechanism, decision=TransferDecision.WITHIN_BUDGET,
+            record_id="TEST_ONLY_CASE", food_reference_id="TEST_ONLY_FOOD",
+            structure_id="TEST_ONLY_GOOD", structure_catalogue_sha256="c" * 64,
+            scenario_fingerprint="f" * 64,
+        ) for mechanism in ProtectionMechanism)
+        candidates = (
+            CandidateScreen(
+                "TEST_ONLY_GOOD", "TEST_ONLY_POUCH",
+                CandidateStatus.ELIGIBLE_FOR_SHORTLIST, (), checks, 0.2,
+                catalogue_sha256="c" * 64, material_master_sha256="b" * 64,
+                review_register_sha256="d" * 64, review_id="TEST_ONLY_REVIEW_GOOD",
+            ),
+            CandidateScreen(
+                "TEST_ONLY_REJECTED", "TEST_ONLY_POUCH",
+                CandidateStatus.EXCLUDED, ("food_scope_mismatch",), (), None,
+                catalogue_sha256="c" * 64, material_master_sha256="b" * 64,
+                review_register_sha256="d" * 64,
+                review_id="TEST_ONLY_REVIEW_REJECTED",
+            ),
+        )
+        shortlist = BasicRecommendation(
+            "TEST_ONLY_CASE", "TEST_ONLY_FOOD",
+            RecommendationStatus.PRELIMINARY_SHORTLIST,
+            "TEST_ONLY_GOOD", "lowest_worst_case_transfer_budget_utilization",
+            candidates, (), (), food_master_sha256="a" * 64,
+            scenario_fingerprint="f" * 64,
+            scenario_source_sha256="e" * 64,
+        )
+        labels = [(SimpleNamespace(
+            scenario_record_id="TEST_ONLY_CASE", food_reference_id="TEST_ONLY_FOOD",
+            structure_id=structure_id, decision=decision,
+        ), {}) for structure_id, decision in (
+            ("TEST_ONLY_GOOD", "suitable"),
+            ("TEST_ONLY_REJECTED", "unsuitable"),
+            ("TEST_ONLY_ABSENT", "unsuitable"),
+        )]
+        expected_hashes = {
+            "scenario_sha256": "e" * 64,
+            "food_master_sha256": "a" * 64,
+            "material_master_sha256": "b" * 64,
+            "structure_catalogue_sha256": "c" * 64,
+            "structure_review_sha256": "d" * 64,
+        }
+        reviewed = {
+            candidate.structure_id: SimpleNamespace(review_id=candidate.review_id)
+            for candidate in candidates
+        }
+        with patch("packsense.material_model.derive_requirement_card", return_value=object()), \
+                patch("packsense.material_model.scenario_fingerprint", return_value="f" * 64):
+            result = _engineering_baseline_agreement(
+                labels, {"TEST_ONLY_CASE": object()},
+                {"TEST_ONLY_CASE": shortlist}, reviewed, expected_hashes,
+            )
+            stale = _engineering_baseline_agreement(
+                labels, {"TEST_ONLY_CASE": object()},
+                {"TEST_ONLY_CASE": shortlist}, reviewed,
+                {**expected_hashes, "structure_catalogue_sha256": "e" * 64},
+            )
+            changed_check = _engineering_baseline_agreement(
+                labels, {"TEST_ONLY_CASE": object()},
+                {"TEST_ONLY_CASE": replace(
+                    shortlist, candidates=(replace(
+                        candidates[0], transfer_checks=(SimpleNamespace(
+                            **{**vars(checks[0]), "scenario_fingerprint": "e" * 64}
+                        ), *checks[1:]),
+                    ), candidates[1]),
+                )}, reviewed, expected_hashes,
+            )
+        self.assertEqual(result["status"], "partial_explicit_pair_coverage")
+        self.assertEqual(result["screened_pairs"], 2)
+        self.assertEqual(result["unknown_pairs"], 1)
+        self.assertEqual(result["cross_tab_counts"]["eligible_for_shortlist_suitable"], 1)
+        self.assertEqual(result["cross_tab_counts"]["excluded_unsuitable"], 1)
+        self.assertEqual(result["cross_tab_counts"]["candidate_not_in_shortlist"], 1)
+        self.assertEqual(stale["status"], "not_ready")
+        self.assertEqual(changed_check["reason_codes"], [
+            "engineering_shortlist_eligible_transfer_gate_mismatch"
+        ])
+        self.assertFalse(result["unlabelled_candidates_treated_as_negative"])
 
 
 if __name__ == "__main__":
