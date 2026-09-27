@@ -792,6 +792,24 @@ PackSense must continue to withhold a real package or shelf-life claim.
   221 Python tests passed; compile, CLI, and diff checks are recorded with
   this PR. CI and independent source review remain separate.
 
+### 2026-09-27 — versioned frontend decision output
+
+- PR #34 merged at `0f98eb5`. Branch `feat/frontend-decision-contract` adds a
+  read-only projection from the audited batch JSON to `frontend-decision-v1`.
+  It exposes input exceptions, evidence gaps, and the narrow preliminary
+  shortlist as separate frontend states, with source hashes and temperature
+  exposures. It refuses contradictory claims of package feasibility, shelf
+  life, or a preferred structure outside the eligible shortlist.
+- The projection has `recommended_structure_id`, `material_prediction`, and
+  `predicted_shelf_life_days` null in every row; its model status is
+  `not_deployed`. The material trainer and Kaggle preflight remain gated by
+  missing genuine scenario/structure labels, a frozen independent split, and
+  source/rights approval. No estimator, score, data row, or synthetic training
+  record was created. The frontend can use the contract without presenting an
+  experimental result as a validated prediction.
+- Local verification: 226 Python tests, compileall, and diff check passed.
+  PR CI and review are separate.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
