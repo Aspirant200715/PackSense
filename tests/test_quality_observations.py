@@ -3,11 +3,11 @@
 import os
 import unittest
 
-from packsense.ingestion import InputSchemaError
 from packsense.quality_observations import (
     LONG_COLUMNS,
     PACKAGE_COLUMNS,
     QualityDataAudit,
+    QualityInputError,
     _columns,
     _number,
     audit_public_quality_data,
@@ -22,11 +22,11 @@ class PublicQualityObservationTests(unittest.TestCase):
                          PACKAGE_COLUMNS)
 
     def test_missing_extra_and_duplicate_columns_are_rejected(self):
-        with self.assertRaisesRegex(InputSchemaError, "missing"):
+        with self.assertRaisesRegex(QualityInputError, "missing"):
             _columns(LONG_COLUMNS[:-1], LONG_COLUMNS, "long")
-        with self.assertRaisesRegex(InputSchemaError, "unexpected"):
+        with self.assertRaisesRegex(QualityInputError, "unexpected"):
             _columns(LONG_COLUMNS + ("invented_target",), LONG_COLUMNS, "long")
-        with self.assertRaisesRegex(InputSchemaError, "duplicate"):
+        with self.assertRaisesRegex(QualityInputError, "duplicate"):
             _columns(LONG_COLUMNS + ("package",), LONG_COLUMNS, "long")
 
     def test_measurement_parser_preserves_zero_and_rejects_invalid_ranges(self):
