@@ -2,7 +2,7 @@
 
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 
-**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, Stop 3 evidence-gated requirement cards, sourced food/material reference imports, package-structure draft intake and review gate, guarded local Stop 4 produce checks, a limited Stop 5 transfer-budget check, an experimental food-property estimator, measured-trial schema intake, and a trial group-split contract are implemented. No approved food-protection limits, review-attested complete structures, or measured trial outcomes have been supplied. Full package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
+**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, Stop 3 evidence-gated requirement cards, sourced food/material reference imports, package-structure draft intake and review gate, guarded local Stop 4 produce checks, a limited Stop 5 transfer-budget check, an experimental food-property estimator, measured-trial schema intake, a trial group-split contract, and an evidence-gated exploratory shelf-life training runner are implemented. No approved food-protection limits, review-attested complete structures, or measured trial outcomes have been supplied. No shelf-life model has been trained or validated. Full package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
 
 The current code uses Python 3.11 or newer and a pinned XLSX reader. From the
 repository root, run `python -m pip install -r requirements.txt` followed by
@@ -28,6 +28,9 @@ vapor ledger and measured dew-point warning with the gas audit.
 passing its checks does not yet authorize model training.
 [Trial split manifests](docs/split-manifest.md) define source-family-separated
 train/validation/test allocation and its refusal gates; no real split exists yet.
+[Shelf-life training](docs/shelf-life-training.md) documents the reviewed-trial
+baseline runner, its leakage controls, and why the current reference tables
+cannot train it.
 [Structure catalogue intake](docs/structure-catalogue.md) defines the exact
 grade/gauge join and the separate evidence review required before a package
 can be recommended.

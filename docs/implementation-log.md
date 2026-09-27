@@ -1,6 +1,6 @@
 # PackSense implementation log and handoff
 
-Last status check: 2026-09-26. This file is the living handoff for backend
+Last status check: 2026-09-27. This file is the living handoff for backend
 work. It records what code exists, what evidence is still absent, and what
 must happen before PackSense can make a defensible packaging recommendation.
 It is not a validation certificate. Update the snapshot after merges and
@@ -8,9 +8,12 @@ append dated entries rather than rewriting past decisions.
 
 ## Current position
 
-`main` includes structure-review merge `6a047ec` (PR #17), handoff merge
-`0bf9bd6` (PR #16), split-contract merge `ee064da` (PR #15), and the earlier
-Stop 4/5 merges. It contains the typed data
+Before this branch, `main` was at `fecb787` (PR #18), following structure-review
+merge `6a047ec` (PR #17), handoff merge `0bf9bd6` (PR #16), split-contract
+merge `ee064da` (PR #15), and the earlier Stop 4/5 merges. This branch adds an
+evidence-gated, CPU-only shelf-life regression runner; it does not fit or
+validate a model without reviewed measured trials and a frozen split. The
+existing backend contains the typed data
 contracts, structured scenario ingestion and exception auditing, exact food
 reference enrichment, food/material master imports, draft package-structure
 intake, evidence-gated Stop 3 requirement cards, measured-trial *schema*
@@ -61,6 +64,12 @@ withholds that claim.
   and flagged CO2TR values are grade observations at source test conditions,
   not verified finished-package performance. Only 13 CO2 observations have
   measured condition-complete training flags; 60 CO2 values are estimates.
+- Kaggle kernel version 4 completed a hash-verified reference import on
+  2026-09-27: 5,000/5,000 food rows and 81/81 material rows passed with no
+  rejected rows. pH is present for 720 foods (709 proxy, 11 reported
+  references), respiration for 116 foods, and only 13 material CO2TR rows
+  have complete measured conditions. The run wrote an audit summary only;
+  it did not create training labels or change training readiness.
 - No approved complete package-structure catalogue is supplied. The
   [structure importer](structure-catalogue.md) creates drafts, never
   approval, from exact grade/gauge joins. The merged
@@ -79,7 +88,8 @@ train shelf life from requested life or generic storage guidance, or form
 fake outcomes by joining food and material rows. No model can honestly be
 called accurate from the present references alone. The reference estimator
 has a separate, limited purpose; its outputs are not hard-filter evidence
-or trial labels.
+or trial labels. The branch training runner is exercised only with ephemeral
+`TEST_ONLY` unit fixtures; no real model artifact has been fitted.
 
 ## Next implementation and evidence gates
 
@@ -268,6 +278,32 @@ PackSense must continue to withhold a real package or shelf-life claim.
   finished-package performance values, or measured food-package trial
   outcomes were added. Package feasibility and model-training readiness
   remain closed.
+
+### 2026-09-27 — first measured-trial shelf-life training runner
+
+- Branch: `ml/09-shelf-life-training-pipeline`, based on `main` at
+  `fecb787`. Added one CPU gradient-boosting training path behind the
+  existing reviewed trial/split gate. It fits only observed failure days,
+  requires one failure criterion and threshold, fits preprocessing on train
+  data, chooses iterations on validation, compares with a training-median
+  baseline, and opens test outcomes only after that validation gate passes.
+- The runner reports right-censored rows separately and never labels their
+  last-observed day as failure. Test censoring is used only for a lower-bound
+  consistency diagnostic. The model artifact and report bind trial, review,
+  plan, and manifest hashes. Every result remains research-only and
+  `model_validated=false`.
+- No real trial rows, approval records, data rights, split, or model artifact
+  were added. Tests use ephemeral `TEST_ONLY` fixtures in temporary storage;
+  they are not a training dataset or project data asset. The reference
+  workbooks still cannot train this target.
+- Local verification: `python -m unittest discover -s tests -q` passed 131
+  tests; `python -m compileall -q packsense tests` and `git diff --check`
+  passed. Kaggle kernel version 4 validated reference imports only and did
+  not train this model.
+- Next evidence gate: provide independently reviewed measured trial outcomes,
+  exact package joins and the reviewed group split. If those gates fail, the
+  trainer must report `not_ready`; no epochs, synthetic labels, or reference
+  row combinations can substitute for the missing outcomes.
 
 ### Template for the next entry
 
