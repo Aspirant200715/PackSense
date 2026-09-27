@@ -648,6 +648,17 @@ PackSense must continue to withhold a real package or shelf-life claim.
   the exploratory scorer and baseline comparison check that source version;
   row fingerprints alone do not identify a complete batch revision.
   Local Python 3.11 verification passed 195 tests; no real model fit occurred.
+- Further same-PR decision-boundary slice (base `498d153`): changed the
+  preliminary engineering preference from a scalar worst-case transfer score
+  to non-dominated comparison across each source-limited mechanism. Oxygen
+  versus moisture trade-offs and exact ties now stay as unpreferred shortlists;
+  a unique dominating candidate can still be preliminary preferred. The
+  reported worst-case fraction remains diagnostic, and `protection_rank` now
+  denotes a Pareto layer. The report contract is `basic-recommendation-v2`.
+  No food/material mapping, scenario, measurement, label, or Kaggle dataset
+  was added. Local Python 3.11 and 3.13 suites passed 197 tests each;
+  compileall and diff checks passed. CI and PR review remain pending, and
+  neither model training nor package certification occurred.
 
 ### Template for the next entry
 

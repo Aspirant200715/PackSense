@@ -258,7 +258,7 @@ class MaterialModelGateTests(unittest.TestCase):
         shortlist = BasicRecommendation(
             "TEST_ONLY_CASE", "TEST_ONLY_FOOD",
             RecommendationStatus.PRELIMINARY_SHORTLIST,
-            "TEST_ONLY_GOOD", "lowest_worst_case_transfer_budget_utilization",
+            "TEST_ONLY_GOOD", "source_limited_transfer_pareto_dominance",
             candidates, (), (), food_master_sha256="a" * 64,
             scenario_fingerprint="f" * 64,
             scenario_source_sha256="e" * 64,
