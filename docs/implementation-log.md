@@ -516,7 +516,8 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - PR #26 was reviewed for scope and CI, had no submitted review comments,
   passed Python 3.11/3.13 checks, and merged to `main` at `f0fd088`. PR #25
   remains open and unmerged because shelf-life training is deferred.
-- Branch: `ml/material-split-preflight`, based on the updated `main`. Added
+- Branch: `ml/material-split-preflight`, [PR #27](https://github.com/Aspirant200715/PackSense/pull/27),
+  based on the updated `main`. Added
   a predeclared material-suitability split plan validator. It rejects source-
   family overlap, source IDs assigned to different families, foods crossing
   partitions, missing classes, insufficient independent groups, and large
@@ -537,7 +538,7 @@ PackSense must continue to withhold a real package or shelf-life claim.
   Its output imported 5,000/5,000 food and 81/81 material reference rows,
   listed the missing label/split/scenario/structure files and newer backend
   modules, and reported `status=not_ready`, `model_trained=false`.
-- PR link and PR CI are recorded after the branch is pushed.
+- PR CI and review are checked on the pushed head separately.
 
 ### Template for the next entry
 
