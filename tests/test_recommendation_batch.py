@@ -10,11 +10,13 @@ from packsense.contracts import (
     ScenarioInput, StorageType, StructureLayer,
 )
 from packsense.enrichment import enrich_scenarios
+from packsense.gas_balance import FinishedPackageGasObservation
 from packsense.ingestion import IngestionIssue, ParsedScenarioRow, ScenarioAudit
 from packsense.masters import FoodMasterEntry, MasterAudit
 from packsense.produce_route import ProduceRoute, RouteEvidence
 from packsense.recommendation_batch import build_batch_recommendations
 from packsense.recommendation_output import summarize_batch
+from packsense.respiration import KineticEvidence
 from packsense.requirements import (
     AssessmentDecision, ProtectionAssessment, ProtectionMechanism,
     derive_requirement_card, scenario_fingerprint,
@@ -133,7 +135,152 @@ def _transfer(card, mechanism, amount):
     )
 
 
+def _produce_sources(*, catalogue_hash=CATALOGUE_HASH):
+    scenario = replace(
+        _scenario(), respiration_rate=10.0, respiration_rate_unit="mg CO2/kg/h",
+        respiration_reference_temperature_c=4.0,
+    )
+    scenarios, foods, materials = _sources(scenario)
+    original = foods.entries[0]
+    foods = replace(foods, entries=(replace(
+        original, reference=replace(
+            original.reference, respiration_rate=10.0,
+            respiration_rate_unit="mg CO2/kg/h",
+            respiration_reference_temperature_c=4.0,
+        ),
+    ),))
+    route = RouteEvidence(
+        "TEST_ONLY_FOOD_ID", ProduceRoute.RESPIRING,
+        "TEST_ONLY_ROUTE_SOURCE", "TEST_ONLY_LOCATOR", "TEST_ONLY_REVIEW",
+    )
+    kinetics = tuple(KineticEvidence(
+        "TEST_ONLY_FOOD_ID", value, unit, 4.0, 2.0, 0.0, 10.0,
+        5.0, 5.0, f"TEST_ONLY_{unit}", "TEST_ONLY_Q10",
+        "TEST_ONLY_LOCATOR", "TEST_ONLY_KINETICS_REVIEW",
+        EvidenceBasis.MEASURED, EvidenceBasis.VALIDATED_CORRECTION,
+    ) for unit, value in (("mg O2/kg/h", 12.0), ("mg CO2/kg/h", 10.0)))
+    exposures = (("storage", 4.0), ("transport", 6.0),
+                 ("transport_max_excursion", 9.0))
+    gas = tuple(FinishedPackageGasObservation(
+        "TEST_ONLY_CASE", "TEST_ONLY_FOOD_ID", "TEST_ONLY_STRUCTURE",
+        phase, temperature, 100.0, 100.0, 5.0, 5.0, 20.0, 0.1,
+        1.0, -0.5, 3.0, 10.0, "TEST_ONLY_GAS_TRANSFER",
+        "TEST_ONLY_GAS_LIMIT", "TEST_ONLY_STRUCTURE_APPROVAL",
+        "TEST_ONLY_LOCATOR", "TEST_ONLY_GAS_REVIEW",
+        EvidenceBasis.MEASURED, EvidenceBasis.MEASURED, catalogue_hash,
+    ) for phase, temperature in exposures)
+    water = tuple(FinishedPackageWaterObservation(
+        "TEST_ONLY_CASE", "TEST_ONLY_FOOD_ID", "TEST_ONLY_STRUCTURE",
+        phase, temperature, 100.0, 0.2, 0.01, -0.3, False, 0.0,
+        0.5, 80.0, 1.0, 2.0, "TEST_ONLY_TRANS", "TEST_ONLY_RESP",
+        "TEST_ONLY_WATER_TRANSFER", "TEST_ONLY_HEADSPACE",
+        "TEST_ONLY_LOCATOR", "TEST_ONLY_WATER_REVIEW", EvidenceBasis.MEASURED,
+        catalogue_hash,
+    ) for phase, temperature in exposures)
+    return scenarios, foods, materials, route, kinetics, gas, water
+
+
 class BatchRecommendationTests(unittest.TestCase):
+    def test_produce_diagnostics_bind_only_to_exact_reviewed_catalogue(self):
+        scenarios, foods, materials, route, kinetics, gas, water = _produce_sources()
+        report = build_batch_recommendations(
+            scenarios, foods, materials, routes=(route,),
+            route_register_sha256="1" * 64, structure_review=_review(),
+            include_produce_diagnostics=True, kinetics=kinetics,
+            kinetics_register_sha256="2" * 64, gas_observations=gas,
+            gas_observation_register_sha256="3" * 64,
+            water_observations=water, water_observation_register_sha256="4" * 64,
+        )
+        diagnostic = report["rows"][0]["produce_local_diagnostics"]
+        binding = diagnostic["structures"][0]["structure_review_binding"]
+        self.assertEqual(binding["status"], "joined")
+        self.assertEqual(binding["reason_codes"], [])
+        self.assertEqual(binding["catalogue_sha256"], CATALOGUE_HASH)
+        self.assertTrue(report["produce_diagnostic_structure_review_joined"])
+        self.assertEqual(report["produce_review_bound_structure_count"], 1)
+        self.assertEqual(report["rows"][0]["status"], "not_ready")
+        self.assertFalse(report["produce_safety_certified"])
+        self.assertFalse(binding["produce_safety_certified"])
+
+    def test_legacy_or_changed_produce_observations_do_not_bind(self):
+        scenarios, foods, materials, route, kinetics, gas, water = _produce_sources()
+        for gas_hash, water_hash, expected in (
+            (None, None, "gas_catalogue_binding_missing"),
+            ("e" * 64, CATALOGUE_HASH, "gas_catalogue_version_mismatch"),
+        ):
+            with self.subTest(expected=expected):
+                report = build_batch_recommendations(
+                    scenarios, foods, materials, routes=(route,),
+                    route_register_sha256="1" * 64, structure_review=_review(),
+                    include_produce_diagnostics=True, kinetics=kinetics,
+                    kinetics_register_sha256="2" * 64,
+                    gas_observations=tuple(replace(
+                        item, structure_catalogue_sha256=gas_hash,
+                    ) for item in gas),
+                    gas_observation_register_sha256="3" * 64,
+                    water_observations=tuple(replace(
+                        item, structure_catalogue_sha256=water_hash,
+                    ) for item in water),
+                    water_observation_register_sha256="4" * 64,
+                )
+                binding = report["rows"][0]["produce_local_diagnostics"]["structures"][0][
+                    "structure_review_binding"
+                ]
+                self.assertEqual(binding["status"], "unresolved")
+                self.assertIn(expected, binding["reason_codes"])
+                self.assertFalse(report["produce_diagnostic_structure_review_joined"])
+                self.assertEqual(report["produce_review_unresolved_structure_count"], 1)
+
+    def test_review_scope_and_phase_coverage_are_required_for_binding(self):
+        scenarios, foods, materials, route, kinetics, gas, water = _produce_sources()
+        narrower = _review()
+        reviewed = narrower.reviewed[0]
+        narrowed_structure = replace(
+            reviewed.structure, service_temperature_max_c=8.0,
+        )
+        narrower = replace(narrower, reviewed=(replace(
+            reviewed, structure=narrowed_structure,
+        ),))
+        report = build_batch_recommendations(
+            scenarios, foods, materials, routes=(route,),
+            route_register_sha256="1" * 64, structure_review=narrower,
+            include_produce_diagnostics=True, kinetics=kinetics,
+            kinetics_register_sha256="2" * 64, gas_observations=gas[:-1],
+            gas_observation_register_sha256="3" * 64,
+            water_observations=water, water_observation_register_sha256="4" * 64,
+        )
+        binding = report["rows"][0]["produce_local_diagnostics"]["structures"][0][
+            "structure_review_binding"
+        ]
+        self.assertIn("reviewed_service_temperature_out_of_scope", binding["reason_codes"])
+        self.assertIn("gas_observation_missing", binding["reason_codes"])
+        self.assertFalse(report["produce_diagnostic_structure_review_joined"])
+
+    def test_reviewed_food_and_material_version_must_match(self):
+        scenarios, foods, materials, route, kinetics, gas, water = _produce_sources()
+        original = _review()
+        reviewed = original.reviewed[0]
+        changed = replace(original, reviewed=(replace(
+            reviewed,
+            structure=replace(reviewed.structure,
+                              compatible_food_scope=("TEST_ONLY_OTHER_FOOD",)),
+            material_master_sha256="f" * 64,
+        ),))
+        report = build_batch_recommendations(
+            scenarios, foods, materials, routes=(route,),
+            route_register_sha256="1" * 64, structure_review=changed,
+            include_produce_diagnostics=True, kinetics=kinetics,
+            kinetics_register_sha256="2" * 64, gas_observations=gas,
+            gas_observation_register_sha256="3" * 64,
+            water_observations=water, water_observation_register_sha256="4" * 64,
+        )
+        binding = report["rows"][0]["produce_local_diagnostics"]["structures"][0][
+            "structure_review_binding"
+        ]
+        self.assertIn("reviewed_food_scope_mismatch", binding["reason_codes"])
+        self.assertIn("material_master_version_mismatch", binding["reason_codes"])
+        self.assertFalse(report["produce_diagnostic_structure_review_joined"])
+
     def test_optional_produce_audit_keeps_route_and_package_status_separate(self):
         scenarios, foods, materials = _sources(_scenario())
         unresolved = build_batch_recommendations(

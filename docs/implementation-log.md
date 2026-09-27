@@ -613,6 +613,26 @@ PackSense must continue to withhold a real package or shelf-life claim.
   Python 3.13 with pinned requirements; compile checks, CLI help, and
   `git diff --check` passed. PR CI and review are separate.
 
+### 2026-09-27 — exact produce-observation catalogue binding
+
+- Continued on `feat/produce-batch-diagnostics` (PR #32). Version-2 gas and
+  water observation registers now require an exact structure-catalogue SHA-256;
+  version-1 registers remain readable as unbound local diagnostics.
+- The recommendation batch checks each observed produce structure against the
+  reviewed catalogue, current material-master version, exact food scope,
+  service-temperature envelope, all three exposure phases, observation
+  catalogue hashes, and resolved local condition checks. It reports per-
+  structure binding gaps and aggregate counts. This is an identity/scope
+  join only; the ordinary recommendation still blocks respiring produce and
+  `produce_safety_certified` stays false.
+- No genuine scenarios, complete-package observations, suitability labels,
+  training data, or model artifact were added. New tests use `TEST_ONLY`
+  observations, never training records. Legacy and changed-hash evidence is
+  verified to remain unbound. Local Python 3.11 verification passed 179
+  tests, compileall, and `git diff --check`. System Python 3.13 lacks the
+  pinned project dependencies, so its full-suite result awaits dependency-
+  installed CI. Source authenticity still requires external review.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

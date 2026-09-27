@@ -126,12 +126,22 @@ kinetics or observations remain explicit unresolved states. The detailed row
 adds `produce_local_diagnostics`, keyed to the same exact scenario row and
 record ID. The top-level report retains hashes of each supplied register,
 unresolved and warning counts, and `produce_safety_certified: false`. The
-optional CSV and ordinary `recommendation` object do not change. The local
-audit does not join observation structure IDs to the reviewed package
-catalogue, so the report explicitly records
-`produce_diagnostic_structure_review_joined: false`. An apparently clear
-local gas/water snapshot cannot approve a structure, prove a safe trajectory,
-or establish the requested shelf life.
+optional CSV and ordinary `recommendation` object do not change. When a
+reviewed package catalogue is supplied, the batch now separately audits
+whether each local gas and water observation belongs to the **exact reviewed
+catalogue version**, food scope, and service-temperature range. This requires
+version-2 gas and water registers with `structure_catalogue_sha256` on every
+storage, transport, and excursion observation. Legacy version-1 observations
+remain usable as local diagnostics but cannot pass this identity join. Each
+observed structure reports `structure_review_binding.status` and explicit
+reason codes; the batch reports bound/unresolved counts. A true
+`produce_diagnostic_structure_review_joined` means internal identity and
+scope checks passed for all observed structures, **not** MAP safety or package
+approval. Missing observations, unreviewed structures, a changed catalogue,
+or out-of-scope conditions leave the binding unresolved. The ordinary
+recommendation remains `not_ready` for respiring produce, and an apparently
+clear local gas/water snapshot still cannot prove a safe trajectory or the
+requested shelf life.
 
 For fresh produce, respiration and gas transfer change with temperature,
 food mass and package surface area; a local balance cannot be extrapolated

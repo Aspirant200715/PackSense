@@ -26,7 +26,10 @@ from packsense.masters import (
     load_material_grades,
 )
 from packsense.produce_route import RouteEvidence, parse_route_register
-from packsense.produce_audit import PRODUCE_AUDIT_VERSION, build_produce_audit
+from packsense.produce_audit import (
+    PRODUCE_AUDIT_VERSION, PRODUCE_REVIEW_BINDING_VERSION,
+    bind_reviewed_produce_structures, build_produce_audit,
+)
 from packsense.recommendation import screen_package_candidates
 from packsense.recommendation_output import summarize_batch, write_summary_csv
 from packsense.requirements import (
@@ -96,12 +99,11 @@ def build_batch_recommendations(
         build_produce_audit(enriched, kinetics, gas_observations, water_observations)
         if include_produce_diagnostics else ()
     )
-    if include_produce_diagnostics and any(
-        source.row_number != diagnostic["row_number"]
-        or source.record_id != diagnostic["record_id"]
-        for source, diagnostic in zip(enriched.rows, produce_rows, strict=True)
-    ):
-        raise ValueError("produce diagnostics do not align with scenario rows")
+    if include_produce_diagnostics:
+        produce_rows = bind_reviewed_produce_structures(
+            enriched, produce_rows, structure_review, materials.source_sha256,
+            gas_observations, water_observations,
+        )
     assessments_by_food: dict[str, list[ProtectionAssessment]] = defaultdict(list)
     for item in assessments:
         assessments_by_food[item.food_reference_id].append(item)
@@ -228,6 +230,7 @@ def build_batch_recommendations(
         )
     if include_produce_diagnostics:
         report["produce_local_audit_version"] = PRODUCE_AUDIT_VERSION
+        report["produce_review_binding_version"] = PRODUCE_REVIEW_BINDING_VERSION
         report["kinetics_register_sha256"] = kinetics_register_sha256
         report["gas_observation_register_sha256"] = gas_observation_register_sha256
         report["water_observation_register_sha256"] = water_observation_register_sha256
@@ -240,7 +243,18 @@ def build_batch_recommendations(
         report["produce_local_warning_rows"] = sum(
             row["status"] == "local_checks_with_warnings" for row in produce_rows
         )
-        report["produce_diagnostic_structure_review_joined"] = False
+        report["produce_review_bound_structure_count"] = sum(
+            row["review_bound_structure_count"] for row in produce_rows
+        )
+        report["produce_review_unresolved_structure_count"] = sum(
+            len(row["structures"]) - row["review_bound_structure_count"]
+            for row in produce_rows
+        )
+        report["produce_diagnostic_structure_review_joined"] = (
+            report["produce_review_bound_structure_count"] > 0
+            and all(row["review_binding_status"] in ("joined", "not_applicable")
+                    for row in produce_rows)
+        )
         report["produce_safety_certified"] = False
     return report
 
