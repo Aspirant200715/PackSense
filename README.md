@@ -42,6 +42,9 @@ passing declaration as package feasibility.
 [Finished-package transfer checking](docs/candidate-transfer.md) is an early
 Stop 5 component: it can compare an exact-scope sourced cumulative transfer
 with a food budget, but cannot yet declare any complete package feasible.
+[Preliminary package shortlisting](docs/basic-recommendation.md) combines
+reviewed structures and exact-scope transfer evidence for a limited basic
+recommendation; it reports evidence gaps instead of inventing a candidate.
 
 ## Why PackSense exists
 

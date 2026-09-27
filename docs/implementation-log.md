@@ -368,6 +368,33 @@ PackSense must continue to withhold a real package or shelf-life claim.
   estimated CO2 values, so it remains a reference source, not a trustworthy
   supervised target table.
 
+### 2026-09-27 — preliminary package shortlist
+
+- Branch: `feat/07-basic-recommendation`, based on `main` at `7cce752` (PR
+  pending). Added a basic source-gated shortlist for confirmed non-respiring
+  foods. It requires all three reviewed oxygen/moisture decisions, an exact
+  food-scope and temperature-matched reviewed complete structure, and exact
+  scenario-matched whole-package transfer evidence. Any approved-limit
+  exceedance excludes that structure. A unique preliminary preference uses
+  only the lowest worst-case fraction of oxygen/moisture budget consumed;
+  cost, sustainability, and light protection are not ranked.
+- The output carries the scenario/food-master identities, structure/review
+  hashes, layer details, source locators, transfer checks, warnings, and
+  explicit `package_feasible=false` / `shelf_life_predicted=false` flags.
+  Respiring foods remain gated behind a validated complete Stop 4 path.
+- No real data or model-training records were added. The supplied 5,000-food
+  and 81-grade masters still have no reviewed complete-structure catalogue,
+  approved food-protection assessment register, or scenario-matched
+  whole-package transfer register, so current project data cannot produce a
+  real shortlist. Unit fixtures are `TEST_ONLY` and are not training data.
+- Local verification: `py -3.11 -m unittest discover -s tests -v` passed all
+  139 tests; `py -3.11 -m compileall -q packsense tests` and `git diff --check`
+  passed. CI and PR review have not run.
+- Remaining gates: source-reviewed food limits, real reviewed package
+  constructions, whole-package measurements across the stated temperature/RH
+  profile, and later cost/sustainability evidence for full Stop 6 ranking.
+  Shelf-life training remains dependent on independent measured trial outcomes.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

@@ -124,6 +124,27 @@ class RequirementCardTests(unittest.TestCase):
         self.assertNotIn("respiration_route_unclassified", card.gaps)
         self.assertNotIn("produce_gas_balance_pending_stop_4", card.gaps)
 
+    def test_candidate_screening_opens_only_after_all_three_food_mechanisms(self):
+        complete = (
+            _assessment(),
+            _assessment(
+                ProtectionMechanism.MOISTURE_GAIN, transfer=10.0,
+                unit="g_h2o_per_pack",
+            ),
+            _assessment(
+                ProtectionMechanism.MOISTURE_LOSS,
+                AssessmentDecision.NOT_REQUIRED, None, None,
+            ),
+        )
+        non_respiring = derive_requirement_card(
+            _enriched(route="confirmed_non_respiring"), complete,
+        )
+        self.assertTrue(non_respiring.candidate_screening_allowed)
+        respiring = derive_requirement_card(
+            _enriched(route="respiration_evidence_present"), complete,
+        )
+        self.assertFalse(respiring.candidate_screening_allowed)
+
     def test_unmatched_food_assessment_is_not_borrowed(self):
         card = derive_requirement_card(
             _enriched(), (_assessment(food_reference_id="OTHER-FOOD"),),
