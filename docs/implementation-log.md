@@ -613,7 +613,7 @@ PackSense must continue to withhold a real package or shelf-life claim.
 
 ### 2026-09-27 — exploratory material-score boundary
 
-- Branch: `feat/model-score-boundary`, stacked on PR #29 head `cbf5a49` so
+- Branch/PR: `feat/model-score-boundary` / #30, stacked on PR #29 head `cbf5a49` so
   the source-catalogue PR can remain open for review. No additional supplier
   documents, workbook values, scenario rows, suitability labels, or Kaggle
   training data were created or changed.
@@ -627,7 +627,8 @@ PackSense must continue to withhold a real package or shelf-life claim.
   reports package feasibility. Test-only estimator fixtures exercise guards;
   no real model was fit, scored, serialized, or deployed.
 - Local verification: 191 Python 3.11 tests passed, compilation and diff checks
-  passed. CI status will be recorded after publishing the PR.
+  passed. Both Python 3.11 and 3.13 CI checks passed for the initial PR #30
+  head `7de9808`; later heads require their own CI checks.
 
 ### Template for the next entry
 
