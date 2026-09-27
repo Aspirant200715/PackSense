@@ -70,6 +70,10 @@ reviewed structures and exact-scope transfer evidence for a limited basic
 recommendation. Its batch command reports each structured scenario and any
 missing evidence without inventing a candidate; an optional flat CSV helps
 review large batches alongside the detailed JSON report.
+[Frontend decision JSON](docs/frontend-contract.md) projects that audited
+batch into stable input-exception, evidence-gap, and preliminary-shortlist
+states for frontend design. It does not expose a trained material prediction
+or promote a preliminary preference into a released package.
 [Film-grade reference comparison](docs/grade-reference-comparison.md) adds an
 opt-in, test-condition-matched Pareto view for reviewed non-respiring food
 needs. It cannot choose or certify a finished package or train a model.
