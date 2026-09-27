@@ -17,7 +17,6 @@ from zipfile import BadZipFile
 
 import joblib
 import numpy as np
-import pandas as pd
 import sklearn
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingRegressor
@@ -51,6 +50,7 @@ NUMERIC_FEATURES = (
     "transport_max_temperature_c",
     "transport_duration_hours",
 )
+FEATURE_COLUMNS = CATEGORICAL_FEATURES + NUMERIC_FEATURES
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +94,14 @@ def _feature_row(outcome: TrialOutcome) -> dict[str, Any]:
         "transport_max_temperature_c": outcome.transport_max_temperature_c,
         "transport_duration_hours": outcome.transport_duration_hours,
     }
+
+
+def _feature_matrix(entries: list[Any]) -> np.ndarray:
+    rows = [
+        [_feature_row(entry.outcome)[name] for name in FEATURE_COLUMNS]
+        for entry in entries
+    ]
+    return np.asarray(rows, dtype=object)
 
 
 def _macro_group_mae(actual: np.ndarray, predicted: np.ndarray,
@@ -207,14 +215,11 @@ def train_shelf_life(
         for partition in observed_by_partition
     }
 
-    frames: dict[str, pd.DataFrame] = {}
+    frames: dict[str, np.ndarray] = {}
     targets: dict[str, np.ndarray] = {}
     for partition in ("train", "validation"):
         entries = observed_by_partition[partition]
-        frames[partition] = pd.DataFrame(
-            [_feature_row(entry.outcome) for entry in entries],
-            columns=CATEGORICAL_FEATURES + NUMERIC_FEATURES,
-        )
+        frames[partition] = _feature_matrix(entries)
         targets[partition] = np.asarray(
             [entry.outcome.observed_days for entry in entries], dtype=float,
         )
@@ -224,14 +229,17 @@ def train_shelf_life(
     }
 
     train_frame = frames["train"]
-    numeric_features = [
-        name for name in NUMERIC_FEATURES if not train_frame[name].isna().all()
+    numeric_indices = list(range(len(CATEGORICAL_FEATURES), len(FEATURE_COLUMNS)))
+    active_numeric_indices = [
+        index for index in numeric_indices
+        if any(value is not None for value in train_frame[:, index])
     ]
+    numeric_features = [FEATURE_COLUMNS[index] for index in active_numeric_indices]
     excluded_numeric = sorted(set(NUMERIC_FEATURES) - set(numeric_features))
     preprocessor = ColumnTransformer(
         transformers=[
-            ("numeric", SimpleImputer(strategy="median", add_indicator=True), numeric_features),
-            ("categorical", OneHotEncoder(handle_unknown="ignore"), list(CATEGORICAL_FEATURES)),
+            ("numeric", SimpleImputer(strategy="median", add_indicator=True), active_numeric_indices),
+            ("categorical", OneHotEncoder(handle_unknown="ignore"), list(range(len(CATEGORICAL_FEATURES)))),
         ],
         remainder="drop",
     )
@@ -286,8 +294,8 @@ def train_shelf_life(
         }
         return TrainingResult(report, None)
 
-    development_frame = pd.concat(
-        [frames["train"], frames["validation"]], ignore_index=True,
+    development_frame = np.concatenate(
+        [frames["train"], frames["validation"]], axis=0,
     )
     development_target = np.concatenate([targets["train"], targets["validation"]])
     final_estimator = Pipeline([
@@ -306,10 +314,7 @@ def train_shelf_life(
     # Do not materialize test features or labels until validation has selected
     # an iteration count and the candidate has beaten the training baseline.
     test_entries = observed_by_partition["test"]
-    frames["test"] = pd.DataFrame(
-        [_feature_row(entry.outcome) for entry in test_entries],
-        columns=CATEGORICAL_FEATURES + NUMERIC_FEATURES,
-    )
+    frames["test"] = _feature_matrix(test_entries)
     targets["test"] = np.asarray(
         [entry.outcome.observed_days for entry in test_entries], dtype=float,
     )
@@ -322,8 +327,11 @@ def train_shelf_life(
     test_baseline = np.full(len(targets["test"]), test_median)
     test_group_ids = groups["test"]
     test_by_food: dict[str, dict[str, float | int]] = {}
-    for food_id in sorted(frames["test"]["food_id"].unique()):
-        mask = frames["test"]["food_id"].to_numpy() == food_id
+    for food_id in sorted({entry.outcome.food_id for entry in test_entries}):
+        mask = np.asarray(
+            [entry.outcome.food_id == food_id for entry in test_entries],
+            dtype=bool,
+        )
         test_by_food[str(food_id)] = {
             "observed_failure_rows": int(mask.sum()),
             "mae_days": float(mean_absolute_error(
@@ -332,10 +340,8 @@ def train_shelf_life(
         }
     censored_test = censored_by_partition["test"]
     censored_test_predictions = (
-        final_estimator.predict(pd.DataFrame(
-            [_feature_row(entry.outcome) for entry in censored_test],
-            columns=CATEGORICAL_FEATURES + NUMERIC_FEATURES,
-        )) if censored_test else np.asarray([], dtype=float)
+        final_estimator.predict(_feature_matrix(censored_test))
+        if censored_test else np.asarray([], dtype=float)
     )
     lower_bound_violations = sum(
         prediction < entry.outcome.observed_days
@@ -365,8 +371,12 @@ def train_shelf_life(
         "numeric": numeric_features,
         "excluded_all_missing_in_training": excluded_numeric,
     }
-    report["training_food_ids"] = sorted(frames["train"]["food_id"].unique().tolist())
-    report["training_structure_ids"] = sorted(frames["train"]["structure_id"].unique().tolist())
+    report["training_food_ids"] = sorted({
+        entry.outcome.food_id for entry in observed_by_partition["train"]
+    })
+    report["training_structure_ids"] = sorted({
+        entry.outcome.structure_id for entry in observed_by_partition["train"]
+    })
     report["status"] = "exploratory_test_evaluated"
     report["model_trained"] = True
     report["model_validated"] = False
