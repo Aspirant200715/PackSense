@@ -14,6 +14,8 @@ handoff, open PR stack, evidence blockers, and update rules. See
 audit and its limits, and [reference imports](docs/reference-imports.md) for
 coverage and evidence-status limitations. [Property estimation](docs/property-estimation.md)
 reports the held-out baseline comparison and when estimates are withheld.
+The [material training-readiness audit](docs/material-training-readiness.md)
+distinguishes sourced OTR/WVTR values from measured, condition-complete labels.
 The [food-reference join](docs/enrichment.md) explains exact identity matching,
 temperature exposures, and the remaining fresh-produce classification gate.
 [Food requirement cards](docs/requirements.md) explain the source-scoped
