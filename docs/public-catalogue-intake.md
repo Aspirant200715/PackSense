@@ -93,6 +93,36 @@ this internal research intake.
 
 ## Audit and next promotion work
 
+### Supplier application lookup in batch reports
+
+The existing batch command can now read this register alongside the food and
+material workbooks:
+
+```powershell
+py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --public-candidates data/public_catalogue_candidates.v1.json --report outputs/new-batch-report.json
+```
+
+For each valid scenario it adds `supplier_application_lookup` to the JSON
+report. The lookup compares only supplier-listed food, pack quantity, storage
+temperature, and transit temperature/duration. `g` and `kg` are converted
+exactly. Food names are matched case/whitespace-insensitively. A food-master
+name of the form `broccoli, raw` versus a supplier's `broccoli` is shown only
+as an **unreviewed name variant**; cooked, frozen, and other forms are not
+silently mapped to a fresh-food application. A supplier-listed warm excursion
+is checked conservatively against the full transport duration. The box-inner
+liner remains flagged as incomplete without its outer package. Products with
+no exact food application, including the broad PLANTIC component claims, are
+not turned into matches.
+
+This lookup is a research aid, not an ML classifier, score, approved structure,
+or material recommendation. Even a food/quantity/temperature match cannot
+establish food-contact scope, source rights, service limits, gas balance,
+whole-package OTR/CO2TR/WVTR, target-life performance, or handling strength.
+It leaves the existing recommendation status and preferred structure unchanged.
+The real 5,000-food workbook has no actual scenario pack quantities or exposure
+inputs; a separate genuine scenario batch is still required to exercise this
+lookup. No scenarios or labels were generated from the food workbook.
+
 Run the deterministic intake audit from the repository root:
 
 ```powershell

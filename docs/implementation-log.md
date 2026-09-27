@@ -599,6 +599,17 @@ PackSense must continue to withhold a real package or shelf-life claim.
   and service-temperature documents, complete-package transfer and seal
   evidence, and produce SKU-level O2/CO2 measurements. The candidate
   catalogue must not be loaded as a `StructureDraft` or training register.
+- Same branch/PR #29 follow-up: added optional supplier-application lookup to
+  the existing recommendation batch JSON. It checks exact supplier food names,
+  quantities (with g/kg conversion), storage and conservative full-duration
+  transit excursions. A `, raw` food-reference name is a review-needed name
+  variant, not an approved identity match; processed variants are not mapped.
+  Inner liners, broad film claims, missing source rights and package-level
+  evidence stay visibly unresolved. The shortlist status and preference are
+  unchanged; no material model was fitted. The 5,000-row workbook has zero
+  populated scenario operating-condition rows, so no real batch result was
+  invented. Local test suite now has 185 passing tests; CI for this update
+  remains to be checked after push.
 
 ### Template for the next entry
 

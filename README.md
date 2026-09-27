@@ -49,7 +49,9 @@ grade/gauge join and the separate evidence review required before a package
 can be recommended.
 [Public catalogue candidate intake](docs/public-catalogue-intake.md) compares
 manufacturer and research sources and audits a small, source-backed product
-register before any exact-grade join or package approval.
+register before any exact-grade join or package approval. The batch runner can
+optionally show supplier-listed food/quantity/temperature application leads;
+these are not model predictions or approved recommendations.
 [Complete-structure review](docs/structure-review.md) checks external review
 declarations against exact draft and source identities, without treating a
 passing declaration as package feasibility.

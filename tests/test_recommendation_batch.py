@@ -3,7 +3,9 @@
 import json
 import unittest
 from dataclasses import replace
+from pathlib import Path
 
+from packsense.catalogue_candidates import load_candidate_catalogue
 from packsense.candidate_transfer import FinishedPackageTransferEvidence
 from packsense.contracts import (
     EvidenceBasis, FoodReference, HandlingSeverity, PackageStructure,
@@ -133,6 +135,33 @@ def _transfer(card, mechanism, amount):
 
 
 class BatchRecommendationTests(unittest.TestCase):
+    def test_public_supplier_lookup_does_not_change_recommendation_gate(self):
+        scenario = replace(
+            _scenario(), commodity_type="Broccoli, raw",
+            net_pack_quantity=400.0, transport_temperature_c=8.0,
+            transport_max_temperature_c=25.0, transport_duration_hours=8.0,
+        )
+        scenarios, foods, materials = _sources(scenario)
+        original = foods.entries[0]
+        foods = replace(foods, entries=(replace(
+            original, reference=replace(original.reference,
+                                        commodity_type="Broccoli, raw"),
+        ),))
+        catalogue_path = (Path(__file__).resolve().parents[1] / "data" /
+                          "public_catalogue_candidates.v1.json")
+        candidates, digest = load_candidate_catalogue(catalogue_path)
+        report = build_batch_recommendations(
+            scenarios, foods, materials, public_candidates=candidates,
+            public_candidate_catalogue_sha256=digest,
+        )
+        self.assertEqual("not_ready", report["rows"][0]["status"])
+        self.assertEqual(1, report["supplier_application_lead_count"])
+        lead = report["rows"][0]["supplier_application_lookup"]["leads"][0]
+        self.assertEqual("SUMITOMO-PPLUS-VY7K9", lead["candidate_id"])
+        self.assertIn("food_identity_requires_review", lead["reason_codes"])
+        self.assertIsNone(report["rows"][0]["recommendation"][
+            "preliminary_preferred_structure_id"])
+
     def test_no_external_registers_reports_not_ready(self):
         report = build_batch_recommendations(*_sources(_scenario()))
         self.assertEqual(report["total_rows"], 1)
