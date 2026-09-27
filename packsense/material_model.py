@@ -169,6 +169,110 @@ def _scores(actual: np.ndarray, probability: np.ndarray, threshold: float) -> di
     }
 
 
+def _split_identity_gaps(
+    partition_ids: Mapping[str, list[str]],
+    labels_by_id: Mapping[str, SuitabilityLabel],
+    scenarios_by_id: Mapping[str, EnrichedScenario],
+) -> tuple[str, ...]:
+    """Recheck critical leakage boundaries even for an in-memory split audit."""
+    source_partitions: dict[str, set[str]] = {}
+    food_partitions: dict[str, set[str]] = {}
+    commodity_partitions: dict[str, set[str]] = {}
+    scenario_partitions: dict[str, set[str]] = {}
+    source_families: dict[str, set[str]] = {}
+    gaps = set()
+    for partition, label_ids in partition_ids.items():
+        for label_id in label_ids:
+            label = labels_by_id[label_id]
+            enriched = scenarios_by_id.get(label.scenario_record_id)
+            if enriched is None:
+                gaps.add("label_feature_join_incomplete")
+                continue
+            if label.food_reference_id != enriched.food_reference.food_id:
+                gaps.add("label_food_reference_mismatch")
+            commodity = enriched.food_reference.commodity_type
+            if not isinstance(commodity, str) or not commodity.strip():
+                gaps.add("food_commodity_name_missing")
+                continue
+            commodity_key = " ".join(commodity.split()).casefold()
+            for table, key in (
+                (source_partitions, label.source_family_id),
+                (food_partitions, label.food_reference_id),
+                (commodity_partitions, commodity_key),
+                (scenario_partitions, label.scenario_record_id),
+            ):
+                table.setdefault(key, set()).add(partition)
+            source_families.setdefault(label.source_id, set()).add(label.source_family_id)
+    if any(len(parts) > 1 for parts in source_partitions.values()):
+        gaps.add("source_family_crosses_partitions")
+    if any(len(parts) > 1 for parts in food_partitions.values()):
+        gaps.add("food_reference_crosses_partitions")
+    if any(len(parts) > 1 for parts in commodity_partitions.values()):
+        gaps.add("commodity_name_crosses_partitions")
+    if any(len(parts) > 1 for parts in scenario_partitions.values()):
+        gaps.add("scenario_crosses_partitions")
+    if any(len(families) > 1 for families in source_families.values()):
+        gaps.add("source_id_crosses_source_families")
+    return tuple(sorted(gaps))
+
+
+def _labelled_pair_ranking(
+    entries: list[tuple[SuitabilityLabel, dict[str, Any]]],
+    probability: np.ndarray,
+) -> dict[str, Any]:
+    """Score only within-scenario, explicitly judged package alternatives.
+
+    Missing scenario/package pairs are never treated as negative labels.
+    A tied top score containing an unsuitable package is not a top-1 hit.
+    """
+    if len(entries) != len(probability) or not np.all(np.isfinite(probability)) or (
+        np.any(probability < 0) or np.any(probability > 1)
+    ):
+        raise ValueError("ranking probabilities must be finite and aligned with labels")
+    by_scenario: dict[str, list[tuple[SuitabilityLabel, float]]] = {}
+    for (label, _), score in zip(entries, probability, strict=True):
+        by_scenario.setdefault(label.scenario_record_id, []).append((label, float(score)))
+    evaluable = 0
+    top1_hits = 0
+    top_score_ties = 0
+    compared_pairs = 0
+    correctly_ordered_pairs = 0
+    tied_pairs = 0
+    for rows in by_scenario.values():
+        positive = [(label, score) for label, score in rows
+                    if label.decision == "suitable"]
+        negative = [(label, score) for label, score in rows
+                    if label.decision == "unsuitable"]
+        if not positive or not negative:
+            continue
+        evaluable += 1
+        highest = max(score for _, score in rows)
+        leaders = [label for label, score in rows if score == highest]
+        if len(leaders) > 1:
+            top_score_ties += 1
+        if all(label.decision == "suitable" for label in leaders):
+            top1_hits += 1
+        for _, positive_score in positive:
+            for _, negative_score in negative:
+                compared_pairs += 1
+                correctly_ordered_pairs += positive_score > negative_score
+                tied_pairs += positive_score == negative_score
+    return {
+        "scope": "explicitly_judged_alternatives_within_same_scenario_only",
+        "status": "evaluable" if evaluable else "not_evaluable",
+        "scenarios_with_labels": len(by_scenario),
+        "scenarios_with_both_decisions": evaluable,
+        "strict_top1_suitable_fraction": top1_hits / evaluable if evaluable else None,
+        "top_score_tie_scenarios": top_score_ties,
+        "suitable_unsuitable_pairs": compared_pairs,
+        "strict_pairwise_correct_fraction": (
+            correctly_ordered_pairs / compared_pairs if compared_pairs else None
+        ),
+        "tied_suitable_unsuitable_pairs": tied_pairs,
+        "unlabelled_candidates_evaluated": False,
+    }
+
+
 def train_material_suitability(
     labels: SuitabilityAudit,
     split: MaterialSplitAudit,
@@ -269,6 +373,13 @@ def train_material_suitability(
             return _not_ready(report, "split_source_families_do_not_match_labels")
     if any(not partition_ids[name] for name in PARTITIONS):
         return _not_ready(report, "empty_training_partition")
+    try:
+        split_gaps = _split_identity_gaps(partition_ids, labels_by_id, by_scenario)
+    except (AttributeError, KeyError, TypeError):
+        return _not_ready(report, "split_identity_recheck_incomplete")
+    if split_gaps:
+        report["split_identity_gaps"] = list(split_gaps)
+        return _not_ready(report, "split_identity_recheck_failed")
 
     def entries(name: str) -> list[tuple[SuitabilityLabel, dict[str, Any]]]:
         result = []
@@ -297,6 +408,7 @@ def train_material_suitability(
     selected: Pipeline | None = None
     selected_c = None
     selected_scores = None
+    selected_probability = None
     for c in config.regularization_candidates:
         candidate = _model(c, config)
         candidate.fit(x_train, y_train)
@@ -304,12 +416,17 @@ def train_material_suitability(
         scores = _scores(y_validation, probability, config.decision_threshold)
         if selected_scores is None or scores["brier_score"] < selected_scores["brier_score"]:
             selected, selected_c, selected_scores = candidate, c, scores
+            selected_probability = probability
     report["model_trained"] = True
     report["validation"] = {
         "selected_regularization_c": selected_c,
         "candidate": selected_scores,
         "training_prevalence_baseline": baseline,
         "selected_without_test_access": True,
+        "labelled_pair_ranking": (
+            _labelled_pair_ranking(validation, selected_probability)
+            if selected_probability is not None else None
+        ),
     }
     if selected is None or selected_scores is None or (
         selected_scores["brier_score"] >= baseline["brier_score"]
@@ -327,9 +444,8 @@ def train_material_suitability(
     if len(set(y_test)) != 2:
         return _not_ready(report, "test_has_one_decision_class")
     x_test = _matrix([row for _, row in testing])
-    test_candidate = _scores(
-        y_test, selected.predict_proba(x_test)[:, 1], config.decision_threshold,
-    )
+    test_probability = selected.predict_proba(x_test)[:, 1]
+    test_candidate = _scores(y_test, test_probability, config.decision_threshold)
     test_baseline = _scores(
         y_test, np.full(len(y_test), prevalence), config.decision_threshold,
     )
@@ -340,6 +456,7 @@ def train_material_suitability(
         "brier_baseline_beaten": (
             test_candidate["brier_score"] < test_baseline["brier_score"]
         ),
+        "labelled_pair_ranking": _labelled_pair_ranking(testing, test_probability),
     }
     report["status"] = "exploratory_test_evaluated"
     report["model_evaluated"] = True

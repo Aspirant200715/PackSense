@@ -131,13 +131,26 @@ uses food composition, pH, temperature/humidity, transport, desired life,
 pack quantity, layer-family sequence, and structure geometry. Food IDs,
 structure IDs, source/review IDs, and the judgement are excluded from model
 features. It fits imputation, encoding, scaling, and a regularized logistic
-classifier on **train only**. Validation chooses the regularization strength;
+classifier on **train only**. The trainer independently rechecks source-family,
+source-ID, food-reference, normalized commodity-name, and scenario separation
+across the supplied in-memory partitions before fitting; a forged or stale
+allocation cannot silently bypass these leakage boundaries. Validation
+chooses the regularization strength;
 the test partition is opened only if validation Brier score beats a constant
 training-prevalence baseline. Test reporting includes suitable precision and
 recall, unsuitable recall, false-suitable count/rate, average precision, and
 Brier score. A passing score is agreement with reviewed judgements, not proof
 of safe packaging or readiness to deploy. The estimator is not serialized or
 connected to the recommendation engine.
+
+Validation and test reports also include a conservative within-scenario
+ranking diagnostic: among scenarios with **explicit suitable and unsuitable
+judgements for different packages**, it reports strict top-choice hit rate,
+pairwise ordering, and score ties. A top-score tie that includes an unsuitable
+package is not counted as a hit. If no scenario has both decisions, the
+ranking result is `not_evaluable`, not zero or an invented accuracy. These
+metrics cover only judged alternatives and do not treat unlabelled packages
+as negatives or establish performance on the full candidate catalogue.
 
 Training additionally requires an explicit independent source/rights approval.
 The notebook expects `material-training-approval.json` with exactly:

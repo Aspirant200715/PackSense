@@ -629,6 +629,15 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Local verification: 191 Python 3.11 tests passed, compilation and diff checks
   passed. Both Python 3.11 and 3.13 CI checks passed for the initial PR #30
   head `7de9808`; later heads require their own CI checks.
+- Follow-up on the same PR: the trainer now rechecks in-memory source-family,
+  source-ID, food, normalized commodity, and scenario separation before any
+  fit, even when handed an allocation marked prepared. Validation and test
+  reports add strict within-scenario ranking diagnostics only for explicitly
+  judged suitable/unsuitable alternatives; no absent pair becomes a negative.
+  Ties are reported conservatively and an unjudgeable partition says
+  `not_evaluable`. These checks do not change the withheld release status.
+  Local Python 3.11 verification passed 193 tests, compileall, and diff checks.
+  No real suitability label, model fit, or Kaggle dataset was added.
 
 ### Template for the next entry
 

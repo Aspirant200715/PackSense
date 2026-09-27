@@ -7,7 +7,9 @@ from unittest.mock import patch
 import numpy as np
 
 from packsense.material_model import (
-    FEATURE_COLUMNS, MaterialTrainingConfig, train_material_suitability,
+    FEATURE_COLUMNS, MaterialTrainingConfig, _labelled_pair_ranking,
+    _split_identity_gaps,
+    train_material_suitability,
 )
 
 
@@ -76,6 +78,8 @@ class MaterialModelGateTests(unittest.TestCase):
         accepted = tuple(SimpleNamespace(
             label_id=f"TEST_ONLY_{index}", scenario_record_id=f"TEST_ONLY_{index}",
             structure_id="TEST_ONLY_STRUCTURE", source_family_id=groups[index],
+            food_reference_id=f"TEST_ONLY_FOOD_{index}",
+            source_id=f"TEST_ONLY_SOURCE_{index}",
             decision=decision,
         ) for index, decision in enumerate(decisions))
         labels = SimpleNamespace(
@@ -104,8 +108,12 @@ class MaterialModelGateTests(unittest.TestCase):
                 record_id=label.scenario_record_id,
                 enriched=SimpleNamespace(
                     scenario=SimpleNamespace(record_id=label.scenario_record_id),
+                    food_reference=SimpleNamespace(
+                        food_id=label.food_reference_id,
+                        commodity_type=f"TEST_ONLY_COMMODITY_{index}",
+                    ),
                 ),
-            ) for label in accepted),
+            ) for index, label in enumerate(accepted)),
         )
         structures = SimpleNamespace(
             status="review_attested", issues=(),
@@ -143,8 +151,75 @@ class MaterialModelGateTests(unittest.TestCase):
         self.assertTrue(result.report["model_evaluated"])
         self.assertFalse(result.report["model_validated"])
         self.assertTrue(result.report["test"]["brier_baseline_beaten"])
+        self.assertEqual(
+            result.report["test"]["labelled_pair_ranking"]["status"], "not_evaluable"
+        )
         self.assertEqual(hashes, result.report["source_hashes"])
         self.assertIsNotNone(result.estimator)
+        with patch("packsense.material_model.attestation_integrity_gaps", return_value=()), \
+                patch("packsense.material_model._split_identity_gaps",
+                      return_value=("food_reference_crosses_partitions",)), \
+                patch("packsense.material_model._model") as model_factory:
+            blocked = train_material_suitability(
+                labels, split, enriched, structures, {},
+                source_and_rights_review_approved=True,
+            )
+        model_factory.assert_not_called()
+        self.assertFalse(blocked.report["model_trained"])
+        self.assertEqual(blocked.report["readiness_reasons"], [
+            "split_identity_recheck_failed"
+        ])
+
+    def test_in_memory_split_recheck_rejects_food_and_source_leakage(self):
+        labels = {
+            "train": SimpleNamespace(
+                scenario_record_id="TEST_ONLY_TRAIN", food_reference_id="FOOD_A",
+                source_family_id="FAMILY_A", source_id="SOURCE_SHARED",
+            ),
+            "test": SimpleNamespace(
+                scenario_record_id="TEST_ONLY_TEST", food_reference_id="FOOD_A",
+                source_family_id="FAMILY_B", source_id="SOURCE_SHARED",
+            ),
+        }
+        scenarios = {
+            "TEST_ONLY_TRAIN": SimpleNamespace(food_reference=SimpleNamespace(
+                food_id="FOOD_A", commodity_type="Tomato, raw",
+            )),
+            "TEST_ONLY_TEST": SimpleNamespace(food_reference=SimpleNamespace(
+                food_id="FOOD_A", commodity_type=" tomato,  RAW ",
+            )),
+        }
+        gaps = _split_identity_gaps(
+            {"train": ["train"], "test": ["test"]}, labels, scenarios,
+        )
+        self.assertIn("food_reference_crosses_partitions", gaps)
+        self.assertIn("commodity_name_crosses_partitions", gaps)
+        self.assertIn("source_id_crosses_source_families", gaps)
+
+    def test_within_scenario_ranking_does_not_create_missing_negatives(self):
+        labels = [
+            SimpleNamespace(scenario_record_id=scenario, decision=decision)
+            for scenario, decision in (
+                ("TEST_ONLY_A", "suitable"),
+                ("TEST_ONLY_A", "unsuitable"),
+                ("TEST_ONLY_B", "suitable"),
+                ("TEST_ONLY_B", "unsuitable"),
+                ("TEST_ONLY_C", "suitable"),
+            )
+        ]
+        rows = [(label, {}) for label in labels]
+        result = _labelled_pair_ranking(
+            rows, np.asarray([0.8, 0.2, 0.5, 0.5, 0.99]),
+        )
+        self.assertEqual(result["scenarios_with_labels"], 3)
+        self.assertEqual(result["scenarios_with_both_decisions"], 2)
+        self.assertEqual(result["strict_top1_suitable_fraction"], 0.5)
+        self.assertEqual(result["strict_pairwise_correct_fraction"], 0.5)
+        self.assertEqual(result["top_score_tie_scenarios"], 1)
+        self.assertEqual(result["tied_suitable_unsuitable_pairs"], 1)
+        self.assertFalse(result["unlabelled_candidates_evaluated"])
+        with self.assertRaisesRegex(ValueError, "aligned"):
+            _labelled_pair_ranking(rows, np.asarray([0.8]))
 
 
 if __name__ == "__main__":
