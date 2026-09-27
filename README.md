@@ -6,9 +6,10 @@ reviewed scenario/complete-structure suitability labels are available; the
 existing food and material workbooks are references, not those labels. See
 [material-suitability evidence intake](docs/material-suitability.md).
 The [existing Kaggle notebook](notebooks/packsense-ai.ipynb) is versioned in
-the repository; it audits the two
-reference masters and explicitly withholds training when suitability inputs
-or a reviewed split are missing.
+the repository; it audits the two reference masters and explicitly withholds
+training when suitability labels, a reviewed split, and source/rights approval
+are missing. An exploratory CPU material classifier is implemented behind
+those gates, but has **not** been trained or validated on real labels.
 
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 

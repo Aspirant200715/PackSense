@@ -540,6 +540,36 @@ PackSense must continue to withhold a real package or shelf-life claim.
   modules, and reported `status=not_ready`, `model_trained=false`.
 - PR CI and review are checked on the pushed head separately.
 
+### 2026-09-27 — guarded material-model runner and Kaggle source refresh
+
+- PR #27 passed CI and was merged to `main` as `2d619fc`. Deferred shelf-life
+  PR #25 remains open and unmerged; it is outside the current material task.
+- Branch: `ml/material-training-runner`, based on that merge. Source commit
+  `7301542` adds a CPU regularized-logistic exploratory classifier behind the
+  suitability-intake, independent human source/rights approval, and frozen
+  source/food-disjoint split gates. It excludes food, scenario, structure,
+  source, and review IDs from features, fits preprocessing on train only,
+  selects regularization on validation, and opens test only if validation
+  Brier score beats a training-prevalence baseline. It does not release a
+  package recommendation or shelf-life claim.
+- The private Kaggle backend-source dataset was refreshed from exact source
+  commit `7301542` with a per-file SHA-256 manifest. Kaggle reports it ready
+  and lists 25 package Python files, including `material_model.py`, plus the
+  manifest. No raw food/material data or withdrawn 672/72 CSVs were uploaded
+  in this source bundle.
+- Kaggle notebook version 6 completed with the refreshed bundle. It verified
+  all 25 source files, accepted 5,000/5,000 food and 81/81 material reference
+  rows, and wrote `not_ready`/`model_trained=false` with no backend modules
+  missing and all six real training files missing. No fit, test metric, or
+  model artifact exists. PR CI remains a separate check.
+- The imported food reference has pH for 720/5,000 rows: 709 proxy and 11
+  reported-reference values. This is a coverage/evidence limit, not a reason
+  to generate pH labels or claim broad model generalization.
+- Local verification: 165 unit tests passed; package/test compile checks and
+  `git diff --check` passed. No real suitability labels, approved split,
+  scenario batch, reviewed structure catalogue, or model artifact were added.
+  Test fixtures are guardrail checks, never fitted training data.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
