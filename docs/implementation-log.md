@@ -443,7 +443,8 @@ PackSense must continue to withhold a real package or shelf-life claim.
 
 ### 2026-09-27 — direct shortlist review-integrity gate
 
-- Branch: `feat/09-review-integrity`, based on PR #23 at `af70eb8`.
+- Branch: `feat/09-review-integrity`, [PR #24](https://github.com/Aspirant200715/PackSense/pull/24),
+  based on PR #23 at `af70eb8`.
   Direct callers of the recommendation function now receive `not_ready`
   before candidate screening if a supposedly approved in-memory structure
   audit has invalid version bindings, duplicate structure IDs, missing or
@@ -456,7 +457,10 @@ PackSense must continue to withhold a real package or shelf-life claim.
   incomplete and inconsistent attestations. No source data, synthetic
   training observations, model fit, or accuracy claim was added.
 - Local verification: `py -3.11 -m unittest discover -s tests -q` passed 149
-  tests. CI and review will be checked on the pushed PR head.
+  tests; compileall and `git diff --check` passed. The separate local Python
+  3.13 environment lacks `openpyxl`, so its test discovery stopped at import;
+  dependency-installed PR CI is the 3.13 verification. CI and review will be
+  checked on the pushed PR head.
 - Remaining gates are unchanged: reviewed real scenario/food/package evidence
   for a shortlist and independent measured trials for shelf-life training.
 
