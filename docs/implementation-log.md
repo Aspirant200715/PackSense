@@ -324,6 +324,30 @@ PackSense must continue to withhold a real package or shelf-life claim.
   failure or right-censoring. Reference-property workbooks are not labels for
   shelf-life or package-selection outcomes.
 
+### 2026-09-27 — real food-property experiment on analytical labels
+
+- Ran the existing CPU property estimator on the local 5,000-food workbook
+  with source SHA-256 `76c5f78c6f6a0ef3c1e5bed7baa442ac9275146198be7de22bbdfe5ef80ccd9f`.
+  Labels were restricted to USDA `A` analytical derivations. This is a narrow
+  moisture/fat reference-value task, not a shelf-life or packaging model.
+- Moisture: 1,628 train, 619 calibration, 463 test rows across 344/87/108
+  independent groups. Test MAE/RMSE were 12.95/17.60 percentage points,
+  versus 16.86/25.47 for the group-median baseline. The wide 33.32-point
+  calibration radius limits use to screening; 110/112 missing values passed
+  the code's estimate gates.
+- Fat: 1,680/643/291 rows across 332/84/104 groups. Model MAE 6.56 was worse
+  than baseline MAE 6.35, so no estimates were emitted; RMSE was better but
+  does not override the predeclared MAE refusal gate.
+- The 80/20 convention is enforced by independent groups. Due to unequal
+  family sizes, row shares differ (fat test rows were 11.1%); this is
+  explicitly reported and is not an 80/20 row-level split. The evaluation is
+  exploratory, not a pristine external challenge set. Local reports are
+  ignored under `outputs/` and were not committed.
+- No material model or shelf-life model was trained. The available 81-row
+  material master has only 13 complete measured CO2-condition records and 60
+  estimated CO2 values, so it remains a reference source, not a trustworthy
+  supervised target table.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

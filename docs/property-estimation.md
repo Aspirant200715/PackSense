@@ -51,16 +51,20 @@ On the USDA-Handbook-enriched workbook (SHA-256
 the `A`-only held-out evaluation found:
 
 - Moisture: 4,888 source values, including 2,710 `A`-coded training/evaluation
-  labels; 112 missing. Test MAE was 12.22 percentage points for the model
-  versus 17.77 for the group-median baseline. The 90% calibration radius was
-  still 31.30 points, with 92.2% empirical coverage on the test rows. The
-  108 of 112 missing rows receive optional experimental estimates; four are
-  withheld by the physical-range/information gate. These are not precise
-  composition results.
+  labels; 112 missing. On the updated group-separated 80/20 holdout, model
+  MAE was 12.95 percentage points versus 16.86 for the group-median baseline;
+  RMSE was 17.60 versus 25.47. The 90% calibration radius was 33.32 points,
+  with 92.9% empirical test coverage. 110 missing rows receive optional
+  experimental estimates; two are withheld by the physical-range/information
+  gate. The group proportions were 344/87/108 (train/calibration/test); row
+  proportions were 60.1/22.8/17.1% because family sizes differ. These are not
+  precise composition results.
 - Fat: 4,766 source values, including 2,614 `A`-coded labels; 234 missing.
-  Test MAE was 6.62 points versus 6.43 for the baseline. The model therefore
-  withholds fat estimates. Its calibration radius was 12.84 points, with
-  89.3% empirical test coverage.
+  Test MAE was 6.56 points versus 6.35 for the baseline, so the model
+  withholds all fat estimates even though its RMSE (11.44) was below the
+  baseline RMSE (14.65). Its calibration radius was 12.32 points, with 88.0%
+  empirical test coverage. The group proportions were 332/84/104; row
+  proportions were 64.3/24.6/11.1% because family sizes differ.
 
 These figures are from one family-held-out split of analytical-derivation
 reference values, not independent laboratory validation. An earlier exploratory
