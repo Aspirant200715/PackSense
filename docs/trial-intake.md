@@ -10,6 +10,17 @@ Run `py -3.11 -m packsense.trials PATH_TO_TRIALS.csv` to see a summary. Use
 existing report. There is no supplied trial-outcome file in the current PS2
 assets; the food and material workbooks must not be passed in as trial labels.
 
+## Withdrawn quality CSVs
+
+The project owner withdrew `packsense_public_measured_quality_raw_672.csv`
+and `packsense_public_measured_quality_packages_72.csv` from this work. Their
+rows are not accepted trial outcomes and must not enter the split manifest,
+shelf-life trainer, or package recommendation inputs. Earlier experiments on
+the `data/21-public-quality-audit` branch were reverted. The final branch
+adds no data importer, quality labels, model artifact, or training result.
+Any later measured-trial source must pass the intake and independent evidence
+review described below before training.
+
 ## Required columns and meaning
 
 The exact CSV/XLSX header is `TRIAL_REQUIRED_COLUMNS` in

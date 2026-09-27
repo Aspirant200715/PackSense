@@ -368,6 +368,21 @@ PackSense must continue to withhold a real package or shelf-life claim.
   estimated CO2 values, so it remains a reference source, not a trustworthy
   supervised target table.
 
+### 2026-09-27 — withdrawn measured-quality candidate files
+
+- Branch: `data/21-public-quality-audit`, based on `main` at `7cce752`.
+  The owner withdrew the 672-row raw quality CSV and 72-row package CSV.
+  The earlier trial-audit, Kaggle metadata, and preprocessing experiments on
+  this branch were fully reverted. This slice records the exclusion decision
+  in the trial-intake guide; no CSV data, importer, training labels, or model
+  artifacts are added.
+- The existing food and material workbooks remain reference masters, not
+  observed shelf-life outcomes. A future trial source still needs independent
+  source, rights, package, endpoint, and grouping review before split/training.
+- This is a documentation-only decision record. No training or prediction
+  was run; local documentation diff and repository tests are checked before
+  PR handoff. CI and review status belong to the PR head.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
