@@ -594,6 +594,96 @@ PackSense must continue to withhold a real package or shelf-life claim.
   compilation, CLI help, and `git diff --check` passed. PR CI and review are
   separate.
 
+### 2026-09-27 — public package-catalogue candidate pilot
+
+- Branch: `data/catalogue-evidence-pilot`, based on merged `main` at
+  `c2e2b70`. Compared research, supplier-film, finished-pouch, and
+  produce-bag sources against the existing Stop 2/5 structure requirements.
+- Added `data/public_catalogue_candidates.v1.json`: nine selected real
+  supplier product claims from four directly accessible sources (The
+  Packaging Lab v3.4, two Kuraray Plantic pages, and Sumitomo P-Plus).
+  Catalogue SHA-256 at intake: `a6f55f0e73fe3b146d7f05d77c93918dd54e5754167caad574c4d66e7dda43af`.
+  Supplier rights review remains pending. No source document or workbook was
+  overwritten or bundled; the existing 81-row material master was compared
+  read-only and had no manufacturer overlap with the candidate suppliers.
+- Added a strict, offline candidate audit, tests, comparison guide, and
+  README link. It preserves supplier units and test conditions, separates
+  narrow produce/quantity/temperature applications from broad claims, and
+  marks six P-Plus gauge interpretations for supplier confirmation. It
+  reports three OTR/WVTR claim records, six exact produce-use records, no
+  CO2TR, no verified service limit, zero approved structures, and zero
+  suitability training labels. PouchDirect was held because its TDS returned
+  HTTP 403 on direct retrieval; ePoP pairings remain research leads rather
+  than finished-package tests.
+- Local verification: 177 Python 3.11 unit tests passed; package/test compile
+  checks and `git diff --check` passed. CI and independent source/rights
+  review remain separate. No model was trained, no Kaggle data was changed,
+  and no package was released as a recommendation.
+- Next promotion work is exact grade/gauge identification, reviewed contact
+  and service-temperature documents, complete-package transfer and seal
+  evidence, and produce SKU-level O2/CO2 measurements. The candidate
+  catalogue must not be loaded as a `StructureDraft` or training register.
+- Same branch/PR #29 follow-up: added optional supplier-application lookup to
+  the existing recommendation batch JSON. It checks exact supplier food names,
+  quantities (with g/kg conversion), storage and conservative full-duration
+  transit excursions. A `, raw` food-reference name is a review-needed name
+  variant, not an approved identity match; processed variants are not mapped.
+  Inner liners, broad film claims, missing source rights and package-level
+  evidence stay visibly unresolved. The shortlist status and preference are
+  unchanged; no material model was fitted. The 5,000-row workbook has zero
+  populated scenario operating-condition rows, so no real batch result was
+  invented. Local test suite had 185 passing tests; both Python CI checks
+  passed for PR #29 head `cbf5a49`.
+
+### 2026-09-27 — exploratory material-score boundary
+
+- Branch/PR: `feat/model-score-boundary` / #30, stacked on PR #29 head `cbf5a49` so
+  the source-catalogue PR can remain open for review. No additional supplier
+  documents, workbook values, scenario rows, suitability labels, or Kaggle
+  training data were created or changed.
+- Corrected training-report semantics: a held-out test sets `model_evaluated`,
+  not `model_validated`, and reports whether its Brier score beats the constant
+  training-prevalence baseline. Release remains withheld even if that metric
+  improves. The checked source hashes are retained for offline comparison.
+- Added a separate exploratory scorer for only engineering-eligible, exact
+  reviewed structures. It refuses source, scenario, review, transfer, class,
+  and probability mismatches and never changes the shortlist preference or
+  reports package feasibility. Test-only estimator fixtures exercise guards;
+  no real model was fit, scored, serialized, or deployed.
+- Local verification: 191 Python 3.11 tests passed, compilation and diff checks
+  passed. Both Python 3.11 and 3.13 CI checks passed for the initial PR #30
+  head `7de9808`; later heads require their own CI checks.
+- Follow-up on the same PR: the trainer now rechecks in-memory source-family,
+  source-ID, food, normalized commodity, and scenario separation before any
+  fit, even when handed an allocation marked prepared. Validation and test
+  reports add strict within-scenario ranking diagnostics only for explicitly
+  judged suitable/unsuitable alternatives; no absent pair becomes a negative.
+  Ties are reported conservatively and an unjudgeable partition says
+  `not_evaluable`. These checks do not change the withheld release status.
+  Local Python 3.11 verification passed 193 tests, compileall, and diff checks.
+  No real suitability label, model fit, or Kaggle dataset was added.
+- Further same-PR evaluation slice: optional, offline engineering-shortlist
+  comparison now cross-tabs only explicit reviewed scenario/structure labels
+  against eligible, excluded, unresolved, and missing candidate states. It
+  refuses stale source/review/fingerprint bindings and does not infer negative
+  labels from absent candidates. It cannot prove that baseline evidence was
+  independent of the judgements; no model selection or recommendation changes.
+  The batch now places its scenario-file SHA-256 on each shortlist, and both
+  the exploratory scorer and baseline comparison check that source version;
+  row fingerprints alone do not identify a complete batch revision.
+  Local Python 3.11 verification passed 195 tests; no real model fit occurred.
+- Further same-PR decision-boundary slice (base `498d153`): changed the
+  preliminary engineering preference from a scalar worst-case transfer score
+  to non-dominated comparison across each source-limited mechanism. Oxygen
+  versus moisture trade-offs and exact ties now stay as unpreferred shortlists;
+  a unique dominating candidate can still be preliminary preferred. The
+  reported worst-case fraction remains diagnostic, and `protection_rank` now
+  denotes a Pareto layer. The report contract is `basic-recommendation-v2`.
+  No food/material mapping, scenario, measurement, label, or Kaggle dataset
+  was added. Local Python 3.11 and 3.13 suites passed 197 tests each;
+  compileall and diff checks passed. CI and PR review remain pending, and
+  neither model training nor package certification occurred.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

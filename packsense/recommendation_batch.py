@@ -17,6 +17,8 @@ from zipfile import BadZipFile
 from packsense.candidate_transfer import (
     FinishedPackageTransferEvidence, parse_transfer_register,
 )
+from packsense.catalogue_candidates import load_candidate_catalogue
+from packsense.catalogue_leads import find_supplier_application_leads
 from packsense.enrichment import enrich_scenarios
 from packsense.grade_reference import compare_grade_barriers
 from packsense.ingestion import InputSchemaError, ScenarioAudit, audit_scenarios
@@ -52,6 +54,8 @@ def build_batch_recommendations(
     transfer_evidence: tuple[FinishedPackageTransferEvidence, ...] = (),
     transfer_register_sha256: str | None = None,
     include_grade_reference_comparison: bool = False,
+    public_candidates: dict[str, Any] | None = None,
+    public_candidate_catalogue_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Return one auditable exception or recommendation result per input row."""
     if not scenarios.rows:
@@ -66,6 +70,8 @@ def build_batch_recommendations(
         raise ValueError("package transfer evidence requires a register hash and structure review")
     if type(include_grade_reference_comparison) is not bool:
         raise ValueError("include_grade_reference_comparison must be boolean")
+    if (public_candidates is None) != (public_candidate_catalogue_sha256 is None):
+        raise ValueError("public candidate catalogue and hash must be supplied together")
 
     enriched = enrich_scenarios(scenarios, foods, routes, route_register_sha256)
     assessments_by_food: dict[str, list[ProtectionAssessment]] = defaultdict(list)
@@ -96,6 +102,8 @@ def build_batch_recommendations(
             }
             if include_grade_reference_comparison:
                 result_row["grade_reference_comparison"] = None
+            if public_candidates is not None:
+                result_row["supplier_application_lookup"] = None
             rows.append(result_row)
             continue
 
@@ -108,6 +116,7 @@ def build_batch_recommendations(
             card, row.enriched.scenario.commodity_type, structure_review,
             transfers_by_record.get(card.record_id, ()),
             current_material_master_sha256=materials.source_sha256,
+            scenario_source_sha256=scenarios.source_sha256,
         )
         reason_counts.update(recommendation.reason_codes)
         result_row = {
@@ -122,6 +131,10 @@ def build_batch_recommendations(
         if include_grade_reference_comparison:
             result_row["grade_reference_comparison"] = compare_grade_barriers(
                 card, materials,
+            )
+        if public_candidates is not None:
+            result_row["supplier_application_lookup"] = find_supplier_application_leads(
+                row.enriched.scenario, public_candidates,
             )
         rows.append(result_row)
 
@@ -188,6 +201,15 @@ def build_batch_recommendations(
             and row["grade_reference_comparison"]["status"] == "reference_comparison"
             for row in rows
         )
+    if public_candidates is not None:
+        report["public_candidate_catalogue_sha256"] = public_candidate_catalogue_sha256
+        report["supplier_application_lookup_rows"] = sum(
+            row.get("supplier_application_lookup") is not None for row in rows
+        )
+        report["supplier_application_lead_count"] = sum(
+            len(row["supplier_application_lookup"]["leads"])
+            for row in rows if row.get("supplier_application_lookup") is not None
+        )
     return report
 
 
@@ -210,6 +232,8 @@ def main() -> int:
         "--compare-grade-references", action="store_true",
         help="opt-in lab-condition film-grade comparison; never package suitability",
     )
+    parser.add_argument("--public-candidates", type=Path,
+                        help="source-backed supplier application leads; never approved packages")
     parser.add_argument("--report", type=Path, required=True, help="new JSON output path")
     parser.add_argument("--summary-csv", type=Path, help="new one-row-per-scenario CSV path")
     args = parser.parse_args()
@@ -257,6 +281,10 @@ def main() -> int:
         transfer_hash = (
             hashlib.sha256(transfer_raw).hexdigest() if transfer_raw is not None else None
         )
+        public_candidates, public_candidate_hash = (
+            load_candidate_catalogue(args.public_candidates)
+            if args.public_candidates is not None else (None, None)
+        )
         report = build_batch_recommendations(
             scenarios, foods, materials,
             routes=routes, route_register_sha256=route_hash,
@@ -264,6 +292,8 @@ def main() -> int:
             structure_review=structure_review,
             transfer_evidence=transfers, transfer_register_sha256=transfer_hash,
             include_grade_reference_comparison=args.compare_grade_references,
+            public_candidates=public_candidates,
+            public_candidate_catalogue_sha256=public_candidate_hash,
         )
         if args.summary_csv is not None:
             summarize_batch(report)

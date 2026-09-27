@@ -131,13 +131,38 @@ uses food composition, pH, temperature/humidity, transport, desired life,
 pack quantity, layer-family sequence, and structure geometry. Food IDs,
 structure IDs, source/review IDs, and the judgement are excluded from model
 features. It fits imputation, encoding, scaling, and a regularized logistic
-classifier on **train only**. Validation chooses the regularization strength;
+classifier on **train only**. The trainer independently rechecks source-family,
+source-ID, food-reference, normalized commodity-name, and scenario separation
+across the supplied in-memory partitions before fitting; a forged or stale
+allocation cannot silently bypass these leakage boundaries. Validation
+chooses the regularization strength;
 the test partition is opened only if validation Brier score beats a constant
 training-prevalence baseline. Test reporting includes suitable precision and
 recall, unsuitable recall, false-suitable count/rate, average precision, and
 Brier score. A passing score is agreement with reviewed judgements, not proof
 of safe packaging or readiness to deploy. The estimator is not serialized or
 connected to the recommendation engine.
+
+Validation and test reports also include a conservative within-scenario
+ranking diagnostic: among scenarios with **explicit suitable and unsuitable
+judgements for different packages**, it reports strict top-choice hit rate,
+pairwise ordering, and score ties. A top-score tie that includes an unsuitable
+package is not counted as a hit. If no scenario has both decisions, the
+ranking result is `not_evaluable`, not zero or an invented accuracy. These
+metrics cover only judged alternatives and do not treat unlabelled packages
+as negatives or establish performance on the full candidate catalogue.
+
+The trainer can optionally receive the existing engineering shortlists for
+an **offline validation/test cross-tab** on those same explicitly judged
+scenario/structure pairs. It rechecks food and scenario fingerprints,
+the source scenario-file hash, reviewed structure identities, source hashes,
+and eligible transfer gates.
+Eligible, excluded, unresolved, and absent candidates remain separate counts;
+an absent candidate is never labelled unsuitable. This comparison does not
+change model selection or recommendations, and eligibility is not itself a
+scientific suitability label. Code cannot verify that engineering evidence
+was curated independently of the reviewed judgements. A human must inspect
+that provenance before interpreting the cross-tab.
 
 Training additionally requires an explicit independent source/rights approval.
 The notebook expects `material-training-approval.json` with exactly:
@@ -163,3 +188,24 @@ five required files are `material-suitability-labels.json`,
 `material-structures.json`, and `material-structure-reviews.json`. The
 notebook reports `not_ready` while any are missing, preserving the reference
 import results without inventing labels or fitting a model.
+
+### Offline candidate-score boundary
+
+After a genuine, reviewed register eventually passes the frozen split and the
+exploratory validation/test sequence, `score_exploratory_candidates` can compare
+the model's uncalibrated score for a **reviewed suitability judgement** on structures
+that already passed the engineering shortlist. It refuses mismatched food,
+scenario fingerprint, master/catalogue/review hashes, missing grade identities,
+unresolved transfer checks, a failed held-out Brier baseline, or invalid model
+probabilities. It never scores supplier-application leads or bypasses the hard
+food-contact, temperature, gas, barrier, seal, and handling gates. It returns a
+separate offline report, never changes the engineering preference, and does
+not produce a deployable model artifact.
+
+The training report now distinguishes `model_evaluated` from `model_validated`.
+An exploratory held-out test can set the former to true, but keeps the latter
+false and release withheld. Even a test Brier score better than the constant
+training-prevalence baseline is evidence about agreement with reviewed labels,
+not proof that the package is safe or suitable in operation. With the current
+real files this scoring path remains `not_ready`; no real suitability register,
+reviewed structure catalogue, split, or trained estimator is present.
