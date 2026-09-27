@@ -480,6 +480,37 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Remaining gates are unchanged: reviewed real scenario/food/package evidence
   for a shortlist and independent measured trials for shelf-life training.
 
+### 2026-09-27 — material-selection priority and label intake
+
+- Owner scope decision: prioritize package-material selection and defer
+  shelf-life prediction. The final eight-stop architecture is preserved;
+  a future learned ranker can operate only after hard candidate filters.
+  Desired shelf-life days remains a scenario requirement, not a training label.
+- Reviewed recent history: PRs #21, #22, #23, and #24 are merged. PR #25 is
+  the only open PR; it concerns shelf-life trial-reference linkage and is
+  deliberately left unmerged while that work is deferred. Its Python 3.11
+  and 3.13 checks were green at review. The current branch starts from
+  `main` at `03cd09b`, not from PR #25.
+- Branch: `feat/material-suitability-intake`, [PR #26](https://github.com/Aspirant200715/PackSense/pull/26).
+  Added a strict, source-versioned
+  food-scenario/complete-structure suitability-label intake. It records
+  explicit suitable/unsuitable decisions and source-family IDs, rejects
+  duplicate or mismatched pairs, and checks reviewed food scope and all
+  exposure temperatures. It does not certify evidence or fit a model.
+- The existing Kaggle notebook was pulled and inspected. It has two cells,
+  runs the reference-master audit from backend commit `fecb787`, and has no
+  material-suitability labels or model training. The two reference workbooks
+  are attached; the withdrawn quality CSVs were not used.
+- No real source labels, complete package catalogue, or scenario-matched
+  transfer data were added. Unit fixtures are `TEST_ONLY` and are not training
+  observations. Current real-data recommendation and supervised ML remain
+  `not_ready` until those sources are reviewed and joined.
+- Local verification: `python -m unittest discover -s tests -q` passed 155
+  tests; `python -m compileall -q packsense tests`, `git diff --check`, and
+  the label-intake CLI help check passed. PR CI and review are separate.
+- Next: review a real suitability source set and freeze a group-held-out
+  split before updating the Kaggle notebook to train a material ranker.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
