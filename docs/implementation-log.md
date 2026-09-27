@@ -596,7 +596,8 @@ PackSense must continue to withhold a real package or shelf-life claim.
 
 ### 2026-09-27 — local produce diagnostics in the recommendation batch
 
-- Branch: `feat/produce-batch-diagnostics`, based on the open grade-reference
+- Branch: `feat/produce-batch-diagnostics`, [PR #32](https://github.com/Aspirant200715/PackSense/pull/32),
+  based on the open grade-reference
   comparison branch. An opt-in path now attaches the existing Stop-4 local
   gas/water audit to each exact scenario row in the recommendation JSON.
   The route, kinetics, gas, and water register hashes remain separate, and
