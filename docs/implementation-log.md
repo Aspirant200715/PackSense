@@ -608,8 +608,57 @@ PackSense must continue to withhold a real package or shelf-life claim.
   evidence stay visibly unresolved. The shortlist status and preference are
   unchanged; no material model was fitted. The 5,000-row workbook has zero
   populated scenario operating-condition rows, so no real batch result was
-  invented. Local test suite now has 185 passing tests; CI for this update
-  remains to be checked after push.
+  invented. Local test suite had 185 passing tests; both Python CI checks
+  passed for PR #29 head `cbf5a49`.
+
+### 2026-09-27 — exploratory material-score boundary
+
+- Branch/PR: `feat/model-score-boundary` / #30, stacked on PR #29 head `cbf5a49` so
+  the source-catalogue PR can remain open for review. No additional supplier
+  documents, workbook values, scenario rows, suitability labels, or Kaggle
+  training data were created or changed.
+- Corrected training-report semantics: a held-out test sets `model_evaluated`,
+  not `model_validated`, and reports whether its Brier score beats the constant
+  training-prevalence baseline. Release remains withheld even if that metric
+  improves. The checked source hashes are retained for offline comparison.
+- Added a separate exploratory scorer for only engineering-eligible, exact
+  reviewed structures. It refuses source, scenario, review, transfer, class,
+  and probability mismatches and never changes the shortlist preference or
+  reports package feasibility. Test-only estimator fixtures exercise guards;
+  no real model was fit, scored, serialized, or deployed.
+- Local verification: 191 Python 3.11 tests passed, compilation and diff checks
+  passed. Both Python 3.11 and 3.13 CI checks passed for the initial PR #30
+  head `7de9808`; later heads require their own CI checks.
+- Follow-up on the same PR: the trainer now rechecks in-memory source-family,
+  source-ID, food, normalized commodity, and scenario separation before any
+  fit, even when handed an allocation marked prepared. Validation and test
+  reports add strict within-scenario ranking diagnostics only for explicitly
+  judged suitable/unsuitable alternatives; no absent pair becomes a negative.
+  Ties are reported conservatively and an unjudgeable partition says
+  `not_evaluable`. These checks do not change the withheld release status.
+  Local Python 3.11 verification passed 193 tests, compileall, and diff checks.
+  No real suitability label, model fit, or Kaggle dataset was added.
+- Further same-PR evaluation slice: optional, offline engineering-shortlist
+  comparison now cross-tabs only explicit reviewed scenario/structure labels
+  against eligible, excluded, unresolved, and missing candidate states. It
+  refuses stale source/review/fingerprint bindings and does not infer negative
+  labels from absent candidates. It cannot prove that baseline evidence was
+  independent of the judgements; no model selection or recommendation changes.
+  The batch now places its scenario-file SHA-256 on each shortlist, and both
+  the exploratory scorer and baseline comparison check that source version;
+  row fingerprints alone do not identify a complete batch revision.
+  Local Python 3.11 verification passed 195 tests; no real model fit occurred.
+- Further same-PR decision-boundary slice (base `498d153`): changed the
+  preliminary engineering preference from a scalar worst-case transfer score
+  to non-dominated comparison across each source-limited mechanism. Oxygen
+  versus moisture trade-offs and exact ties now stay as unpreferred shortlists;
+  a unique dominating candidate can still be preliminary preferred. The
+  reported worst-case fraction remains diagnostic, and `protection_rank` now
+  denotes a Pareto layer. The report contract is `basic-recommendation-v2`.
+  No food/material mapping, scenario, measurement, label, or Kaggle dataset
+  was added. Local Python 3.11 and 3.13 suites passed 197 tests each;
+  compileall and diff checks passed. CI and PR review remain pending, and
+  neither model training nor package certification occurred.
 
 ### Template for the next entry
 

@@ -36,13 +36,17 @@ material grades into synthetic trials.
 
 ## Preliminary preference
 
-When multiple candidates pass those gates and have comparable numeric,
-source-approved transfer budgets, the function can identify a preliminary preference by the
-lowest worst-case fraction of the approved oxygen/moisture budget consumed.
-The output names this ranking basis and preserves source locators and review
-hashes. A tied shortlist, or candidates with no comparable budget, has no
-preferred structure. Eligible candidates include their protection rank and
-budget-utilization value. This is not a weighted
+When candidates pass those gates and have comparable numeric, source-approved
+transfer budgets, the function compares their budget use separately for each
+source-limited oxygen/moisture mechanism. A candidate is preferred only when
+it is the unique non-dominated choice: no rival has lower transfer on one
+mechanism without losing on another. For example, if one package admits less
+oxygen but more water than another, both stay in the shortlist without a
+forced preference. Exact ties also remain unpreferred. `protection_rank` is
+the non-dominated layer (1 is the frontier), not a weighted score; the
+worst-case budget-utilization fraction is retained only as a diagnostic.
+Where numeric budgets are unavailable or incomparable, no preference is made.
+The output preserves source locators and review hashes. This is not a weighted
 Stop 6 ranking: cost and sustainability are not in the current material master
 and are not ranked. Light sensitivity is reported as an open warning.
 
@@ -98,6 +102,9 @@ unmatched scenarios, `not_ready` with specific evidence gaps, or
 `preliminary_shortlist` with the screened structures. It includes source
 hashes, source-row numbers, requirement cards, review and transfer evidence,
 summary counts, and explicit false package-feasibility and shelf-life flags.
+Each recommendation also carries the source scenario-file SHA-256, separate
+from its row-level scenario fingerprint, so later offline comparisons can
+reject a stale batch version.
 An existing output path is never overwritten. Exit code 1 means the report
 contains input exception rows; code 2 means input or output creation failed.
 `not_ready` is an expected report result and does not itself make the command

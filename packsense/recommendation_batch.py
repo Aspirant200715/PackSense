@@ -110,6 +110,7 @@ def build_batch_recommendations(
             card, row.enriched.scenario.commodity_type, structure_review,
             transfers_by_record.get(card.record_id, ()),
             current_material_master_sha256=materials.source_sha256,
+            scenario_source_sha256=scenarios.source_sha256,
         )
         reason_counts.update(recommendation.reason_codes)
         result_row = {

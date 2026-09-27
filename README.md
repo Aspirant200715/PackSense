@@ -10,6 +10,8 @@ the repository; it audits the two reference masters and explicitly withholds
 training when suitability labels, a reviewed split, and source/rights approval
 are missing. An exploratory CPU material classifier is implemented behind
 those gates, but has **not** been trained or validated on real labels.
+Its optional offline scorer is restricted to already shortlisted, reviewed
+structures and cannot alter a recommendation or release a model.
 
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 
