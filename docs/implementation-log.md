@@ -441,6 +441,25 @@ PackSense must continue to withhold a real package or shelf-life claim.
   recommendations and independent measured trial outcomes for shelf-life
   training. The CSV is an output view, not a training dataset.
 
+### 2026-09-27 — direct shortlist review-integrity gate
+
+- Branch: `feat/09-review-integrity`, based on PR #23 at `af70eb8`.
+  Direct callers of the recommendation function now receive `not_ready`
+  before candidate screening if a supposedly approved in-memory structure
+  audit has invalid version bindings, duplicate structure IDs, missing or
+  failed required checks, inconsistent review IDs, or mismatched
+  construction/food-contact source IDs or an invalid package shape. This
+  closes a bypass of the structure-review builder's checks; it does not
+  authenticate external evidence.
+- Updated `TEST_ONLY` fixtures to carry the same five-check attestation
+  shape as the production review builder. Added adversarial tests for
+  incomplete and inconsistent attestations. No source data, synthetic
+  training observations, model fit, or accuracy claim was added.
+- Local verification: `py -3.11 -m unittest discover -s tests -q` passed 149
+  tests. CI and review will be checked on the pushed PR head.
+- Remaining gates are unchanged: reviewed real scenario/food/package evidence
+  for a shortlist and independent measured trials for shelf-life training.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

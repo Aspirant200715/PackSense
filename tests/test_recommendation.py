@@ -16,7 +16,7 @@ from packsense.recommendation import (
     CandidateStatus, RecommendationStatus, screen_package_candidates,
 )
 from packsense.structure_review import (
-    ReviewAttestedStructure, StructureReviewAudit,
+    CHECK_KINDS, EvidenceCheck, ReviewAttestedStructure, StructureReviewAudit,
 )
 
 
@@ -77,9 +77,16 @@ def _reviewed(structure_id, *, scope="Dry snack", low=-5.0, high=35.0):
         compatible_food_scope=(scope,), service_temperature_min_c=low,
         service_temperature_max_c=high,
     )
+    checks = tuple(EvidenceCheck(
+        kind, (structure.structure_source_id if kind == "construction" else
+               structure.food_contact_evidence_id if kind == "food_contact" else
+               f"TEST_ONLY_{kind.upper()}_SOURCE"),
+        "TEST_ONLY_LOCATOR", "e" * 64, "TEST_ONLY_REVIEW",
+        "TEST_ONLY_RIGHTS", "pass",
+    ) for kind in sorted(CHECK_KINDS))
     return ReviewAttestedStructure(
         structure, CATALOGUE_HASH, MATERIAL_HASH, "d" * 64,
-        "TEST_ONLY_REVIEW", (), (), (),
+        "TEST_ONLY_REVIEW", tuple(check.review_id for check in checks), (), checks,
     )
 
 
@@ -113,6 +120,56 @@ def _evidence(card, structure_id, mechanism, observed):
 
 
 class BasicRecommendationTests(unittest.TestCase):
+    def test_in_memory_review_missing_checks_fails_closed(self):
+        card = _card()
+        reviewed = replace(_reviewed("TEST_ONLY_A"), evidence_checks=(),
+                           evidence_check_ids=())
+        evidence = (
+            _evidence(card, "TEST_ONLY_A", ProtectionMechanism.OXYGEN_INGRESS, 5.0),
+            _evidence(card, "TEST_ONLY_A", ProtectionMechanism.MOISTURE_GAIN, 6.0),
+        )
+        result = screen_package_candidates(
+            card, "Dry snack", _audit(reviewed), evidence,
+            current_material_master_sha256=MATERIAL_HASH,
+        )
+        self.assertEqual(result.status, RecommendationStatus.NOT_READY)
+        self.assertIsNone(result.preferred_structure_id)
+        self.assertEqual(result.candidates, ())
+        self.assertIn("structure_review_required_checks_incomplete", result.reason_codes)
+
+    def test_in_memory_review_broken_bindings_fail_closed(self):
+        card = _card()
+        reviewed = _reviewed("TEST_ONLY_A")
+        cases = (
+            (_audit(replace(reviewed, catalogue_sha256="f" * 64)),
+             "structure_review_version_binding_invalid"),
+            (_audit(replace(reviewed, evidence_check_ids=())),
+             "structure_review_check_decision_or_identity_invalid"),
+            (_audit(replace(reviewed, evidence_checks=(
+                replace(reviewed.evidence_checks[0], decision="fail"),
+                *reviewed.evidence_checks[1:],
+            ))), "structure_review_check_decision_or_identity_invalid"),
+            (_audit(replace(reviewed, evidence_checks=(
+                replace(reviewed.evidence_checks[0], source_id="TEST_ONLY_WRONG"),
+                *reviewed.evidence_checks[1:],
+            ))), "structure_review_source_binding_invalid"),
+            (_audit(reviewed, reviewed), "structure_review_duplicate_structure_id"),
+            (_audit(replace(reviewed, structure=replace(
+                reviewed.structure, layers=(),
+            ))), "structure_review_structure_invalid"),
+            (replace(_audit(reviewed), review_register_sha256="f" * 64),
+             "structure_review_version_binding_invalid"),
+        )
+        for audit, expected in cases:
+            with self.subTest(expected=expected):
+                result = screen_package_candidates(
+                    card, "Dry snack", audit, (),
+                    current_material_master_sha256=MATERIAL_HASH,
+                )
+                self.assertEqual(result.status, RecommendationStatus.NOT_READY)
+                self.assertEqual(result.candidates, ())
+                self.assertIn(expected, result.reason_codes)
+
     def test_unique_best_protection_margin_is_preferred_not_certified(self):
         card = _card()
         first, second = _reviewed("TEST_ONLY_A"), _reviewed("TEST_ONLY_B")
