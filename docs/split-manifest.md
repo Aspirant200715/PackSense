@@ -1,10 +1,11 @@
 # Measured-trial split manifest
 
 This backend slice allocates **measured trial outcomes**, not food-reference or
-material-reference rows. It is the next gate after [trial intake](trial-intake.md)
+material-reference rows. It is the gate after [trial intake](trial-intake.md)
 and before any trial-derived imputer, coefficient, model, calibration, or
-performance metric. No trial-outcome dataset or split manifest is bundled.
-The code does **not** train a packaging selector or shelf-life model.
+performance metric. A guarded shelf-life training runner now consumes this
+manifest, but no trial-outcome dataset or split manifest is bundled and no
+real model has been trained. The code does **not** train a packaging selector.
 
 ## What must be reviewed first
 
@@ -90,8 +91,12 @@ Allocation is refused when there are rejected or unreviewed trial rows,
 stale hashes/digests, missing or extra groups, a source/trial group/batch
 spread across independence groups, or a group appearing in more than one
 partition. The predeclared **minimum allocation check** is at least 8
-train, 2 validation, and 2 test independent groups, with respective
-group-share tolerances of 60–80%, 10–25%, and 10–25% around 70/15/15.
+training, 2 validation, and 2 test independent groups. The target is an
+80% development portion and 20% untouched test portion. Whole-group
+constraints allow a documented tolerance of 75–85% development and 15–25%
+test groups. Validation groups must represent 10–25% of development groups;
+they are used internally for model selection, then training and validation
+groups are combined to fit the final model before the test is opened.
 At least 4/2/2 groups must contain an **observed failure** in those
 partitions. At least one exact `food_id` must have observed failures in
 all three partitions. Right-censored observations are counted separately,
@@ -109,9 +114,10 @@ today's evidence, in which case the correct result is `not_ready`.
 ## How to use the partitions later
 
 - Fit every imputer, encoder, scaler, feature selector, trial-derived physical
-  coefficient, and model inside the **training** partition. Use grouped
-  cross-validation within training for selection and tuning.
-- Use validation for stopping, model comparison, interval/calibration work,
+  coefficient, and model inside the **80% development** portion. Validation
+  groups stay within that portion; use grouped cross-validation there when
+  sample size permits.
+- Use internal validation for stopping, model comparison, interval/calibration work,
   and a predeclared promotion decision. Do not search the untouched test
   partition for features, thresholds, or favourable subgroups.
 - Open the test partition once for the frozen model and predeclared metrics.
