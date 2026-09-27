@@ -19,7 +19,9 @@ from packsense.requirements import (
     AssessmentDecision, ProtectionAssessment, ProtectionMechanism,
     derive_requirement_card, scenario_fingerprint,
 )
-from packsense.structure_review import ReviewAttestedStructure, StructureReviewAudit
+from packsense.structure_review import (
+    CHECK_KINDS, EvidenceCheck, ReviewAttestedStructure, StructureReviewAudit,
+)
 
 
 FOOD_HASH = "a" * 64
@@ -101,9 +103,16 @@ def _review():
         "TEST_ONLY_GRADE", "TEST_ONLY_CONSTRUCTION", "TEST_ONLY_CONTACT",
         ("TEST_ONLY_FOOD",), 0.0, 10.0,
     )
+    checks = tuple(EvidenceCheck(
+        kind, (structure.structure_source_id if kind == "construction" else
+               structure.food_contact_evidence_id if kind == "food_contact" else
+               f"TEST_ONLY_{kind.upper()}_SOURCE"),
+        "TEST_ONLY_LOCATOR", "e" * 64, "TEST_ONLY_REVIEW",
+        "TEST_ONLY_RIGHTS", "pass",
+    ) for kind in sorted(CHECK_KINDS))
     reviewed = ReviewAttestedStructure(
         structure, CATALOGUE_HASH, MATERIAL_HASH, REVIEW_HASH,
-        "TEST_ONLY_REVIEW", (), (), (),
+        "TEST_ONLY_REVIEW", tuple(check.review_id for check in checks), (), checks,
     )
     return StructureReviewAudit(
         "review_attested", CATALOGUE_HASH, REVIEW_HASH, (reviewed,), (),

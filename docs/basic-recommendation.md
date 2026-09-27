@@ -17,6 +17,16 @@ applicable whole-package transfer evidence for every source-limited mechanism.
 That evidence must match the exact scenario fingerprint, package, quantity,
 target period, temperature envelope, and transport-humidity scope.
 
+Before considering candidates, the direct function also checks the
+in-memory review attestation's internal bindings. Its catalogue and register
+hashes must match the parent audit; structure IDs must be unique; and each
+structure must carry all five passing evidence checks with matching review
+IDs and construction/food-contact source IDs. A broken binding returns
+`not_ready` with a `structure_review_*` reason and no candidates. This is a
+consistency guard, not authentication of the underlying documents or proof
+that a human reviewer actually approved them. The direct path also rejects
+an invalid package shape, such as a missing sealant layer or service range.
+
 An absent or mismatched limit/measurement remains unresolved. A transfer above
 its source-approved food budget excludes that structure. Supplier grade OTR or
 WVTR values are not substituted for finished-package transfer measurements.

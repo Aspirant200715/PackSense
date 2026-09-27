@@ -26,6 +26,7 @@ from packsense.structure_review import (
     EvidenceCheck,
     ReviewAttestedStructure,
     StructureReviewAudit,
+    attestation_integrity_gaps,
 )
 
 
@@ -309,6 +310,13 @@ def screen_package_candidates(
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("no_reviewed_complete_structures",), warnings,
+            **_report_context(card),
+        )
+    review_gaps = attestation_integrity_gaps(structure_review)
+    if review_gaps:
+        return BasicRecommendation(
+            card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
+            None, None, (), review_gaps, warnings,
             **_report_context(card),
         )
 

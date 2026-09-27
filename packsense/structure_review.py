@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 from zipfile import BadZipFile
 
-from packsense.contracts import PackageStructure
+from packsense.contracts import PackageStructure, StructureLayer
 from packsense.ingestion import InputSchemaError
 from packsense.masters import load_material_grades
 from packsense.structures import (
@@ -195,6 +195,96 @@ class StructureReviewAudit:
             "package_feasible": False,
             "shelf_life_predicted": False,
         }
+
+
+def _valid_attested_structure(structure: object) -> bool:
+    if not isinstance(structure, PackageStructure):
+        return False
+    try:
+        for field in ("structure_id", "pack_format", "sealant_grade_id",
+                      "structure_source_id", "food_contact_evidence_id"):
+            _text(getattr(structure, field), field)
+        layers = structure.layers
+        if not isinstance(layers, tuple) or not layers:
+            return False
+        for layer in layers:
+            if not isinstance(layer, StructureLayer):
+                return False
+            _text(layer.grade_id, "grade_id")
+            _text(layer.role, "role")
+            if (isinstance(layer.thickness_um, bool)
+                    or not isinstance(layer.thickness_um, (int, float))
+                    or not isfinite(layer.thickness_um)
+                    or layer.thickness_um <= 0
+                    or not isinstance(layer.is_food_contact, bool)):
+                return False
+        if (layers[-1].grade_id != structure.sealant_grade_id
+                or layers[-1].role.casefold() != "sealant"
+                or not layers[-1].is_food_contact
+                or any(layer.is_food_contact for layer in layers[:-1])):
+            return False
+        scope = structure.compatible_food_scope
+        if not isinstance(scope, tuple) or not scope:
+            return False
+        normalized = tuple(_text(item, "compatible_food_scope").casefold()
+                           for item in scope)
+        if len(set(normalized)) != len(normalized) or any(
+            item in BROAD_FOOD_SCOPE for item in normalized
+        ):
+            return False
+        low = _temperature(structure.service_temperature_min_c, "service_temperature_min_c")
+        high = _temperature(structure.service_temperature_max_c, "service_temperature_max_c")
+        return low <= high
+    except (ValueError, TypeError, OverflowError):
+        return False
+
+
+def attestation_integrity_gaps(audit: StructureReviewAudit) -> tuple[str, ...]:
+    """Check an in-memory attestation's internal bindings before screening.
+
+    This guards callers that bypass ``audit_structure_reviews``. It does not
+    authenticate the cited sources or substitute for that original audit.
+    """
+    gaps: set[str] = set()
+    if any(not isinstance(value, str) or not _HASH.fullmatch(value) for value in (
+        audit.catalogue_sha256, audit.review_register_sha256,
+    )):
+        gaps.add("structure_review_audit_hash_invalid")
+    seen: set[str] = set()
+    for reviewed in audit.reviewed:
+        structure = reviewed.structure
+        if not _valid_attested_structure(structure):
+            gaps.add("structure_review_structure_invalid")
+            continue
+        if structure.structure_id in seen:
+            gaps.add("structure_review_duplicate_structure_id")
+        seen.add(structure.structure_id)
+        if (reviewed.catalogue_sha256 != audit.catalogue_sha256
+                or reviewed.review_register_sha256 != audit.review_register_sha256
+                or not isinstance(reviewed.material_master_sha256, str)
+                or not _HASH.fullmatch(reviewed.material_master_sha256)):
+            gaps.add("structure_review_version_binding_invalid")
+        if not isinstance(reviewed.review_id, str) or not reviewed.review_id.strip():
+            gaps.add("structure_review_identity_invalid")
+        checks = reviewed.evidence_checks
+        if (not isinstance(checks, tuple)
+                or len(checks) != len(CHECK_KINDS)
+                or any(not isinstance(check, EvidenceCheck) for check in checks)
+                or {check.kind for check in checks} != CHECK_KINDS):
+            gaps.add("structure_review_required_checks_incomplete")
+            continue
+        if (any(check.decision != "pass" or check.review_id != reviewed.review_id
+                for check in checks)
+                or reviewed.evidence_check_ids != tuple(
+                    check.review_id for check in checks
+                )):
+            gaps.add("structure_review_check_decision_or_identity_invalid")
+        by_kind = {check.kind: check for check in checks}
+        if (by_kind["construction"].source_id != structure.structure_source_id
+                or by_kind["food_contact"].source_id
+                != structure.food_contact_evidence_id):
+            gaps.add("structure_review_source_binding_invalid")
+    return tuple(sorted(gaps))
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
