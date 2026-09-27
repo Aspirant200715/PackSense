@@ -18,6 +18,7 @@ from packsense.candidate_transfer import (
     FinishedPackageTransferEvidence, parse_transfer_register,
 )
 from packsense.enrichment import enrich_scenarios
+from packsense.grade_reference import compare_grade_barriers
 from packsense.ingestion import InputSchemaError, ScenarioAudit, audit_scenarios
 from packsense.masters import (
     FoodMasterEntry, MasterAudit, MaterialMasterEntry, load_food_references,
@@ -50,6 +51,7 @@ def build_batch_recommendations(
     structure_review: StructureReviewAudit | None = None,
     transfer_evidence: tuple[FinishedPackageTransferEvidence, ...] = (),
     transfer_register_sha256: str | None = None,
+    include_grade_reference_comparison: bool = False,
 ) -> dict[str, Any]:
     """Return one auditable exception or recommendation result per input row."""
     if not scenarios.rows:
@@ -62,6 +64,8 @@ def build_batch_recommendations(
         raise ValueError("food assessments require a register hash")
     if transfer_evidence and (transfer_register_sha256 is None or structure_review is None):
         raise ValueError("package transfer evidence requires a register hash and structure review")
+    if type(include_grade_reference_comparison) is not bool:
+        raise ValueError("include_grade_reference_comparison must be boolean")
 
     enriched = enrich_scenarios(scenarios, foods, routes, route_register_sha256)
     assessments_by_food: dict[str, list[ProtectionAssessment]] = defaultdict(list)
@@ -78,7 +82,7 @@ def build_batch_recommendations(
     for row in enriched.rows:
         if row.enriched is None:
             input_issue_counts.update((issue.field, issue.code) for issue in row.issues)
-            rows.append({
+            result_row = {
                 "row_number": row.row_number,
                 "record_id": row.record_id,
                 "food_reference_row": None,
@@ -89,7 +93,10 @@ def build_batch_recommendations(
                 ],
                 "requirement_card": None,
                 "recommendation": None,
-            })
+            }
+            if include_grade_reference_comparison:
+                result_row["grade_reference_comparison"] = None
+            rows.append(result_row)
             continue
 
         card = derive_requirement_card(
@@ -103,7 +110,7 @@ def build_batch_recommendations(
             current_material_master_sha256=materials.source_sha256,
         )
         reason_counts.update(recommendation.reason_codes)
-        rows.append({
+        result_row = {
             "row_number": row.row_number,
             "record_id": row.record_id,
             "food_reference_row": row.enriched.food_reference_row,
@@ -111,10 +118,15 @@ def build_batch_recommendations(
             "issues": [],
             "requirement_card": card.report(),
             "recommendation": recommendation.report(),
-        })
+        }
+        if include_grade_reference_comparison:
+            result_row["grade_reference_comparison"] = compare_grade_barriers(
+                card, materials,
+            )
+        rows.append(result_row)
 
     status_counts = Counter(row["status"] for row in rows)
-    return {
+    report = {
         "batch_version": BATCH_VERSION,
         "scenario_source_path": scenarios.source_path,
         "scenario_sha256": scenarios.source_sha256,
@@ -167,6 +179,16 @@ def build_batch_recommendations(
         "shelf_life_predicted": False,
         "rows": rows,
     }
+    if include_grade_reference_comparison:
+        report["grade_reference_comparison_rows"] = sum(
+            row["grade_reference_comparison"] is not None for row in rows
+        )
+        report["grade_reference_frontier_rows"] = sum(
+            row["grade_reference_comparison"] is not None
+            and row["grade_reference_comparison"]["status"] == "reference_comparison"
+            for row in rows
+        )
+    return report
 
 
 def main() -> int:
@@ -184,6 +206,10 @@ def main() -> int:
     parser.add_argument("--structures", type=Path)
     parser.add_argument("--structure-reviews", type=Path)
     parser.add_argument("--transfers", type=Path)
+    parser.add_argument(
+        "--compare-grade-references", action="store_true",
+        help="opt-in lab-condition film-grade comparison; never package suitability",
+    )
     parser.add_argument("--report", type=Path, required=True, help="new JSON output path")
     parser.add_argument("--summary-csv", type=Path, help="new one-row-per-scenario CSV path")
     args = parser.parse_args()
@@ -237,6 +263,7 @@ def main() -> int:
             assessments=assessments, assessment_register_sha256=assessment_hash,
             structure_review=structure_review,
             transfer_evidence=transfers, transfer_register_sha256=transfer_hash,
+            include_grade_reference_comparison=args.compare_grade_references,
         )
         if args.summary_csv is not None:
             summarize_batch(report)
