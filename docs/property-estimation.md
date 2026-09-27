@@ -18,14 +18,17 @@ this experiment.
 
 The estimator uses character n-gram TF-IDF of food name and group followed by
 ridge regression. Related food-name prefixes stay together in a
-reproducible group split. The vectorizer and regressor are fitted only on
-training families; separate calibration families set a 90% absolute-residual
-interval, and untouched test families evaluate error and interval coverage.
+reproducible group split. It reserves 20% of independent groups as an
+untouched test set; within the remaining 80% development portion, separate
+calibration groups set a 90% absolute-residual interval. The vectorizer and
+regressor are fitted only on the remaining development training families.
+Untouched test families evaluate error and interval coverage.
 The comparison baseline is the food-group median fitted on training rows only.
 No test values, missing rows, package data, desired-life targets, or proxy pH
-values are used to fit the model. The train/calibration/test group proportions
-are approximately 70/15/15, but row counts differ because whole families stay
-together. Ridge has no neural-network epochs.
+values are used to fit the model. Train/calibration/test groups are
+approximately 64/16/20 (80% development and 20% untouched test); row counts
+differ because whole families stay together. Ridge has no neural-network
+epochs.
 
 Run one target at a time:
 

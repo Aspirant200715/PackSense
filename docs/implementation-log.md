@@ -102,7 +102,8 @@ or trial labels. The branch training runner is exercised only with ephemeral
    complete structure joins, endpoint meaning, and group independence.
    Freeze a reviewed manifest before fitting any imputer, encoder, feature
    selector, calibration, or model. If the groups or coverage remain too
-   weak, report `not_ready` instead of manufacturing a 70/15/15 split.
+   weak, report `not_ready` instead of manufacturing an 80/20 holdout;
+   keep validation internal to the development portion.
 2. **Supply real pilot evidence before interpreting Stop 4 as a product
    result.** For a selected respiring food such as the planned tomato pilot,
    review exact food/form identity and independently sourced O2-consumption
@@ -305,6 +306,23 @@ PackSense must continue to withhold a real package or shelf-life claim.
   exact package joins and the reviewed group split. If those gates fail, the
   trainer must report `not_ready`; no epochs, synthetic labels, or reference
   row combinations can substitute for the missing outcomes.
+
+### 2026-09-27 — requested 80/20 grouped holdout
+
+- Updated PR #19's measured-trial split gate to target 80% development and
+  20% untouched test groups. A validation subset is held inside development
+  for iteration selection; the final exploratory fit uses all development
+  groups before the test is opened once. Whole source/study/batch families
+  remain indivisible, so the audited group-level tolerance is 75–85% / 15–25%.
+- Aligned the experimental food-property evaluator to the same 80/20
+  development/test convention, with calibration kept inside development.
+- No new food, material, or trial data was added and no real model was fit.
+  All 131 local tests pass, including grouped split and holdout ratio checks;
+  CI for the prior PR head passed Python 3.11 and 3.13 before this update.
+- Remaining hard blocker for shelf-life learning is a reviewed measured
+  trial-outcome table with exact food/package/storage linkage and observed
+  failure or right-censoring. Reference-property workbooks are not labels for
+  shelf-life or package-selection outcomes.
 
 ### Template for the next entry
 

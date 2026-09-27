@@ -22,6 +22,9 @@ class PropertyEstimationTests(unittest.TestCase):
         self.assertFalse(set(groups[i] for i in train) & set(groups[i] for i in calibration))
         self.assertFalse(set(groups[i] for i in train) & set(groups[i] for i in test))
         self.assertFalse(set(groups[i] for i in calibration) & set(groups[i] for i in test))
+        self.assertEqual(len(test), 20)
+        self.assertEqual(len(train) + len(calibration), 80)
+        self.assertEqual(len(calibration), 16)
 
     def test_interval_radius_uses_held_out_residuals(self) -> None:
         actual = np.array([1, 2, 3, 4, 5], dtype=float)

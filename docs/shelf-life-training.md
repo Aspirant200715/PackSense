@@ -39,14 +39,17 @@ structure. This first feature set also does not yet join food composition,
 respiration, approved structure layers, or measured finished-package barrier
 properties. Results must remain limited to represented evidence.
 
-The split manifest is checked before fitting. The candidate is fit on the
-training partition, and the number of boosting iterations is chosen using
-validation MAE against a training-median baseline. If the candidate does not
-beat that baseline on validation, the test partition is not opened and no
-model artifact is written. If it does, preprocessing and the selected model
-are refit on train plus validation; only then are test metrics computed once.
-The test results are exploratory. The module never marks the model validated
-or produces a `ShelfLifeResult`.
+The predeclared split targets 80% development and 20% untouched test by
+independence group. The development portion contains disjoint train and
+validation groups; because groups are indivisible, the split contract allows
+75–85% development and 15–25% test, with validation comprising 10–25% of
+development groups. The candidate is fit on the training groups, and the
+number of boosting iterations is chosen using validation MAE against a
+training-median baseline. If it does not beat that baseline, the test is not
+opened and no model artifact is written. If it does, preprocessing and the
+selected model are refit on all development groups; only then are test metrics
+computed once. The test results are exploratory. The module never marks the
+model validated or produces a `ShelfLifeResult`.
 
 ## Run
 

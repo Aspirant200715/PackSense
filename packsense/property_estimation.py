@@ -107,10 +107,10 @@ def _group_split(groups: list[str]) -> tuple[np.ndarray, np.ndarray, np.ndarray]
     """Disjoint family groups: development, calibration, untouched test."""
     indices = np.arange(len(groups))
     train_cal, test = next(GroupShuffleSplit(
-        n_splits=1, test_size=0.15, random_state=SEED,
+        n_splits=1, test_size=0.20, random_state=SEED,
     ).split(indices, groups=groups))
     local_train, local_cal = next(GroupShuffleSplit(
-        n_splits=1, test_size=0.15 / 0.85, random_state=SEED + 1,
+        n_splits=1, test_size=0.20, random_state=SEED + 1,
     ).split(train_cal, groups=[groups[i] for i in train_cal]))
     train, calibration = train_cal[local_train], train_cal[local_cal]
     if not (set(groups[i] for i in train).isdisjoint(groups[i] for i in calibration)

@@ -66,6 +66,14 @@ class SplitManifestTests(unittest.TestCase):
         self.assertEqual(first.manifest["summaries"]["train"]["independent_groups"], 8)
         self.assertEqual(first.manifest["summaries"]["validation"]["independent_groups"], 2)
         self.assertEqual(first.manifest["summaries"]["test"]["independent_groups"], 2)
+        self.assertEqual(
+            first.diagnostics["target_split"],
+            "80_percent_development_20_percent_untouched_test",
+        )
+        self.assertAlmostEqual(first.diagnostics["development_group_fraction"], 10 / 12)
+        self.assertAlmostEqual(
+            first.diagnostics["validation_fraction_within_development"], 0.20,
+        )
         self.assertEqual(len(first.manifest["assignments"]), 12)
         self.assertEqual(first.manifest["supported_food_ids"], ["TEST-FOOD"])
         self.assertFalse(first.report()["model_trained"])
@@ -166,7 +174,7 @@ class SplitManifestTests(unittest.TestCase):
         lopsided = replace(plan, train_groups=plan.train_groups + plan.validation_groups,
                             validation_groups=())
         result = build_split_manifest(audit, reviews, lopsided)
-        self.assertIn("group_split_outside_predeclared_70_15_15_tolerance", result.reasons)
+        self.assertIn("group_split_outside_predeclared_80_20_holdout_tolerance", result.reasons)
 
     def test_empty_trial_audit_refuses_allocation(self):
         audit, reviews, plan = _cases()
