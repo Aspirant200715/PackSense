@@ -70,7 +70,7 @@ master; it is not a completed scenario batch.
 
 ```powershell
 New-Item -ItemType Directory -Force outputs | Out-Null
-py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --report outputs/batch-recommendations.json
+py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --report outputs/batch-recommendations.json --summary-csv outputs/batch-summary.csv
 ```
 
 The reviewed registers can be supplied with `--route-register`,
@@ -88,3 +88,15 @@ An existing output path is never overwritten. Exit code 1 means the report
 contains input exception rows; code 2 means input or output creation failed.
 `not_ready` is an expected report result and does not itself make the command
 fail.
+
+The optional CSV is a one-row-per-input review summary. It carries the input
+row and food-reference row, storage/transport/excursion temperatures, desired
+shelf life, issue and evidence-gap codes, eligible structure IDs, and a
+preliminary preferred format and total layer thickness only when supported.
+Missing values stay blank. Every row states that package feasibility and
+shelf life were not established. The CSV also repeats the three input hashes
+so it can be traced back to the source workbooks and scenario batch. The JSON
+report remains the detailed record for source locators, individual transfer
+checks, layer order, and all candidate reasons. The CSV is a decision report,
+not a model-training dataset; external text is protected against spreadsheet
+formula interpretation when opened in Excel.

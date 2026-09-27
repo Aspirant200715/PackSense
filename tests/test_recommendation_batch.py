@@ -14,6 +14,7 @@ from packsense.ingestion import IngestionIssue, ParsedScenarioRow, ScenarioAudit
 from packsense.masters import FoodMasterEntry, MasterAudit
 from packsense.produce_route import ProduceRoute, RouteEvidence
 from packsense.recommendation_batch import build_batch_recommendations
+from packsense.recommendation_output import summarize_batch
 from packsense.requirements import (
     AssessmentDecision, ProtectionAssessment, ProtectionMechanism,
     derive_requirement_card, scenario_fingerprint,
@@ -178,6 +179,10 @@ class BatchRecommendationTests(unittest.TestCase):
         self.assertEqual(report["rows"][2]["issues"][0]["code"], "missing_value")
         self.assertEqual(report["transfer_register_sha256"], "3" * 64)
         json.dumps(report, allow_nan=False)
+        summary = summarize_batch(report)
+        self.assertEqual([row["status"] for row in summary],
+                         ["preliminary_shortlist", "not_ready", "exception"])
+        self.assertEqual(summary[0]["preliminary_preferred_total_thickness_um"], 20.0)
 
     def test_rejected_master_rows_and_unversioned_evidence_are_refused(self):
         scenarios, foods, materials = _sources(_scenario())
