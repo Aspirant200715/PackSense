@@ -45,7 +45,8 @@ with a food budget, but cannot yet declare any complete package feasible.
 [Preliminary package shortlisting](docs/basic-recommendation.md) combines
 reviewed structures and exact-scope transfer evidence for a limited basic
 recommendation. Its batch command reports each structured scenario and any
-missing evidence without inventing a candidate.
+missing evidence without inventing a candidate; an optional flat CSV helps
+review large batches alongside the detailed JSON report.
 
 ## Why PackSense exists
 

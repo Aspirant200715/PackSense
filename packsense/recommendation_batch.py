@@ -25,6 +25,7 @@ from packsense.masters import (
 )
 from packsense.produce_route import RouteEvidence, parse_route_register
 from packsense.recommendation import screen_package_candidates
+from packsense.recommendation_output import summarize_batch, write_summary_csv
 from packsense.requirements import (
     ProtectionAssessment, _parse_protection_assessments, derive_requirement_card,
 )
@@ -184,11 +185,19 @@ def main() -> int:
     parser.add_argument("--structure-reviews", type=Path)
     parser.add_argument("--transfers", type=Path)
     parser.add_argument("--report", type=Path, required=True, help="new JSON output path")
+    parser.add_argument("--summary-csv", type=Path, help="new one-row-per-scenario CSV path")
     args = parser.parse_args()
     if bool(args.structures) != bool(args.structure_reviews):
         parser.error("--structures and --structure-reviews must be supplied together")
     if args.transfers and not args.structures:
         parser.error("--transfers requires --structures and --structure-reviews")
+    if args.summary_csv is not None:
+        if args.summary_csv.resolve() == args.report.resolve():
+            parser.error("--summary-csv and --report must be different paths")
+        if args.summary_csv.exists():
+            parser.error("summary CSV already exists; choose a new path")
+        if not args.summary_csv.parent.is_dir():
+            parser.error("summary CSV parent directory does not exist")
 
     try:
         scenarios = audit_scenarios(args.scenarios, sheet_name=args.scenario_sheet)
@@ -229,11 +238,18 @@ def main() -> int:
             structure_review=structure_review,
             transfer_evidence=transfers, transfer_register_sha256=transfer_hash,
         )
+        if args.summary_csv is not None:
+            summarize_batch(report)
         with args.report.open("x", encoding="utf-8") as output:
             output.write(json.dumps(report, indent=2, allow_nan=False) + "\n")
+        if args.summary_csv is not None:
+            write_summary_csv(report, args.summary_csv)
     except (InputSchemaError, OSError, csv.Error, BadZipFile, ValueError, UnicodeError) as exc:
         parser.exit(2, f"input/report error: {exc}\n")
-    print(json.dumps({key: value for key, value in report.items() if key != "rows"}, indent=2))
+    summary = {key: value for key, value in report.items() if key != "rows"}
+    if args.summary_csv is not None:
+        summary["summary_csv_path"] = str(args.summary_csv)
+    print(json.dumps(summary, indent=2))
     return 1 if report["exception_rows"] else 0
 
 

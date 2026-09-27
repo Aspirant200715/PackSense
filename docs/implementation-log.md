@@ -437,6 +437,26 @@ PackSense must continue to withhold a real package or shelf-life claim.
   measurements. Shelf-life training still needs independent measured trials;
   no shelf-life model was fitted by this change.
 
+### 2026-09-27 — preliminary batch CSV summary
+
+- Branch: `feat/08-batch-summary`, [PR #23](https://github.com/Aspirant200715/PackSense/pull/23),
+  based on PR #21 at `c3fd1c0`. Added an optional one-row-per-scenario CSV
+  beside the detailed JSON report. The summary preserves input exceptions,
+  missing evidence,
+  storage/transit/excursion temperatures, target life, eligible IDs, and
+  preliminary structure details. It leaves unsupported fields blank and
+  always marks package feasibility and shelf-life prediction false.
+- The exporter rejects inconsistent claims and protects external text from
+  spreadsheet formula interpretation. The JSON remains the source-level
+  audit record. No source data, synthetic training observations, model fit,
+  or performance claim was added.
+- Local verification: `py -3.11 -m unittest discover -s tests -q` passed 147
+  tests; compileall, `git diff --check`, and CLI help passed. CI and review
+  will be checked on the pushed PR head.
+- Remaining gates are unchanged: reviewed scenario/package evidence for real
+  recommendations and independent measured trial outcomes for shelf-life
+  training. The CSV is an output view, not a training dataset.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
