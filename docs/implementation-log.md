@@ -1,6 +1,6 @@
 # PackSense implementation log and handoff
 
-Last status check: 2026-09-26. This file is the living handoff for backend
+Last status check: 2026-09-27. This file is the living handoff for backend
 work. It records what code exists, what evidence is still absent, and what
 must happen before PackSense can make a defensible packaging recommendation.
 It is not a validation certificate. Update the snapshot after merges and
@@ -8,9 +8,12 @@ append dated entries rather than rewriting past decisions.
 
 ## Current position
 
-`main` includes structure-review merge `6a047ec` (PR #17), handoff merge
-`0bf9bd6` (PR #16), split-contract merge `ee064da` (PR #15), and the earlier
-Stop 4/5 merges. It contains the typed data
+Before this branch, `main` was at `fecb787` (PR #18), following structure-review
+merge `6a047ec` (PR #17), handoff merge `0bf9bd6` (PR #16), split-contract
+merge `ee064da` (PR #15), and the earlier Stop 4/5 merges. This branch adds an
+evidence-gated, CPU-only shelf-life regression runner; it does not fit or
+validate a model without reviewed measured trials and a frozen split. The
+existing backend contains the typed data
 contracts, structured scenario ingestion and exception auditing, exact food
 reference enrichment, food/material master imports, draft package-structure
 intake, evidence-gated Stop 3 requirement cards, measured-trial *schema*
@@ -61,6 +64,12 @@ withholds that claim.
   and flagged CO2TR values are grade observations at source test conditions,
   not verified finished-package performance. Only 13 CO2 observations have
   measured condition-complete training flags; 60 CO2 values are estimates.
+- Kaggle kernel version 4 completed a hash-verified reference import on
+  2026-09-27: 5,000/5,000 food rows and 81/81 material rows passed with no
+  rejected rows. pH is present for 720 foods (709 proxy, 11 reported
+  references), respiration for 116 foods, and only 13 material CO2TR rows
+  have complete measured conditions. The run wrote an audit summary only;
+  it did not create training labels or change training readiness.
 - No approved complete package-structure catalogue is supplied. The
   [structure importer](structure-catalogue.md) creates drafts, never
   approval, from exact grade/gauge joins. The merged
@@ -79,7 +88,8 @@ train shelf life from requested life or generic storage guidance, or form
 fake outcomes by joining food and material rows. No model can honestly be
 called accurate from the present references alone. The reference estimator
 has a separate, limited purpose; its outputs are not hard-filter evidence
-or trial labels.
+or trial labels. The branch training runner is exercised only with ephemeral
+`TEST_ONLY` unit fixtures; no real model artifact has been fitted.
 
 ## Next implementation and evidence gates
 
@@ -92,7 +102,8 @@ or trial labels.
    complete structure joins, endpoint meaning, and group independence.
    Freeze a reviewed manifest before fitting any imputer, encoder, feature
    selector, calibration, or model. If the groups or coverage remain too
-   weak, report `not_ready` instead of manufacturing a 70/15/15 split.
+   weak, report `not_ready` instead of manufacturing an 80/20 holdout;
+   keep validation internal to the development portion.
 2. **Supply real pilot evidence before interpreting Stop 4 as a product
    result.** For a selected respiring food such as the planned tomato pilot,
    review exact food/form identity and independently sourced O2-consumption
@@ -289,6 +300,73 @@ PackSense must continue to withhold a real package or shelf-life claim.
   for shelf-life prediction and more consistent barrier observations if a
   material-property estimator is desired. This audit does not create package
   recommendations or validate the supplier-reported references.
+### 2026-09-27 — first measured-trial shelf-life training runner
+
+- Branch: `ml/09-shelf-life-training-pipeline`,
+  [PR #19](https://github.com/Aspirant200715/PackSense/pull/19), based on
+  `main` at `fecb787`. Added one CPU gradient-boosting training path behind the
+  existing reviewed trial/split gate. It fits only observed failure days,
+  requires one failure criterion and threshold, fits preprocessing on train
+  data, chooses iterations on validation, compares with a training-median
+  baseline, and opens test outcomes only after that validation gate passes.
+- The runner reports right-censored rows separately and never labels their
+  last-observed day as failure. Test censoring is used only for a lower-bound
+  consistency diagnostic. The model artifact and report bind trial, review,
+  plan, and manifest hashes. Every result remains research-only and
+  `model_validated=false`.
+- No real trial rows, approval records, data rights, split, or model artifact
+  were added. Tests use ephemeral `TEST_ONLY` fixtures in temporary storage;
+  they are not a training dataset or project data asset. The reference
+  workbooks still cannot train this target.
+- Local verification: `python -m unittest discover -s tests -q` passed 131
+  tests; `python -m compileall -q packsense tests` and `git diff --check`
+  passed. Kaggle kernel version 4 validated reference imports only and did
+  not train this model.
+- Next evidence gate: provide independently reviewed measured trial outcomes,
+  exact package joins and the reviewed group split. If those gates fail, the
+  trainer must report `not_ready`; no epochs, synthetic labels, or reference
+  row combinations can substitute for the missing outcomes.
+
+### 2026-09-27 — requested 80/20 grouped holdout
+
+- Updated PR #19's measured-trial split gate to target 80% development and
+  20% untouched test groups. A validation subset is held inside development
+  for iteration selection; the final exploratory fit uses all development
+  groups before the test is opened once. Whole source/study/batch families
+  remain indivisible, so the audited group-level tolerance is 75–85% / 15–25%.
+- Aligned the experimental food-property evaluator to the same 80/20
+  development/test convention, with calibration kept inside development.
+- No new food, material, or trial data was added and no real model was fit.
+  All 131 local tests pass, including grouped split and holdout ratio checks;
+  CI for the prior PR head passed Python 3.11 and 3.13 before this update.
+- Remaining hard blocker for shelf-life learning is a reviewed measured
+  trial-outcome table with exact food/package/storage linkage and observed
+  failure or right-censoring. Reference-property workbooks are not labels for
+  shelf-life or package-selection outcomes.
+
+### 2026-09-27 — real food-property experiment on analytical labels
+
+- Ran the existing CPU property estimator on the local 5,000-food workbook
+  with source SHA-256 `76c5f78c6f6a0ef3c1e5bed7baa442ac9275146198be7de22bbdfe5ef80ccd9f`.
+  Labels were restricted to USDA `A` analytical derivations. This is a narrow
+  moisture/fat reference-value task, not a shelf-life or packaging model.
+- Moisture: 1,628 train, 619 calibration, 463 test rows across 344/87/108
+  independent groups. Test MAE/RMSE were 12.95/17.60 percentage points,
+  versus 16.86/25.47 for the group-median baseline. The wide 33.32-point
+  calibration radius limits use to screening; 110/112 missing values passed
+  the code's estimate gates.
+- Fat: 1,680/643/291 rows across 332/84/104 groups. Model MAE 6.56 was worse
+  than baseline MAE 6.35, so no estimates were emitted; RMSE was better but
+  does not override the predeclared MAE refusal gate.
+- The 80/20 convention is enforced by independent groups. Due to unequal
+  family sizes, row shares differ (fat test rows were 11.1%); this is
+  explicitly reported and is not an 80/20 row-level split. The evaluation is
+  exploratory, not a pristine external challenge set. Local reports are
+  ignored under `outputs/` and were not committed.
+- No material model or shelf-life model was trained. The available 81-row
+  material master has only 13 complete measured CO2-condition records and 60
+  estimated CO2 values, so it remains a reference source, not a trustworthy
+  supervised target table.
 
 ### Template for the next entry
 

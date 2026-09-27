@@ -19,7 +19,7 @@ from packsense.ingestion import InputSchemaError
 from packsense.trials import TrialAudit, TrialEntry, audit_trial_outcomes
 
 
-SPLIT_VERSION = "trial-source-group-split-v1"
+SPLIT_VERSION = "trial-source-group-split-v2"
 PARTITIONS = ("train", "validation", "test")
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _MISSING = frozenset({"", "unknown", "not_reported", "n/a", "na", "tbd"})
@@ -259,12 +259,18 @@ def build_split_manifest(
             reasons.append(f"too_few_independent_groups:{partition}")
     if group_count:
         shares = {partition: len(assigned[partition]) / group_count for partition in PARTITIONS}
-        if not (0.60 <= shares["train"] <= 0.80
-                and 0.10 <= shares["validation"] <= 0.25
-                and 0.10 <= shares["test"] <= 0.25):
-            reasons.append("group_split_outside_predeclared_70_15_15_tolerance")
+        development_share = shares["train"] + shares["validation"]
+        validation_within_development = (
+            shares["validation"] / development_share if development_share else 0.0
+        )
+        if not (0.75 <= development_share <= 0.85
+                and 0.15 <= shares["test"] <= 0.25
+                and 0.10 <= validation_within_development <= 0.25):
+            reasons.append("group_split_outside_predeclared_80_20_holdout_tolerance")
     else:
         shares = {partition: 0.0 for partition in PARTITIONS}
+        development_share = 0.0
+        validation_within_development = 0.0
 
     assignments = []
     summaries = {}
@@ -309,6 +315,9 @@ def build_split_manifest(
         "total_rows": audit.total_rows,
         "reviewed_rows": len(reviews.reviews),
         "independent_groups": group_count,
+        "target_split": "80_percent_development_20_percent_untouched_test",
+        "development_group_fraction": development_share,
+        "validation_fraction_within_development": validation_within_development,
         "partitions": summaries,
         "supported_food_ids": supported_food_ids,
     }

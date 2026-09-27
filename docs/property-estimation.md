@@ -18,14 +18,17 @@ this experiment.
 
 The estimator uses character n-gram TF-IDF of food name and group followed by
 ridge regression. Related food-name prefixes stay together in a
-reproducible group split. The vectorizer and regressor are fitted only on
-training families; separate calibration families set a 90% absolute-residual
-interval, and untouched test families evaluate error and interval coverage.
+reproducible group split. It reserves 20% of independent groups as an
+untouched test set; within the remaining 80% development portion, separate
+calibration groups set a 90% absolute-residual interval. The vectorizer and
+regressor are fitted only on the remaining development training families.
+Untouched test families evaluate error and interval coverage.
 The comparison baseline is the food-group median fitted on training rows only.
 No test values, missing rows, package data, desired-life targets, or proxy pH
-values are used to fit the model. The train/calibration/test group proportions
-are approximately 70/15/15, but row counts differ because whole families stay
-together. Ridge has no neural-network epochs.
+values are used to fit the model. Train/calibration/test groups are
+approximately 64/16/20 (80% development and 20% untouched test); row counts
+differ because whole families stay together. Ridge has no neural-network
+epochs.
 
 Run one target at a time:
 
@@ -48,16 +51,20 @@ On the USDA-Handbook-enriched workbook (SHA-256
 the `A`-only held-out evaluation found:
 
 - Moisture: 4,888 source values, including 2,710 `A`-coded training/evaluation
-  labels; 112 missing. Test MAE was 12.22 percentage points for the model
-  versus 17.77 for the group-median baseline. The 90% calibration radius was
-  still 31.30 points, with 92.2% empirical coverage on the test rows. The
-  108 of 112 missing rows receive optional experimental estimates; four are
-  withheld by the physical-range/information gate. These are not precise
-  composition results.
+  labels; 112 missing. On the updated group-separated 80/20 holdout, model
+  MAE was 12.95 percentage points versus 16.86 for the group-median baseline;
+  RMSE was 17.60 versus 25.47. The 90% calibration radius was 33.32 points,
+  with 92.9% empirical test coverage. 110 missing rows receive optional
+  experimental estimates; two are withheld by the physical-range/information
+  gate. The group proportions were 344/87/108 (train/calibration/test); row
+  proportions were 60.1/22.8/17.1% because family sizes differ. These are not
+  precise composition results.
 - Fat: 4,766 source values, including 2,614 `A`-coded labels; 234 missing.
-  Test MAE was 6.62 points versus 6.43 for the baseline. The model therefore
-  withholds fat estimates. Its calibration radius was 12.84 points, with
-  89.3% empirical test coverage.
+  Test MAE was 6.56 points versus 6.35 for the baseline, so the model
+  withholds all fat estimates even though its RMSE (11.44) was below the
+  baseline RMSE (14.65). Its calibration radius was 12.32 points, with 88.0%
+  empirical test coverage. The group proportions were 332/84/104; row
+  proportions were 64.3/24.6/11.1% because family sizes differ.
 
 These figures are from one family-held-out split of analytical-derivation
 reference values, not independent laboratory validation. An earlier exploratory
