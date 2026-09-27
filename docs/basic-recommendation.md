@@ -69,6 +69,7 @@ pack size, requested life, and storage/transport conditions as described in
 master; it is not a completed scenario batch.
 
 ```powershell
+New-Item -ItemType Directory -Force outputs | Out-Null
 py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --report outputs/batch-recommendations.json
 ```
 
