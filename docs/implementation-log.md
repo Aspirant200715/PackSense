@@ -344,6 +344,22 @@ PackSense must continue to withhold a real package or shelf-life claim.
   failure or right-censoring. Reference-property workbooks are not labels for
   shelf-life or package-selection outcomes.
 
+### 2026-09-27 — withdrawn measured-quality candidate files
+
+- Branch: `data/21-public-quality-audit`, [PR #22](https://github.com/Aspirant200715/PackSense/pull/22),
+  based on `main` at `7cce752`.
+  The owner withdrew the 672-row raw quality CSV and 72-row package CSV.
+  The earlier trial-audit, Kaggle metadata, and preprocessing experiments on
+  this branch were fully reverted. This slice records the exclusion decision
+  in the trial-intake guide; no CSV data, importer, training labels, or model
+  artifacts are added.
+- The existing food and material workbooks remain reference masters, not
+  observed shelf-life outcomes. A future trial source still needs independent
+  source, rights, package, endpoint, and grouping review before split/training.
+- This is a documentation-only decision record. No training or prediction
+  was run. `py -3.11 -m unittest discover -s tests -q` passed all 132 tests;
+  `git diff --check` passed. CI and review status belong to the PR head.
+
 ### 2026-09-27 — real food-property experiment on analytical labels
 
 - Ran the existing CPU property estimator on the local 5,000-food workbook
