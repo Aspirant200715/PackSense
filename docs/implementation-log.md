@@ -810,6 +810,30 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Local verification: 226 Python tests, compileall, and diff check passed.
   PR CI and review are separate.
 
+### 2026-09-27 — static frontend decision workspace
+
+- PR #35 merged at `5e30498`. Branch `feat/frontend-workspace` adds a
+  dependency-free, responsive browser UI for the existing
+  `frontend-decision-v1` contract: overview, searchable/paginated records,
+  eight-stop pipeline explanation, and source-hash inspection. The report is
+  imported from a local JSON file into browser memory; there is no live API,
+  bundled example dataset, or generated packaging claim.
+- The audited batch now includes a compact `scenario` summary of validated
+  input values for each interpretable row. The frontend projection carries
+  this summary and leaves it `null` for exceptions or legacy reports. It lets
+  the UI show the actual commodity, food properties, pack quantity, and route
+  context without repeating the source workbook or inferring a value.
+- The UI rejects files that claim a deployed model, released recommendation,
+  package feasibility, material prediction, or shelf-life prediction under
+  this preliminary contract. It displays a shortlist only as preliminary.
+  No real data, suitability labels, estimator, or training result changed;
+  material-model release remains `not_ready`.
+- Local verification: 226 Python tests, seven Node contract tests, Python
+  compilation, JavaScript syntax checks, a Python-to-JavaScript contract
+  round-trip, and local HTTP responses passed. Visual browser QA could not
+  be completed because no browser surface was available to the UI-check tool.
+  PR CI and independent review remain separate.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

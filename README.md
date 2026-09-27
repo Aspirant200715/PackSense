@@ -15,7 +15,7 @@ structures and cannot alter a recommendation or release a model.
 
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 
-**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, Stop 3 evidence-gated requirement cards, sourced food/material reference imports, package-structure draft intake and review gate, guarded local Stop 4 produce checks, a limited Stop 5 transfer-budget check, a preliminary non-respiring shortlist and batch report, an experimental food-property estimator, measured-trial schema intake, a trial group-split contract, and an evidence-gated exploratory shelf-life training runner are implemented. No approved food-protection limits, review-attested complete structures, or measured trial outcomes have been supplied. No shelf-life model has been trained or validated. Full package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
+**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, Stop 3 evidence-gated requirement cards, sourced food/material reference imports, package-structure draft intake and review gate, guarded local Stop 4 produce checks, a limited Stop 5 transfer-budget check, a preliminary non-respiring shortlist and batch report, an experimental food-property estimator, measured-trial schema intake, a trial group-split contract, and an evidence-gated exploratory shelf-life training runner are implemented. A static [decision workspace](web/README.md) now inspects the versioned frontend JSON locally; it is not an API or trained prediction service. No approved food-protection limits, review-attested complete structures, or measured trial outcomes have been supplied. No shelf-life model has been trained or validated. Full package filtering, a validated package/shelf-life model, and a live API are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
 
 The current code uses Python 3.11 or newer and a pinned XLSX reader. From the
 repository root, run `python -m pip install -r requirements.txt` followed by
@@ -74,6 +74,9 @@ review large batches alongside the detailed JSON report.
 batch into stable input-exception, evidence-gap, and preliminary-shortlist
 states for frontend design. It does not expose a trained material prediction
 or promote a preliminary preference into a released package.
+The [static frontend](web/README.md) reads this projected JSON from a local
+file, explains the eight-stop workflow, and displays source-derived food
+properties, status, exposure segments, candidate details, and evidence trace.
 [Film-grade reference comparison](docs/grade-reference-comparison.md) adds an
 opt-in, test-condition-matched Pareto view for reviewed non-respiring food
 needs. It cannot choose or certify a finished package or train a model.

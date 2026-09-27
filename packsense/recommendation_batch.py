@@ -140,6 +140,7 @@ def build_batch_recommendations(
                 "row_number": row.row_number,
                 "record_id": row.record_id,
                 "food_reference_row": None,
+                "scenario": None,
                 "status": "exception",
                 "issues": [
                     {"field": issue.field, "code": issue.code, "message": issue.message}
@@ -175,6 +176,24 @@ def build_batch_recommendations(
             "row_number": row.row_number,
             "record_id": row.record_id,
             "food_reference_row": row.enriched.food_reference_row,
+            "scenario": {
+                "commodity_type": row.enriched.scenario.commodity_type,
+                "moisture_content_pct": row.enriched.scenario.moisture_content_pct,
+                "oil_fat_content_pct": row.enriched.scenario.oil_fat_content_pct,
+                "pH": row.enriched.scenario.pH,
+                "net_pack_quantity": row.enriched.scenario.net_pack_quantity,
+                "net_pack_quantity_unit": row.enriched.scenario.net_pack_quantity_unit,
+                "storage_type": row.enriched.scenario.storage_type.value,
+                "transport_mode": row.enriched.scenario.transport_mode,
+                "transport_handling_severity": (
+                    row.enriched.scenario.transport_handling_severity.value
+                ),
+                "respiration_rate": row.enriched.scenario.respiration_rate,
+                "respiration_rate_unit": row.enriched.scenario.respiration_rate_unit,
+                "respiration_reference_temperature_c": (
+                    row.enriched.scenario.respiration_reference_temperature_c
+                ),
+            },
             "status": recommendation.status.value,
             "issues": [],
             "requirement_card": card.report(),

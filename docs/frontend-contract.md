@@ -48,6 +48,12 @@ Every row also carries `source_row_number`, `record_id`, `food_reference_id`
 where matched, the requested shelf-life target, distinct temperature exposure
 segments, and the screened candidate's pack format, layer gauges, service-
 temperature bounds, protection rank, and reason codes when available.
+Newly generated batch reports also project a `scenario` summary from the
+validated input: commodity name, moisture, fat, pH, pack quantity, storage
+type, handling severity, transport mode, and any supplied respiration values.
+It is `null` for input exceptions and may be `null` when opening a report
+generated before this additive field existed. These are input facts, not
+measured packaging outcomes or inferred missing properties.
 
 In **all** three states of this contract, `recommended_structure_id`,
 `material_prediction`, and `predicted_shelf_life_days` are `null`, and
@@ -62,3 +68,6 @@ before fitting or releasing a material predictor. The 5,000-food and 81-grade
 workbooks remain reference features, not package-choice labels. See
 [material-suitability intake](material-suitability.md) and
 [preliminary recommendation](basic-recommendation.md).
+
+The [static decision workspace](../web/README.md) can display this contract
+from a local file. It does not yet call a live backend API.

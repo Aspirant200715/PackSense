@@ -109,6 +109,9 @@ unmatched scenarios, `not_ready` with specific evidence gaps, or
 `preliminary_shortlist` with the screened structures. It includes source
 hashes, source-row numbers, requirement cards, review and transfer evidence,
 summary counts, and explicit false package-feasibility and shelf-life flags.
+For validated rows, it also includes a compact `scenario` summary of the
+actual commodity and input properties for the frontend; exception rows have
+`scenario: null`. This summary does not fill missing facts or create labels.
 Each recommendation also carries the source scenario-file SHA-256, separate
 from its row-level scenario fingerprint, so later offline comparisons can
 reject a stale batch version.

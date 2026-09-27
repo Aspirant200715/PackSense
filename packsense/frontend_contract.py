@@ -22,6 +22,12 @@ TRACE_FIELDS = (
     "structure_catalogue_sha256", "structure_review_register_sha256",
     "transfer_register_sha256", "public_candidate_catalogue_sha256",
 )
+SCENARIO_FIELDS = (
+    "commodity_type", "moisture_content_pct", "oil_fat_content_pct", "pH",
+    "net_pack_quantity", "net_pack_quantity_unit", "storage_type",
+    "transport_mode", "transport_handling_severity", "respiration_rate",
+    "respiration_rate_unit", "respiration_reference_temperature_c",
+)
 
 
 def _object(value: Any, name: str) -> Mapping[str, Any]:
@@ -54,6 +60,17 @@ def _candidate_view(raw: Any) -> dict[str, Any]:
     }
 
 
+def _scenario_view(raw: Any) -> dict[str, Any] | None:
+    """Keep validated scenario facts only; legacy batch reports may omit them."""
+    if raw is None:
+        return None
+    scenario = _object(raw, "scenario summary")
+    if (not isinstance(scenario.get("commodity_type"), str)
+            or not scenario["commodity_type"].strip()):
+        raise ValueError("scenario summary has no commodity")
+    return {name: scenario.get(name) for name in SCENARIO_FIELDS}
+
+
 def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
     """Expose actionable states while withholding unvalidated predictions."""
     batch = _object(report, "batch report")
@@ -75,8 +92,9 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
             raise ValueError("batch row has no valid source row number")
         issues = _list(row.get("issues"), "input issues")
         card, recommendation = row.get("requirement_card"), row.get("recommendation")
+        scenario = _scenario_view(row.get("scenario"))
         if status == "exception":
-            if card is not None or recommendation is not None:
+            if card is not None or recommendation is not None or scenario is not None:
                 raise ValueError("input exception cannot carry a recommendation")
             if not issues:
                 raise ValueError("input exception must explain its issue")
@@ -122,6 +140,7 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
             "source_row_number": row["row_number"],
             "record_id": row.get("record_id"),
             "food_reference_id": food_reference_id,
+            "scenario": scenario,
             "status": status,
             "input_issues": issues,
             "requirement_gaps": requirement_gaps,

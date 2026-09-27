@@ -75,6 +75,8 @@ class FrontendContractTests(unittest.TestCase):
         batch = build_batch_recommendations(*_sources(_scenario()))
         result = project_frontend_decisions(batch)
         self.assertEqual("not_ready", result["rows"][0]["status"])
+        self.assertEqual("TEST_ONLY_FOOD", result["rows"][0]["scenario"]["commodity_type"])
+        self.assertEqual(100.0, result["rows"][0]["scenario"]["net_pack_quantity"])
         self.assertEqual(batch["scenario_sha256"], result["trace"]["scenario_sha256"])
         self.assertIsNone(result["rows"][0]["material_prediction"])
 
@@ -87,6 +89,7 @@ class FrontendContractTests(unittest.TestCase):
         self.assertEqual("withheld", result["recommendation_release_status"])
         invalid, gap, shortlist = result["rows"]
         self.assertEqual("exception", invalid["status"])
+        self.assertIsNone(invalid["scenario"])
         self.assertEqual("pH", invalid["input_issues"][0]["field"])
         self.assertEqual([], invalid["screened_candidates"])
         self.assertEqual("not_ready", gap["status"])
