@@ -480,6 +480,36 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Remaining gates are unchanged: reviewed real scenario/food/package evidence
   for a shortlist and independent measured trials for shelf-life training.
 
+### 2026-09-27 — merged recommendation stack and trial reference-link gate
+
+- Merged PRs #22, #21, #23, and #24 into `main` in that order; stacked PRs
+  #23 and #24 were retargeted to `main` after their parent merged. The final
+  merge is `03cd09b`. Main passed Python 3.11/3.13 CI and 149 local tests.
+- Branch: `ml/10-trial-reference-join`, based on `03cd09b`. Before any split
+  or exploratory shelf-life fit, each measured trial must now resolve to an
+  exact food reference and a complete, review-attested package in the
+  versioned catalogue/material master. Trial review identity, food scope,
+  grades, and storage/transport service-temperature coverage are checked.
+  A failed link returns `not_ready` with row-level reason codes and no model.
+  Artifacts record all four reference hashes in addition to trial/split IDs.
+- The [Mendeley smoked-food package-level dataset](https://data.mendeley.com/datasets/tvsw53j89z/1)
+  is genuine measured longitudinal quality data, but its publisher says
+  processing-run identifiers were not retained and it is not a commercial
+  shelf-life validation dataset. The [R3PACK snack dataset](https://zenodo.org/records/21396864)
+  contains simulations, not observed trial outcomes. Neither was imported or
+  relabelled as a PackSense shelf-life target. The withdrawn 672/72 CSVs remain
+  excluded. No source data, synthetic training labels, model fit, or
+  performance claim was added.
+- Local verification: `py -3.11 -m unittest discover -s tests -q` passed 150
+  tests, including exact-join refusal cases; compileall and diff checks are
+  recorded with the PR. The only ML run to date remains the separate,
+  exploratory food-property experiment, not a package/shelf-life model.
+- Remaining gates: an independently reviewed measured trial table with exact
+  food/package/condition linkage and adequate independent failure groups,
+  followed by 80/20 group allocation, baseline comparison, blind evaluation,
+  and prospective validation. Human source and rights review cannot be
+  replaced by matching IDs in code.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

@@ -9,10 +9,18 @@ production prediction endpoint, or safety approval.
 
 The command requires a CSV or one selected XLSX sheet that passes
 [`trial-intake.md`](trial-intake.md), plus the review register and split plan
-described in [`split-manifest.md`](split-manifest.md). The current food and
-material workbooks are reference masters, not trial labels, and cannot be used
-as substitutes. The split builder must return `allocation_prepared`; otherwise
-the command writes a `not_ready` report and does not fit a model.
+described in [`split-manifest.md`](split-manifest.md). It also requires the
+food and material reference masters, a complete-structure catalogue, and its
+review register. Before any split or fit, each trial must join to one exact
+food and review-attested complete structure, the stated catalogue version and
+structure review, and a structure whose food scope, grades, and service
+temperature cover the trial. Broken links produce `not_ready`, without a
+split or model. These joins do not authenticate the underlying documents.
+
+The current food and material workbooks are reference masters, not trial
+labels, and cannot be used as substitutes. The split builder must return
+`allocation_prepared`; otherwise the command writes a `not_ready` report and
+does not fit a model.
 
 The selected outcome is `observed_days` only for rows where
 `failure_observed=true`. Every row must use the same recorded failure
@@ -35,9 +43,11 @@ Missing optional numeric inputs are imputed using training rows only. Features
 that are entirely missing in training are omitted and recorded. Categorical
 encoding is fitted on the development data and ignores unseen categories.
 The model therefore has no validated basis for predicting a new food or
-structure. This first feature set also does not yet join food composition,
-respiration, approved structure layers, or measured finished-package barrier
-properties. Results must remain limited to represented evidence.
+structure. The pre-fit reference join is an identity/scope gate, not yet an
+expanded model feature join. This first feature set does not yet use food
+composition, respiration, approved structure layers, or measured
+finished-package barrier properties. Results must remain limited to
+represented evidence.
 
 The predeclared split targets 80% development and 20% untouched test by
 independence group. The development portion contains disjoint train and
@@ -59,18 +69,22 @@ From the repository root, with the project environment installed:
 python -m packsense.shelf_life_model MEASURED_TRIALS.csv `
   --reviews REVIEW_REGISTER.json `
   --plan SPLIT_PLAN.json `
+  --food-master FOOD_MASTER.xlsx `
+  --material-master MATERIAL_MASTER.xlsx `
+  --structures STRUCTURE_CATALOGUE.json `
+  --structure-reviews STRUCTURE_REVIEW_REGISTER.json `
   --report NEW_TRAINING_REPORT.json `
   --model NEW_MODEL.joblib
 ```
 
 For XLSX, also supply `--sheet "Worksheet name"`. Output paths must be new;
 existing reports and model files are preserved. The report records the trial,
-review, plan and manifest hashes, selected boosting iteration, baseline and
-candidate metrics, feature fields, censor counts, software version, and
-limitations. The model artifact includes the fitted preprocessing and
-regressor with its source/split hashes. Treat Joblib artifacts as trusted
-Python objects and load only files produced by the controlled PackSense
-pipeline.
+food, material, structure, review, plan and manifest hashes, selected
+boosting iteration, baseline and candidate metrics, feature fields, censor
+counts, software version, and limitations. The model artifact includes the
+fitted preprocessing and regressor with those source/split hashes. Treat
+Joblib artifacts as trusted Python objects and load only files produced by
+the controlled PackSense pipeline.
 
 The default ceiling is 1,000 boosting iterations with validation early
 stopping after 20 non-improving iterations. These are tree iterations, not

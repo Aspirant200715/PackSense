@@ -28,6 +28,10 @@ from sklearn.preprocessing import OneHotEncoder
 
 from packsense.contracts import TrialOutcome
 from packsense.ingestion import InputSchemaError
+from packsense.masters import (
+    FoodMasterEntry, MasterAudit, MaterialMasterEntry, load_food_references,
+    load_material_grades,
+)
 from packsense.splits import (
     SplitPlan,
     ReviewRegister,
@@ -36,6 +40,11 @@ from packsense.splits import (
     parse_split_plan,
 )
 from packsense.trials import TrialAudit, audit_trial_outcomes
+from packsense.trial_links import audit_trial_reference_links
+from packsense.structure_review import (
+    StructureReviewAudit, audit_structure_reviews, parse_structure_review_register,
+)
+from packsense.structures import StructureCatalogueAudit, audit_structure_catalogue
 
 
 MODEL_VERSION = "shelf-life-gbrt-v1"
@@ -125,15 +134,23 @@ def train_shelf_life(
     audit: TrialAudit,
     reviews: ReviewRegister,
     plan: SplitPlan,
+    foods: MasterAudit[FoodMasterEntry],
+    materials: MasterAudit[MaterialMasterEntry],
+    catalogue: StructureCatalogueAudit,
+    structure_reviews: StructureReviewAudit,
     config: TrainingConfig = TrainingConfig(),
 ) -> TrainingResult:
     """Fit a measured-failure baseline only after the existing split gate passes.
 
-    The untouched test partition is not read until the iteration count is fixed
-    by validation and the candidate improves on a training-median baseline.
-    Results remain exploratory even when the test metrics are produced.
+    Test identities are checked for reference linkage, but test outcomes are
+    not used for fitting or iteration selection. Test features/labels are
+    materialized only after validation beats the training-median baseline.
+    Results remain exploratory even when test metrics are produced.
     """
-    split = build_split_manifest(audit, reviews, plan)
+    links = audit_trial_reference_links(
+        audit, reviews, foods, materials, catalogue, structure_reviews,
+    )
+    split = build_split_manifest(audit, reviews, plan) if links.status == "ready_for_split" else None
     report: dict[str, Any] = {
         "model_version": MODEL_VERSION,
         "training_config": asdict(config),
@@ -141,18 +158,19 @@ def train_shelf_life(
         "trial_source_sha256": audit.source_sha256,
         "review_register_sha256": reviews.register_sha256,
         "split_plan_sha256": plan.plan_sha256,
-        "split_manifest_sha256": split.report()["manifest_sha256"],
+        "split_manifest_sha256": split.report()["manifest_sha256"] if split else None,
         "input_rows": audit.total_rows,
         "schema_valid_rows": len(audit.entries),
         "rejected_rows": audit.total_rows - len(audit.entries),
-        "split_audit": split.report(),
+        "split_audit": split.report() if split else None,
+        "trial_reference_links": links.report(),
         "target": "observed_days for a recorded failure only",
         "censoring_policy": (
             "right-censored rows are excluded from regression fitting and error metrics; "
             "they are retained for counts and a test lower-bound consistency diagnostic"
         ),
         "feature_policy": (
-            "food, complete-structure, pack-geometry, storage and transport fields only; "
+            "food/complete-structure IDs, pack-geometry, storage and transport fields only; "
             "trial/source/group IDs and outcome fields are excluded; identifier features "
             "support only represented food/structure coverage"
         ),
@@ -165,6 +183,9 @@ def train_shelf_life(
         "release_status": "withheld",
     }
 
+    if links.status != "ready_for_split":
+        return _not_ready(report, "trial_reference_links_not_ready")
+    assert split is not None
     if split.status != "allocation_prepared" or split.manifest is None:
         return _not_ready(report, "reviewed_group_split_not_ready")
     if audit.issues or audit.total_rows != len(audit.entries):
@@ -404,6 +425,12 @@ def main() -> int:
     parser.add_argument("--sheet", help="XLSX worksheet name")
     parser.add_argument("--reviews", type=Path, required=True)
     parser.add_argument("--plan", type=Path, required=True)
+    parser.add_argument("--food-master", type=Path, required=True)
+    parser.add_argument("--material-master", type=Path, required=True)
+    parser.add_argument("--structures", type=Path, required=True)
+    parser.add_argument("--structure-reviews", type=Path, required=True)
+    parser.add_argument("--food-sheet")
+    parser.add_argument("--material-sheet")
     parser.add_argument("--report", type=Path, required=True,
                         help="new JSON report path; existing files are preserved")
     parser.add_argument("--model", type=Path, required=True,
@@ -423,12 +450,25 @@ def main() -> int:
         audit = audit_trial_outcomes(args.trials, sheet_name=args.sheet)
         reviews = parse_review_register(args.reviews.read_bytes())
         plan = parse_split_plan(args.plan.read_bytes())
+        foods = load_food_references(args.food_master, sheet_name=args.food_sheet)
+        materials = load_material_grades(args.material_master, sheet_name=args.material_sheet)
+        catalogue = audit_structure_catalogue(
+            args.structures,
+            grades={entry.grade.material_id: entry.grade for entry in materials.entries},
+            material_master_sha256=materials.source_sha256,
+        )
+        structure_register = parse_structure_review_register(
+            args.structure_reviews.read_bytes()
+        )
+        structure_reviews = audit_structure_reviews(catalogue, structure_register)
         config = TrainingConfig(
             max_iterations=args.max_iterations,
             early_stopping_patience=args.patience,
             random_seed=args.seed,
         )
-        result = train_shelf_life(audit, reviews, plan, config)
+        result = train_shelf_life(
+            audit, reviews, plan, foods, materials, catalogue, structure_reviews, config,
+        )
     except (InputSchemaError, OSError, csv.Error, BadZipFile, ValueError, UnicodeError) as exc:
         parser.exit(2, f"training input error: {exc}\n")
 
@@ -444,6 +484,10 @@ def main() -> int:
             "failure_endpoint": report["failure_endpoint"],
             "selected_iterations": report["validation"]["selected_iterations"],
             "trial_source_sha256": report["trial_source_sha256"],
+            "food_master_sha256": report["trial_reference_links"]["food_master_sha256"],
+            "material_master_sha256": report["trial_reference_links"]["material_master_sha256"],
+            "structure_catalogue_sha256": report["trial_reference_links"]["structure_catalogue_sha256"],
+            "structure_review_register_sha256": report["trial_reference_links"]["structure_review_register_sha256"],
             "split_manifest_sha256": report["split_manifest_sha256"],
             "training_config": report["training_config"],
         }
