@@ -104,6 +104,36 @@ function stage(state, statement, input, check, output, evidence = []) {
   return { state, statement, input, check, output, evidence };
 }
 
+function numberWithUnit(value, unit = "") {
+  return typeof value === "number" && Number.isFinite(value)
+    ? `${value}${unit}`
+    : null;
+}
+
+function packQuantity(scenario) {
+  const quantity = numberWithUnit(scenario?.net_pack_quantity);
+  return quantity ? `${quantity} ${scenario?.net_pack_quantity_unit || "(unit not reported)"}` : null;
+}
+
+function exposureSummary(exposures = []) {
+  const parts = exposures.flatMap((exposure) => {
+    const temperature = numberWithUnit(exposure?.temperature_c, "°C");
+    return temperature ? [`${exposure.phase?.replaceAll("_", " ") || "Exposure"} ${temperature}`] : [];
+  });
+  return parts.length ? parts.join(" · ") : "Not reported";
+}
+
+/** Facts copied from the imported row, never estimated by the browser. */
+export function actualContext(row) {
+  const scenario = row.scenario;
+  return [
+    { label: "FOOD", value: scenario?.commodity_type || "Not validated or not reported" },
+    { label: "PACK QUANTITY", value: packQuantity(scenario) || "Not reported" },
+    { label: "REQUESTED LIFE", value: numberWithUnit(row.target_shelf_life_days, " days") || "Not reported" },
+    { label: "TEMPERATURE PHASES", value: exposureSummary(row.temperature_exposures) },
+  ];
+}
+
 export function actualPipeline(row) {
   if (!row || typeof row !== "object") throw new TypeError("A decision row is required.");
   const exception = row.status === "exception";
@@ -112,26 +142,40 @@ export function actualPipeline(row) {
   const reasons = row.screening_reason_codes ?? [];
   const candidates = row.screened_candidates ?? [];
   const eligible = candidates.filter((candidate) => candidate.status === "eligible_for_shortlist");
+  const excluded = candidates.filter((candidate) => candidate.status === "excluded");
+  const unresolved = candidates.filter((candidate) => candidate.status === "unresolved");
+  const context = actualContext(row);
+  const scenario = row.scenario;
+  const composition = [
+    ["Moisture", numberWithUnit(scenario?.moisture_content_pct, "%")],
+    ["Fat", numberWithUnit(scenario?.oil_fat_content_pct, "%")],
+    ["pH", numberWithUnit(scenario?.pH)],
+  ].filter(([, value]) => value !== null).map(([label, value]) => `${label} ${value}`).join(" · ");
+  const respiration = numberWithUnit(scenario?.respiration_rate);
+  const respirationTemperature = numberWithUnit(scenario?.respiration_reference_temperature_c, "°C");
+  const respirationInput = respiration
+    ? `${respiration} ${scenario.respiration_rate_unit || "(unit not reported)"}${respirationTemperature ? ` at ${respirationTemperature}` : ""}`
+    : "Respiration rate not reported";
   const notReached = stage("not_reached", "This step has no interpretable scenario to process.", "—", "—", "Stopped at validation");
 
   return [
-    stage("recorded", "The source row is present in the audited batch.", `Source row ${row.source_row_number}`, "Structured scenario intake", row.record_id || "Record ID not available"),
+    stage("recorded", "The source row is present in the audited batch.", exception ? `Source row ${row.source_row_number}` : `${context[0].value} · ${context[1].value}`, exception ? "Food and condition fields await validation" : `Source row ${row.source_row_number}; ${context[3].value}`, row.record_id || "Record ID not available"),
     exception
       ? stage("held", "Validation or exact food matching did not complete.", row.record_id || "Input row", "Required values and food-reference identity", `${inputIssues.length} input issue${inputIssues.length === 1 ? "" : "s"}`, inputIssues.map((item) => item.code))
       : stage("recorded", "The row was interpretable and matched to a food reference.", row.scenario?.commodity_type || row.record_id || "Scenario", "Validated input and exact reference join", row.food_reference_id || "Food reference not shown"),
     exception
       ? notReached
-      : stage(gaps.length ? "gaps_recorded" : "recorded", "The food-needs card is present; open gaps remain visible.", `${row.target_shelf_life_days ?? "Unknown"} requested days`, "Source-scoped protection mechanisms", gaps.length ? `${gaps.length} requirement gap${gaps.length === 1 ? "" : "s"}` : "No requirement gaps reported", gaps),
+      : stage(gaps.length ? "gaps_recorded" : "recorded", "The food-needs card is present; open gaps remain visible.", `${context[2].value}; ${composition || "food composition not projected"}`, `Exposure: ${context[3].value}`, gaps.length ? `${gaps.length} requirement gap${gaps.length === 1 ? "" : "s"}` : "No requirement gaps reported", gaps),
     exception
       ? notReached
       : row.produce_route_status === "confirmed_non_respiring"
-        ? stage("bypassed", "The reviewed route is non-respiring, so the produce-only branch is bypassed.", "Confirmed non-respiring route", "Route classification", "Continue to package screening")
+        ? stage("bypassed", "The reviewed route is non-respiring, so the produce-only branch is bypassed.", "Confirmed non-respiring route", `Recorded temperature phases: ${context[3].value}`, "Continue to package screening")
         : row.produce_route_status === "confirmed_respiring" || row.produce_route_status === "respiration_evidence_present"
-          ? stage("limited", "A respiration-related route is present; this view cannot certify MAP safety.", row.produce_route_status, "Separate gas and water diagnostics", "Produce safety not certified")
-          : stage("unresolved", "The produce route is unclassified or not carried by this report.", row.produce_route_status || "Route not reported", "Reviewed route classification", "Route remains unresolved"),
+          ? stage("limited", "A respiration-related route is present; this view cannot certify MAP safety.", `${row.produce_route_status}; ${respirationInput}`, `Gas and water diagnostics across ${context[3].value}`, "Produce safety not certified")
+          : stage("unresolved", "The produce route is unclassified or not carried by this report.", `${row.produce_route_status || "Route not reported"}; ${respirationInput}`, "Reviewed route classification", "Route remains unresolved"),
     exception
       ? notReached
-      : stage(row.candidate_screening_allowed === false ? "held" : candidates.length ? "screened" : "unresolved", "The structure screen preserves eligible, excluded and unresolved outcomes.", `${candidates.length} reviewed candidate${candidates.length === 1 ? "" : "s"} shown`, "Food scope, service range and exact transfer evidence", eligible.length ? `${eligible.length} preliminary eligible` : "No eligible structure shown", reasons),
+      : stage(row.candidate_screening_allowed === false ? "held" : candidates.length ? "screened" : "unresolved", "The structure screen preserves eligible, excluded and unresolved outcomes.", `${candidates.length} reviewed candidate${candidates.length === 1 ? "" : "s"} shown; screening ${row.candidate_screening_allowed === true ? "allowed" : row.candidate_screening_allowed === false ? "held" : "not reported"}`, "Food scope, service range and exact transfer evidence", `${eligible.length} eligible · ${excluded.length} excluded · ${unresolved.length} unresolved`, reasons),
     exception
       ? notReached
       : stage(eligible.length ? "preliminary" : "unavailable", "Only comparable, eligible structures can receive a protection-only preference.", `${eligible.length} eligible structure${eligible.length === 1 ? "" : "s"}`, "Non-dominated protection comparison", row.preliminary_preferred_structure_id || "No unique preliminary preference"),

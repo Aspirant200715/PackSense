@@ -1,5 +1,5 @@
 import { parseDecisionReport, readableCode, summarizeReport } from "./report.js";
-import { actualPipeline, STAGES, walkthroughStage } from "./pipeline.js";
+import { actualContext, actualPipeline, STAGES, walkthroughStage } from "./pipeline.js";
 
 const VIEWS = new Set(["overview", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
@@ -237,6 +237,7 @@ function renderEvidence() {
 function renderPipeline() {
   const actualMode = state.pipelineMode === "actual";
   const hasReport = Boolean(state.report);
+  $("#pipeline-heading-step").textContent = STAGES[state.pipelineStep].number;
   $$('[data-pipeline-mode]').forEach((button) => {
     const active = button.dataset.pipelineMode === state.pipelineMode;
     button.classList.toggle("is-active", active);
@@ -266,15 +267,30 @@ function renderPipeline() {
     $("#pipeline-record-select").value = String(state.pipelineRowIndex);
   }
 
+  const contextRoot = $("#actual-context");
+  contextRoot.hidden = !actualMode || !hasReport;
+  if (actualMode && hasReport) {
+    contextRoot.innerHTML = actualContext(state.report.rows[state.pipelineRowIndex]).map(({ label, value }) =>
+      `<div class="context-fact"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`
+    ).join("");
+  }
+
   const actualStages = actualMode && hasReport
     ? actualPipeline(state.report.rows[state.pipelineRowIndex])
     : null;
-  $("#pipeline-stage-list").innerHTML = STAGES.map((stage, index) => {
+  const stageList = $("#pipeline-stage-list");
+  stageList.innerHTML = STAGES.map((stage, index) => {
     const active = index === state.pipelineStep;
     const status = actualStages ? actualStages[index].state : actualMode ? "awaiting_report" : active ? "in_focus" : index < state.pipelineStep ? "viewed" : "upcoming";
     const statusText = actualMode ? (hasReport ? readableCode(status) : "Awaiting report") : active ? "In focus" : index < state.pipelineStep ? "Explored" : "Up next";
     return `<button type="button" class="studio-stage${active ? " is-active" : ""}" data-pipeline-index="${index}" ${actualMode && !hasReport ? "disabled" : ""} ${active ? 'aria-current="step"' : ""}><span class="stage-index">${stage.number}</span><span class="stage-text"><strong>${escapeHtml(stage.title)}</strong><small>${escapeHtml(statusText)}</small></span><span class="stage-light stage-${escapeHtml(status)}" aria-hidden="true"></span></button>`;
   }).join("");
+  if (window.matchMedia("(max-width: 650px)").matches) {
+    const activeStage = stageList.querySelector(".is-active");
+    const listBounds = stageList.getBoundingClientRect();
+    const stageBounds = activeStage.getBoundingClientRect();
+    stageList.scrollLeft += stageBounds.left - listBounds.left - (stageList.clientWidth - stageBounds.width) / 2;
+  }
 
   if (actualMode && !hasReport) return;
   const stage = actualStages
@@ -313,6 +329,7 @@ function render() {
 
 async function loadFile(file) {
   if (!file) return;
+  const returnToTrace = state.view === "pipeline" && state.pipelineMode === "actual";
   if (file.size > MAX_FILE_BYTES) {
     notify("This report is over 100 MB. Export a smaller batch before importing.", true);
     return;
@@ -330,7 +347,7 @@ async function loadFile(file) {
     $("#record-search").value = "";
     $("#record-filter").value = "all";
     render();
-    goTo("decisions");
+    goTo(returnToTrace ? "pipeline" : "decisions");
     notify(`${report.rows.length.toLocaleString()} decision rows loaded locally.`);
   } catch (error) {
     notify(error instanceof Error ? error.message : "Could not read the report.", true);

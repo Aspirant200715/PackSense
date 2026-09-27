@@ -848,7 +848,13 @@ PackSense must continue to withhold a real package or shelf-life claim.
   browser stores only the theme choice; report import remains local and in
   memory. Online fonts have system fallbacks. No real food data, packaging
   outcomes, suitability labels, estimator or model artifact were changed.
-- Local verification: 227 scoped Python tests and 12 Node tests passed, along
+- A follow-up frontend pass puts recorded food, pack quantity, requested life
+  and the full temperature-phase summary above the actual trace, with
+  composition, respiration and candidate-state counts at the relevant stages.
+  Missing facts remain explicitly unreported, and importing from the trace
+  returns to that view. The stage counter follows navigation, and the active
+  stage centers in the mobile rail. No values are estimated in the browser.
+- Local verification: 227 scoped Python tests and 14 Node tests passed, along
   with JavaScript syntax and diff checks. A local headless browser rendered
   dark, light and mobile views; route switching, the actual-mode empty state,
   and a `TEST_ONLY` report import/trace produced no browser exceptions. The

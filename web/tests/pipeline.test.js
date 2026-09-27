@@ -1,7 +1,7 @@
 // TEST_ONLY report rows exercise the visualization. They are not training data.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { actualPipeline, STAGES, walkthroughStage } from "../src/pipeline.js";
+import { actualContext, actualPipeline, STAGES, walkthroughStage } from "../src/pipeline.js";
 
 const base = {
   source_row_number: 2,
@@ -34,6 +34,38 @@ test("actual not-ready row exposes gates rather than claiming approval", () => {
   assert.deepEqual(stages[2].evidence, ["oxygen_limit_missing"]);
   assert.equal(stages[4].state, "held");
   assert.equal(stages[6].state, "withheld");
+});
+
+test("actual trace uses reported food, quantity, composition and temperature only", () => {
+  const row = {
+    ...base,
+    scenario: {
+      commodity_type: "TEST_ONLY_COMMODITY", net_pack_quantity: 100,
+      net_pack_quantity_unit: "g", moisture_content_pct: 8,
+      oil_fat_content_pct: 2, pH: 6,
+    },
+    temperature_exposures: [
+      { phase: "storage", temperature_c: 4 },
+      { phase: "transport", temperature_c: 8 },
+    ],
+  };
+  const context = actualContext(row);
+  assert.deepEqual(context.map(({ value }) => value), [
+    "TEST_ONLY_COMMODITY", "100 g", "30 days", "storage 4°C · transport 8°C",
+  ]);
+  const stages = actualPipeline(row);
+  assert.match(stages[0].input, /TEST_ONLY_COMMODITY · 100 g/);
+  assert.match(stages[0].check, /storage 4°C · transport 8°C/);
+  assert.match(stages[2].input, /Moisture 8% · Fat 2% · pH 6/);
+  assert.match(stages[2].check, /transport 8°C/);
+});
+
+test("missing source facts remain visibly unreported", () => {
+  const row = { ...base, scenario: null, target_shelf_life_days: null, temperature_exposures: [] };
+  assert.deepEqual(actualContext(row).map(({ value }) => value), [
+    "Not validated or not reported", "Not reported", "Not reported", "Not reported",
+  ]);
+  assert.match(actualPipeline(row)[2].input, /food composition not projected/);
 });
 
 test("exception stops scenario-specific stages", () => {

@@ -8,6 +8,11 @@ non-respiring route or a fresh-produce route and can be played step by step.
 It is an explanation, not a computed recommendation. The actual trace uses
 only fields in the imported report and does not run a new screen or predictor.
 No demonstration food/package rows or model predictions are bundled.
+The actual trace shows the imported food, pack quantity, requested-life target,
+and every recorded temperature phase, then exposes recorded composition,
+respiration, evidence gaps, and candidate counts at the relevant stages. If a
+field was not reported, it stays visibly unreported. Importing a report from
+the trace view returns to that trace.
 
 The workspace defaults to a dark theme and has a light-mode toggle. The theme
 choice alone is stored in browser local storage. A report is read into browser

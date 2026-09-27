@@ -135,7 +135,7 @@
           </section>
 
           <section class="view" id="view-pipeline" aria-labelledby="pipeline-title" hidden>
-            <div class="page-heading"><div><div class="page-kicker">SYSTEM MAP / EIGHT STOPS</div><h1 id="pipeline-title">Inside the decision process</h1><p>Explore the logic, then inspect what a real imported report actually contains.</p></div><div class="page-counter">01 <span>/</span> 08</div></div>
+            <div class="page-heading"><div><div class="page-kicker">SYSTEM MAP / EIGHT STOPS</div><h1 id="pipeline-title">Inside the decision process</h1><p>Explore the logic, then inspect what a real imported report actually contains.</p></div><div class="page-counter"><strong id="pipeline-heading-step">01</strong> <span>/</span> 08</div></div>
             <div class="pipeline-mode-switch" role="group" aria-label="Pipeline view">
               <button type="button" class="mode-button is-active" data-pipeline-mode="walkthrough" aria-pressed="true">Interactive walkthrough <span>Learn the logic</span></button>
               <button type="button" class="mode-button" data-pipeline-mode="actual" aria-pressed="false">Actual report trace <span>Use imported evidence</span></button>
@@ -145,6 +145,7 @@
               <label class="actual-record-control" id="actual-record-control" hidden><span>REPORT RECORD</span><select id="pipeline-record-select"></select></label>
               <div class="pipeline-mode-note" id="pipeline-mode-note">Conceptual walkthrough · no food/package result is generated</div>
             </div>
+            <dl class="actual-context" id="actual-context" aria-label="Imported scenario facts" hidden></dl>
             <div class="pipeline-studio">
               <div class="studio-rail"><div class="studio-rail-heading"><span>PROCESS STAGES</span><span>01—08</span></div><div id="pipeline-stage-list"></div></div>
               <div class="studio-main">
