@@ -4,7 +4,8 @@
 source for the existing [PackSense Kaggle notebook](https://www.kaggle.com/code/aspirant200715/packsense-ai).
 The notebook is a **reference preprocessing and evidence-gated exploratory
 material-training workflow**, not a trained recommendation model. Version 5
-completed on 2026-09-27; the next pushed version pins source commit `7301542`.
+completed on 2026-09-27; version 6 completed on the same date and pins source
+commit `7301542`.
 
 The notebook now pins backend source commit `7301542` and verifies the
 attached source bundle against a SHA-256 manifest. It also verifies the two

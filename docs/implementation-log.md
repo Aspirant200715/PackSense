@@ -557,11 +557,14 @@ PackSense must continue to withhold a real package or shelf-life claim.
   and lists 25 package Python files, including `material_model.py`, plus the
   manifest. No raw food/material data or withdrawn 672/72 CSVs were uploaded
   in this source bundle.
-- The notebook source is updated to pin that commit, repeat hash checks, and
-  require six separate real training files including a source/rights approval
-  before invoking the trainer. With the present two reference datasets alone,
-  its expected outcome remains `not_ready`/`model_trained=false`. A Kaggle run
-  and PR CI still need separate verification after this source update.
+- Kaggle notebook version 6 completed with the refreshed bundle. It verified
+  all 25 source files, accepted 5,000/5,000 food and 81/81 material reference
+  rows, and wrote `not_ready`/`model_trained=false` with no backend modules
+  missing and all six real training files missing. No fit, test metric, or
+  model artifact exists. PR CI remains a separate check.
+- The imported food reference has pH for 720/5,000 rows: 709 proxy and 11
+  reported-reference values. This is a coverage/evidence limit, not a reason
+  to generate pH labels or claim broad model generalization.
 - Local verification: 165 unit tests passed; package/test compile checks and
   `git diff --check` passed. No real suitability labels, approved split,
   scenario batch, reviewed structure catalogue, or model artifact were added.
