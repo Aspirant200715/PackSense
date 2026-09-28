@@ -9,7 +9,7 @@ export const STAGES = Object.freeze([
   { number: "04", title: "Produce branch", short: "Produce" },
   { number: "05", title: "Package screening", short: "Screen" },
   { number: "06", title: "Protection comparison", short: "Compare" },
-  { number: "07", title: "Prediction gate", short: "Predict" },
+  { number: "07", title: "Prediction gate", short: "Model gate" },
   { number: "08", title: "Decision record", short: "Output" },
 ]);
 

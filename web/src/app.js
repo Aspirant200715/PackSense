@@ -97,7 +97,6 @@ function updatePlaybackControls() {
   const actualTrace = state.pipelineMode === "actual";
   const subject = actualTrace ? "report trace" : "guided tour";
   $(".pipeline-studio").classList.toggle("is-playing", playing);
-  $("#journey-map").classList.toggle("is-playing", playing);
   $("#guide-play-label").textContent = playing ? (actualTrace ? "Pause trace" : "Pause tour") : state.pipelineStep === STAGES.length - 1 ? (actualTrace ? "Replay trace" : "Replay tour") : `Play ${subject}`;
   $("#guide-play-icon").textContent = playing ? "Ⅱ" : "▶";
   $("#pipeline-play").setAttribute("aria-label", playing ? `Pause ${subject}` : state.pipelineStep === STAGES.length - 1 ? `Replay ${subject}` : `Play ${subject}`);
@@ -147,15 +146,6 @@ function returnToWelcome() {
   window.scrollTo(0, 0);
 }
 
-function centerActiveStage() {
-  const stageList = $("#pipeline-stage-list");
-  const activeStage = stageList.querySelector(".is-active");
-  if (!activeStage || stageList.scrollWidth <= stageList.clientWidth) return;
-  const listBounds = stageList.getBoundingClientRect();
-  const stageBounds = activeStage.getBoundingClientRect();
-  stageList.scrollLeft += stageBounds.left - listBounds.left - (stageList.clientWidth - stageBounds.width) / 2;
-}
-
 function goTo(view) {
   if (!VIEWS.has(view)) return;
   if (view !== "pipeline") stopPlayback();
@@ -171,7 +161,6 @@ function goTo(view) {
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
   });
-  if (view === "pipeline") centerActiveStage();
   window.scrollTo(0, 0);
 }
 
@@ -305,24 +294,9 @@ function renderEvidence() {
 function renderPipeline() {
   const actualMode = state.pipelineMode === "actual";
   const hasReport = Boolean(state.report);
-  const journeyPhase = state.pipelineStep < 2 ? 0 : state.pipelineStep < 7 ? 1 : 2;
-  $("#pipeline-heading-step").textContent = STAGES[state.pipelineStep].number;
   $("#pipeline-guide-bar").hidden = actualMode && !hasReport;
-  $("#guide-type-label").textContent = actualMode ? "ACTUAL REPORT FLOW" : "GUIDED TOUR";
-  $("#guide-stage-caption").textContent = `Step ${state.pipelineStep + 1} of ${STAGES.length} · ${STAGES[state.pipelineStep].title}`;
-  $("#guide-progress").setAttribute("aria-valuenow", String(state.pipelineStep + 1));
-  $("#guide-progress-fill").style.width = `${((state.pipelineStep + 1) / STAGES.length) * 100}%`;
-  const journeyProgress = `${((state.pipelineStep + 1) / STAGES.length) * 100}%`;
-  $("#journey-progress-fill").style.width = journeyProgress;
-  $("#journey-progress-cursor").style.left = journeyProgress;
-  $$('[data-journey-start]').forEach((button, index) => {
-    const active = index === journeyPhase;
-    button.classList.toggle("is-active", active);
-    button.classList.toggle("is-past", index < journeyPhase);
-    button.disabled = actualMode && !hasReport;
-    if (active) button.setAttribute("aria-current", "step");
-    else button.removeAttribute("aria-current");
-  });
+  $("#guide-type-label").textContent = actualMode ? "REAL REPORT · RECORDED VALUES" : "HOW IT WORKS · NO LIVE RESULT";
+  $("#guide-stage-caption").textContent = `Step ${state.pipelineStep + 1} of ${STAGES.length}`;
   updatePlaybackControls();
   $$('[data-pipeline-mode]').forEach((button) => {
     const active = button.dataset.pipelineMode === state.pipelineMode;
@@ -340,7 +314,9 @@ function renderPipeline() {
     ? "Audited report values only · no new inference is performed"
     : "Conceptual walkthrough · no food/package result is generated";
   $("#pipeline-empty").hidden = !actualMode || hasReport;
+  $(".studio-rail").hidden = actualMode && !hasReport;
   $("#studio-focus").hidden = actualMode && !hasReport;
+  $("#studio-intake-action").hidden = actualMode || state.pipelineStep !== 0;
   $("#studio-finish").hidden = actualMode || state.pipelineStep !== STAGES.length - 1;
   $("#studio-actual-finish").hidden = !actualMode || !hasReport || state.pipelineStep !== STAGES.length - 1;
 
@@ -371,17 +347,14 @@ function renderPipeline() {
     const active = index === state.pipelineStep;
     const status = actualStages ? actualStages[index].state : actualMode ? "awaiting_report" : active ? "in_focus" : index < state.pipelineStep ? "viewed" : "upcoming";
     const statusText = actualMode ? (hasReport ? readableCode(status) : "Awaiting report") : active ? "In focus" : index < state.pipelineStep ? "Explored" : "Up next";
-    return `<button type="button" class="studio-stage${active ? " is-active" : ""}" data-pipeline-index="${index}" ${actualMode && !hasReport ? "disabled" : ""} ${active ? 'aria-current="step"' : ""}><span class="stage-index">${stage.number}</span><span class="stage-text"><strong>${escapeHtml(stage.title)}</strong><small>${escapeHtml(statusText)}</small></span><span class="stage-light stage-${escapeHtml(status)}" aria-hidden="true"></span></button>`;
+    return `<button type="button" class="studio-stage stage-status-${escapeHtml(status)}${active ? " is-active" : ""}${index < state.pipelineStep ? " is-past" : ""}" data-pipeline-index="${index}" ${active ? 'aria-current="step"' : ""} aria-label="Step ${index + 1}: ${escapeHtml(stage.title)}. ${escapeHtml(statusText)}" title="${escapeHtml(stage.title)}"><span class="stage-index">${stage.number}</span><span class="stage-text"><strong>${escapeHtml(stage.short)}</strong></span></button>`;
   }).join("");
-  centerActiveStage();
 
   if (actualMode && !hasReport) return;
   const stage = actualStages
     ? { ...STAGES[state.pipelineStep], ...actualStages[state.pipelineStep] }
     : walkthroughStage(state.pipelineStep, state.pipelineRoute);
-  $("#studio-mode-label").textContent = actualMode ? "ACTUAL REPORT TRACE" : "CONCEPTUAL WALKTHROUGH";
-  $("#studio-progress").textContent = `${stage.number} / 08`;
-  $("#studio-state-label").textContent = actualMode ? readableCode(stage.state).toUpperCase() : "STEP IN FOCUS";
+  $("#studio-state-label").textContent = actualMode ? readableCode(stage.state).toUpperCase() : "CURRENT STEP";
   $("#studio-title").textContent = stage.title;
   $("#studio-statement").textContent = stage.statement;
   $("#studio-input").textContent = stage.input;
@@ -396,7 +369,6 @@ function renderPipeline() {
   $("#studio-evidence").innerHTML = codes?.length
     ? `<span>REPORTED CODES</span><div>${codes.map((code) => `<code>${escapeHtml(code)}</code>`).join("")}</div>`
     : "";
-  $("#studio-step-caption").textContent = `Step ${state.pipelineStep + 1} of 8`;
   $("#pipeline-previous").disabled = state.pipelineStep === 0;
   $("#pipeline-next").disabled = state.pipelineStep === STAGES.length - 1;
 }
@@ -545,11 +517,6 @@ document.addEventListener("click", (event) => {
   }
   else if (target.matches("[data-copy-setup]")) {
     copyText($("#startup-command").textContent.trim(), "Command copied. Replace the example paths before running it.");
-  }
-  else if (target.matches("[data-journey-start]")) {
-    stopPlayback();
-    state.pipelineStep = Number(target.dataset.journeyStart);
-    renderPipeline();
   }
   else if (target.matches("[data-filter]")) {
     state.filter = target.dataset.filter;

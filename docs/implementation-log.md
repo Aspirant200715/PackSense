@@ -1027,6 +1027,21 @@ PackSense must continue to withhold a real package or shelf-life claim.
   overflow. PR CI and independent review remain separate. The live flow
   still requires a real scenario batch and independent package evidence.
 
+### 2026-09-28 — simplify the playable decision flow
+
+- Continued on PR #37. The Pipeline page now has one compact eight-step
+  timeline instead of stacked phase, playback and stage progress displays.
+  The active scene explains its input, PackSense check and output. The mode
+  switch distinguishes a conceptual tour from a recorded report trace, and
+  the first scene links directly to the real-data setup instructions.
+- Playback, manual stage navigation, fresh-produce branching and actual
+  report traces remain available. No source data, scenario rows, training
+  labels, model output or recommendation gate changed.
+- Local verification: 237 Python tests, 17 Node tests and headless browser
+  smoke at 320, 390 and 1440 px passed, including the single timeline,
+  setup visibility, real
+  trace playback and no horizontal overflow. PR CI is pending this update.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
