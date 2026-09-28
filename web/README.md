@@ -1,13 +1,16 @@
 # PackSense decision workspace
 
 This is the build-free MVP frontend for the existing Python decision pipeline.
-It opens on a separate introduction. **Explore PackSense** enters the workspace
-and starts the eight-stage guided tour; the four decision-path stops can also
-open a specific stage. A prominent play/pause control, progress indicator, and
-clickable connected stage track show how the process advances. A three-phase
-map (add data → follow checks → read output) and subtle moving indicators
-make the progression visible without changing any result. The same play/pause
-control can advance through an **actual reported row** after one is loaded;
+It opens on a separate, responsive introduction with a layered-package
+schematic. The drawing explains the method; it is not a simulated result.
+When real food and material reference masters are configured, **Evaluate a
+food** is the primary action. Otherwise **Explore PackSense** is primary and
+starts the eight-stage guided tour. Four linked decision-path stops can also
+open a specific stage on wider screens. A prominent play/pause control,
+progress indicator, and clickable connected stage track show how the process
+advances. A three-phase map (add data → follow checks → read output) and subtle
+moving indicators make the progression visible without changing any result.
+The same play/pause control can advance through an **actual reported row** after one is loaded;
 it only plays back the report and performs no new inference. With reduced
 motion enabled, the tour waits for a manual click instead of auto-playing.
 
