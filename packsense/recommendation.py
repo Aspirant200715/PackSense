@@ -13,6 +13,7 @@ from enum import StrEnum
 from math import isclose
 from typing import Any, Iterable
 
+from packsense.contracts import HandlingSeverity
 from packsense.candidate_transfer import (
     FinishedPackageTransferEvidence,
     TransferCheck,
@@ -27,10 +28,11 @@ from packsense.structure_review import (
     ReviewAttestedStructure,
     StructureReviewAudit,
     attestation_integrity_gaps,
+    handling_scope_gap,
 )
 
 
-RECOMMENDATION_VERSION = "basic-recommendation-v1"
+RECOMMENDATION_VERSION = "basic-recommendation-v3"
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
 _STRUCTURE_GAPS_RESOLVED_BY_REVIEW = frozenset({
     "seal_integrity_pending_structure",
@@ -64,6 +66,7 @@ class CandidateScreen:
     compatible_food_scope: tuple[str, ...] = ()
     service_temperature_min_c: float | None = None
     service_temperature_max_c: float | None = None
+    max_reviewed_handling_severity: HandlingSeverity | None = None
     sealant_grade_id: str | None = None
     catalogue_sha256: str | None = None
     material_master_sha256: str | None = None
@@ -95,6 +98,10 @@ class CandidateScreen:
                 "material_master_sha256": self.material_master_sha256,
                 "review_register_sha256": self.review_register_sha256,
                 "review_id": self.review_id,
+                "max_reviewed_handling_severity": (
+                    self.max_reviewed_handling_severity.value
+                    if self.max_reviewed_handling_severity is not None else None
+                ),
                 "evidence_check_ids": list(self.evidence_check_ids),
                 "source_checks": [
                     {
@@ -147,6 +154,7 @@ class BasicRecommendation:
     warnings: tuple[str, ...]
     food_master_sha256: str | None = None
     scenario_fingerprint: str | None = None
+    scenario_source_sha256: str | None = None
     food_requirement_evidence: tuple[AppliedAssessment, ...] = ()
 
     def report(self) -> dict[str, Any]:
@@ -156,6 +164,7 @@ class BasicRecommendation:
             "food_reference_id": self.food_reference_id,
             "food_master_sha256": self.food_master_sha256,
             "scenario_fingerprint": self.scenario_fingerprint,
+            "scenario_source_sha256": self.scenario_source_sha256,
             "status": self.status.value,
             "preliminary_preferred_structure_id": self.preferred_structure_id,
             "ranking_basis": self.ranking_basis,
@@ -194,6 +203,7 @@ def _review_context(reviewed: ReviewAttestedStructure) -> dict[str, Any]:
         "compatible_food_scope": structure.compatible_food_scope,
         "service_temperature_min_c": structure.service_temperature_min_c,
         "service_temperature_max_c": structure.service_temperature_max_c,
+        "max_reviewed_handling_severity": reviewed.max_reviewed_handling_severity,
         "sealant_grade_id": structure.sealant_grade_id,
         "catalogue_sha256": reviewed.catalogue_sha256,
         "material_master_sha256": reviewed.material_master_sha256,
@@ -204,10 +214,13 @@ def _review_context(reviewed: ReviewAttestedStructure) -> dict[str, Any]:
     }
 
 
-def _report_context(card: RequirementCard) -> dict[str, Any]:
+def _report_context(
+    card: RequirementCard, scenario_source_sha256: str | None,
+) -> dict[str, Any]:
     return {
         "food_master_sha256": card.food_master_sha256,
         "scenario_fingerprint": scenario_fingerprint(card),
+        "scenario_source_sha256": scenario_source_sha256,
         "food_requirement_evidence": card.applied_assessments,
     }
 
@@ -238,28 +251,76 @@ def _transfer_key(
     )
 
 
+def _budget_utilization_by_mechanism(
+    candidate: CandidateScreen,
+) -> dict[ProtectionMechanism, float] | None:
+    utilization: dict[ProtectionMechanism, float] = {}
+    for check in candidate.transfer_checks:
+        if check.decision is not TransferDecision.WITHIN_BUDGET:
+            continue
+        if (check.mechanism in utilization
+                or check.observed_cumulative_transfer is None
+                or check.maximum_cumulative_transfer is None
+                or check.maximum_cumulative_transfer <= 0):
+            return None
+        utilization[check.mechanism] = (
+            check.observed_cumulative_transfer / check.maximum_cumulative_transfer
+        )
+    return utilization or None
+
+
+def _dominates(
+    left: dict[ProtectionMechanism, float],
+    right: dict[ProtectionMechanism, float],
+) -> bool:
+    if left.keys() != right.keys():
+        return False
+    strictly_better = False
+    for mechanism, left_value in left.items():
+        right_value = right[mechanism]
+        if isclose(left_value, right_value, rel_tol=1e-12, abs_tol=1e-12):
+            continue
+        if left_value > right_value:
+            return False
+        strictly_better = True
+    return strictly_better
+
+
 def _rank_candidates(
     candidates: tuple[CandidateScreen, ...],
-) -> tuple[tuple[CandidateScreen, ...], str | None]:
+) -> tuple[tuple[CandidateScreen, ...], str | None, str | None]:
     eligible = [item for item in candidates
                 if item.status is CandidateStatus.ELIGIBLE_FOR_SHORTLIST]
-    if not eligible or any(item.worst_case_budget_utilization is None for item in eligible):
-        return candidates, None
-    ordered = sorted(eligible, key=lambda item: item.worst_case_budget_utilization)
+    if not eligible:
+        return candidates, None, None
+    vectors = {item.structure_id: _budget_utilization_by_mechanism(item)
+               for item in eligible}
+    if (any(vector is None for vector in vectors.values())
+            or len({frozenset(vector) for vector in vectors.values()}) != 1):
+        return candidates, None, "protection_comparison_unavailable"
+
     ranks: dict[str, int] = {}
-    last_score = None
-    last_rank = 0
-    for position, item in enumerate(ordered, start=1):
-        score = item.worst_case_budget_utilization
-        if last_score is None or not isclose(score, last_score, rel_tol=1e-12, abs_tol=1e-12):
-            last_rank = position
-            last_score = score
-        ranks[item.structure_id] = last_rank
+    remaining = set(vectors)
+    layer = 1
+    while remaining:
+        frontier = {
+            structure_id for structure_id in remaining
+            if not any(
+                _dominates(vectors[other_id], vectors[structure_id])
+                for other_id in remaining if other_id != structure_id
+            )
+        }
+        if not frontier:
+            return candidates, None, "protection_comparison_unavailable"
+        ranks.update({structure_id: layer for structure_id in frontier})
+        remaining -= frontier
+        layer += 1
     ranked = tuple(replace(item, protection_rank=ranks.get(item.structure_id))
                    for item in candidates)
-    winners = [item for item in ordered if ranks[item.structure_id] == 1]
+    winners = [item for item in eligible if ranks[item.structure_id] == 1]
     preferred = winners[0].structure_id if len(winners) == 1 else None
-    return ranked, preferred
+    warning = None if preferred else "protection_tradeoff_or_tie_no_unique_preference"
+    return ranked, preferred, warning
 
 
 def screen_package_candidates(
@@ -269,13 +330,14 @@ def screen_package_candidates(
     transfer_evidence: Iterable[FinishedPackageTransferEvidence],
     *,
     current_material_master_sha256: str,
+    scenario_source_sha256: str | None = None,
 ) -> BasicRecommendation:
     """Return a preliminary shortlist only where each evidence gate is met.
 
-    Food scope is an exact, case/whitespace-normalized match. The only numeric
-    preference is the highest worst-case fraction of the source-approved
-    oxygen/moisture transfer budgets (lower is better). Cost, sustainability,
-    light protection, produce MAP, package feasibility, and shelf life are not
+    Food scope is an exact, case/whitespace-normalized match. A numeric
+    preference requires one candidate to dominate every rival across the
+    comparable source-limited transfer budgets. Cost, sustainability, light
+    protection, produce MAP, package feasibility, and shelf life are not
     inferred here.
     """
     if not isinstance(commodity_type, str) or not commodity_type.strip():
@@ -283,6 +345,12 @@ def screen_package_candidates(
     if (not isinstance(current_material_master_sha256, str)
             or not _HASH.fullmatch(current_material_master_sha256)):
         raise ValueError("current_material_master_sha256 must be a lowercase SHA-256")
+    if scenario_source_sha256 is not None and (
+        not isinstance(scenario_source_sha256, str)
+        or not _HASH.fullmatch(scenario_source_sha256)
+    ):
+        raise ValueError("scenario_source_sha256 must be a lowercase SHA-256")
+    report_context = _report_context(card, scenario_source_sha256)
     evidence_by_key = _unique_transfer_evidence(transfer_evidence)
     warnings = tuple(sorted(
         gap for gap in card.gaps if gap in _NON_BLOCKING_WARNINGS
@@ -292,32 +360,32 @@ def screen_package_candidates(
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("food_requirements_or_produce_route_incomplete",), warnings,
-            **_report_context(card),
+            **report_context,
         )
     if structure_review is None:
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("complete_structure_review_missing",), warnings,
-            **_report_context(card),
+            **report_context,
         )
     if structure_review.status != "review_attested" or structure_review.issues:
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("complete_structure_review_not_approved",), warnings,
-            **_report_context(card),
+            **report_context,
         )
     if not structure_review.reviewed:
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), ("no_reviewed_complete_structures",), warnings,
-            **_report_context(card),
+            **report_context,
         )
     review_gaps = attestation_integrity_gaps(structure_review)
     if review_gaps:
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), review_gaps, warnings,
-            **_report_context(card),
+            **report_context,
         )
 
     unresolved_card_gaps = tuple(sorted(
@@ -329,7 +397,7 @@ def screen_package_candidates(
         return BasicRecommendation(
             card.record_id, card.food_reference_id, RecommendationStatus.NOT_READY,
             None, None, (), unresolved_card_gaps, warnings,
-            **_report_context(card),
+            **report_context,
         )
 
     candidates: list[CandidateScreen] = []
@@ -361,6 +429,21 @@ def screen_package_candidates(
                 structure.structure_id, structure.pack_format,
                 CandidateStatus.EXCLUDED, ("service_temperature_out_of_scope",), (), None,
                 **_review_context(reviewed),
+            ))
+            continue
+        handling_gap = handling_scope_gap(reviewed, card.handling_severity)
+        if handling_gap == "mechanical_handling_scope_missing":
+            candidates.append(CandidateScreen(
+                structure.structure_id, structure.pack_format,
+                CandidateStatus.UNRESOLVED, (handling_gap,),
+                (), None, **_review_context(reviewed),
+            ))
+            continue
+        if handling_gap is not None:
+            candidates.append(CandidateScreen(
+                structure.structure_id, structure.pack_format,
+                CandidateStatus.EXCLUDED, (handling_gap,),
+                (), None, **_review_context(reviewed),
             ))
             continue
 
@@ -405,7 +488,7 @@ def screen_package_candidates(
             ),
         ))
 
-    result_candidates, preferred = _rank_candidates(tuple(candidates))
+    result_candidates, preferred, preference_warning = _rank_candidates(tuple(candidates))
     eligible = any(item.status is CandidateStatus.ELIGIBLE_FOR_SHORTLIST
                    for item in result_candidates)
     return BasicRecommendation(
@@ -413,11 +496,11 @@ def screen_package_candidates(
         RecommendationStatus.PRELIMINARY_SHORTLIST if eligible
         else RecommendationStatus.NOT_READY,
         preferred,
-        "lowest_worst_case_transfer_budget_utilization" if preferred else None,
+        "source_limited_transfer_pareto_dominance" if preferred else None,
         result_candidates,
         () if eligible else tuple(sorted({
             reason for item in result_candidates for reason in item.reason_codes
         })) or ("no_applicable_structure_candidates",),
-        warnings,
-        **_report_context(card),
+        warnings + ((preference_warning,) if preference_warning else ()),
+        **report_context,
     )

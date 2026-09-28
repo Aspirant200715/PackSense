@@ -1,8 +1,21 @@
 # PackSense
 
+**Current phase:** package-material selection. Shelf-life prediction is
+deferred. A learned material ranker will be evaluated only after genuine,
+reviewed scenario/complete-structure suitability labels are available; the
+existing food and material workbooks are references, not those labels. See
+[material-suitability evidence intake](docs/material-suitability.md).
+The [existing Kaggle notebook](notebooks/packsense-ai.ipynb) is versioned in
+the repository; it audits the two reference masters and explicitly withholds
+training when suitability labels, a reviewed split, and source/rights approval
+are missing. An exploratory CPU material classifier is implemented behind
+those gates, but has **not** been trained or validated on real labels.
+Its optional offline scorer is restricted to already shortlisted, reviewed
+structures and cannot alter a recommendation or release a model.
+
 PackSense is a planned decision-support backend for selecting food packaging. It takes a structured record describing a food, its pack size, and its storage and transport conditions. It will return feasible packaging structures and specifications, rank the feasible options, and estimate shelf life only where the prediction has been validated.
 
-**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, Stop 3 evidence-gated requirement cards, sourced food/material reference imports, package-structure draft intake and review gate, guarded local Stop 4 produce checks, a limited Stop 5 transfer-budget check, a preliminary non-respiring shortlist and batch report, an experimental food-property estimator, measured-trial schema intake, an exact trial-to-food/structure linkage gate, a trial group-split contract, and an evidence-gated exploratory shelf-life training runner are implemented. No approved food-protection limits, review-attested complete structures, or measured trial outcomes have been supplied. No shelf-life model has been trained or validated. Full package filtering, a validated package/shelf-life model, API, and frontend are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
+**Project status:** Backend contracts, Stops 1–2 scenario ingestion/exception auditing, exact food-reference enrichment, Stop 3 evidence-gated requirement cards, sourced food/material reference imports, package-structure draft intake and review gate, guarded local Stop 4 produce checks, a limited Stop 5 transfer-budget check, a preliminary non-respiring shortlist and batch report, an experimental food-property estimator, measured-trial schema intake, an exact trial-to-food/structure linkage gate, a trial group-split contract, and an evidence-gated exploratory shelf-life training runner are implemented. The [decision workspace](web/README.md) connects to a localhost-only backend service for an operator-configured batch or audited report; it can also open projected JSON locally. This is not a deployed prediction service. No approved food-protection limits, review-attested complete structures, or measured trial outcomes have been supplied. No shelf-life model has been trained or validated. Full package filtering and a validated package/shelf-life model are not implemented yet. The architecture and implementation sequence below guide that work; they are not claims that the system already produces validated recommendations.
 
 The current code uses Python 3.11 or newer and a pinned XLSX reader. From the
 repository root, run `python -m pip install -r requirements.txt` followed by
@@ -36,9 +49,19 @@ cannot train it.
 [Structure catalogue intake](docs/structure-catalogue.md) defines the exact
 grade/gauge join and the separate evidence review required before a package
 can be recommended.
+[Public catalogue candidate intake](docs/public-catalogue-intake.md) compares
+manufacturer and research sources and audits a small, source-backed product
+register before any exact-grade join or package approval. The batch runner can
+optionally show supplier-listed food/quantity/temperature application leads;
+these are not model predictions or approved recommendations.
+It can also trace one selected public candidate against each genuine scenario
+to report exact published-use mismatches and the evidence needed for review,
+without promoting a supplier claim into an approved package.
 [Complete-structure review](docs/structure-review.md) checks external review
 declarations against exact draft and source identities, without treating a
-passing declaration as package feasibility.
+passing declaration as package feasibility. Its version-2 register requires
+an explicit reviewed handling-severity scope before a scenario can enter the
+preliminary shortlist or the material-ranker label intake.
 [Finished-package transfer checking](docs/candidate-transfer.md) is an early
 Stop 5 component: it can compare an exact-scope sourced cumulative transfer
 with a food budget, but cannot yet declare any complete package feasible.
@@ -47,6 +70,21 @@ reviewed structures and exact-scope transfer evidence for a limited basic
 recommendation. Its batch command reports each structured scenario and any
 missing evidence without inventing a candidate; an optional flat CSV helps
 review large batches alongside the detailed JSON report.
+[Frontend decision JSON](docs/frontend-contract.md) projects that audited
+batch into stable input-exception, evidence-gap, and preliminary-shortlist
+states for frontend design. It does not expose a trained material prediction
+or promote a preliminary preference into a released package.
+The [frontend](web/README.md) reads this projected JSON from a local file or
+the localhost backend, explains the eight-stop workflow, and displays
+source-derived food properties, status, exposure segments, candidate details,
+and evidence trace. A configured batch can run through the existing Python
+pipeline; the browser never substitutes a model result.
+[Film-grade reference comparison](docs/grade-reference-comparison.md) adds an
+opt-in, test-condition-matched Pareto view for reviewed non-respiring food
+needs. It cannot choose or certify a finished package or train a model.
+The same batch can optionally attach the [local fresh-produce gas/water
+diagnostics](docs/basic-recommendation.md#optional-local-fresh-produce-diagnostics)
+without promoting a snapshot to a MAP approval or package recommendation.
 
 ## Why PackSense exists
 
@@ -111,7 +149,17 @@ The planned batch output includes:
 
 The existing food-input workbook is a **commodity reference**: it helps describe foods, but its rows are not complete package trials or complete storage scenarios. The packaging-material workbook is a **material-grade reference**: it supplies reported properties and clearly flagged estimates, but it does not by itself establish the performance of a finished multilayer package. The backend also needs a catalogue of actual manufacturable structures and validated food-contact/compatibility evidence.
 
-The supervised training target requires a separate **trial-outcomes dataset**. One record must link a known food, complete package and gauge, pack area/headspace/fill mass, storage and transport exposure, trial/batch/source identifiers, a stated quality-failure criterion, and the observed time to failure. It must record whether failure was actually observed. If the package is still acceptable when observation ends, that observation is *right-censored*; the last observed day is not its failure day.
+The current material-ranking target needs a separate set of genuine,
+source-reviewed **scenario/complete-package suitability judgements**. The
+[material-suitability intake](docs/material-suitability.md) checks their
+identity and provenance fields but does not certify their scientific validity.
+The deferred shelf-life target instead requires a **trial-outcomes dataset**.
+One record must link a known food, complete package and gauge, pack
+area/headspace/fill mass, storage and transport exposure, trial/batch/source
+identifiers, a stated quality-failure criterion, and the observed time to
+failure. It must record whether failure was actually observed. If the package
+is still acceptable when observation ends, that observation is
+*right-censored*; the last observed day is not its failure day.
 
 `desired_shelf_life_days` is a requirement from the input scenario, **not** the observed shelf-life label. Generic storage-life guidance, proxy pH values, screening estimates of material permeability, and illustrative examples must not be converted into measured labels. A Cartesian join between the food and material sheets creates possible combinations, not real experimental outcomes.
 
@@ -119,7 +167,24 @@ The first validation pilots will follow the architecture's two examples: an oily
 
 ## Training and evaluation plan
 
-The model's first learned task is shelf-life prediction at Stop 7. OTR, WVTR, gas balance, and hard compatibility limits remain engineering or measured-property outputs. Stop 6 remains a versioned ranking of feasible structures; we will not replace it with an opaque food-to-material lookup.
+The current phase's first learned task is suitability ranking **within the
+hard-filtered candidate set**, provided genuine, reviewed labels become
+available. OTR, WVTR, gas balance, and hard compatibility limits remain
+engineering or measured-property checks. We will not train on Cartesian
+food/material combinations or mistake agreement with expert labels for
+experimentally proven package performance. The shelf-life training plan below
+is deferred and does not block material-selection work.
+
+For material ranking, first audit the real suitability register and review
+its sources and rights. Freeze a source-family-grouped 80/20 holdout before
+fitting a model or imputer. Compare a simple ranker with the existing
+engineering shortlist on the untouched test groups, reporting top-k agreement,
+false-suitable decisions, calibration, and food/temperature subgroup results.
+Only a model that improves the baseline within a documented validation scope
+may affect the ranking of already feasible structures. The current workbooks
+do not yet permit this training run, including in Kaggle.
+
+### Deferred shelf-life training
 
 1. **Build the physical baseline.** Estimate relevant moisture and oxygen failure paths for the dry-food pilot, and temperature-dependent respiration, gas balance, water loss, and quality paths for produce. Validate each calculation against hand-worked cases and source data.
 2. **Freeze the split before fitting.** Keep all measurements, replicates, and package comparisons from an independent trial/batch group together. Target an 80% development portion and a 20% untouched test portion; use group-separated validation or cross-validation only inside the 80% development portion. Since groups cannot be divided, accept only a documented group-level tolerance. Reserve additional unseen-food, unseen-grade, or external-source challenge tests when evidence permits. If coverage is too weak, report exploratory results rather than claiming generalization.
@@ -134,6 +199,11 @@ Every training run will record input-data hashes, trial and split IDs, feature s
 ## Backend-first branch and PR sequence
 
 Implementation began after the project owner's approval. The sequence below remains the review order; do not treat a planned branch as completed work. Each PR should include relevant tests and a reproducible command. Data fixtures must be sourced and traceable, and example outputs belong only where a working stage can produce them. Merge one reviewable change at a time.
+
+Current priority inserts source-reviewed material-suitability intake and later
+grouped ranking evaluation after candidate filtering. The shelf-life trial and
+model branches listed below are deferred; the architecture's safety gates and
+eventual output contract are unchanged.
 
 1. `feat/01-contracts` — repository tooling and CI; typed input, reference, trial, and output schemas; units and schema-only tests. Any future data fixtures must be sourced and traceable.
 2. `feat/02-ingestion` — Stops 1–2 batch loading, schema/range/cross-field checks, unit conversion, and exception report.

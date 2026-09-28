@@ -17,22 +17,34 @@ from zipfile import BadZipFile
 from packsense.candidate_transfer import (
     FinishedPackageTransferEvidence, parse_transfer_register,
 )
+from packsense.catalogue_candidates import load_candidate_catalogue
+from packsense.catalogue_leads import (
+    audit_pilot_candidate, find_supplier_application_leads,
+)
 from packsense.enrichment import enrich_scenarios
+from packsense.gas_balance import FinishedPackageGasObservation, parse_gas_observations
+from packsense.grade_reference import compare_grade_barriers
 from packsense.ingestion import InputSchemaError, ScenarioAudit, audit_scenarios
 from packsense.masters import (
     FoodMasterEntry, MasterAudit, MaterialMasterEntry, load_food_references,
     load_material_grades,
 )
 from packsense.produce_route import RouteEvidence, parse_route_register
+from packsense.produce_audit import (
+    PRODUCE_AUDIT_VERSION, PRODUCE_REVIEW_BINDING_VERSION,
+    bind_reviewed_produce_structures, build_produce_audit,
+)
 from packsense.recommendation import screen_package_candidates
 from packsense.recommendation_output import summarize_batch, write_summary_csv
 from packsense.requirements import (
     ProtectionAssessment, _parse_protection_assessments, derive_requirement_card,
 )
+from packsense.respiration import KineticEvidence, parse_kinetics_register
 from packsense.structure_review import (
     StructureReviewAudit, audit_structure_reviews, parse_structure_review_register,
 )
 from packsense.structures import audit_structure_catalogue
+from packsense.water_balance import FinishedPackageWaterObservation, parse_water_observations
 
 
 BATCH_VERSION = "basic-recommendation-batch-v1"
@@ -50,6 +62,17 @@ def build_batch_recommendations(
     structure_review: StructureReviewAudit | None = None,
     transfer_evidence: tuple[FinishedPackageTransferEvidence, ...] = (),
     transfer_register_sha256: str | None = None,
+    include_grade_reference_comparison: bool = False,
+    include_produce_diagnostics: bool = False,
+    kinetics: tuple[KineticEvidence, ...] = (),
+    kinetics_register_sha256: str | None = None,
+    gas_observations: tuple[FinishedPackageGasObservation, ...] = (),
+    gas_observation_register_sha256: str | None = None,
+    water_observations: tuple[FinishedPackageWaterObservation, ...] = (),
+    water_observation_register_sha256: str | None = None,
+    public_candidates: dict[str, Any] | None = None,
+    public_candidate_catalogue_sha256: str | None = None,
+    pilot_candidate_id: str | None = None,
 ) -> dict[str, Any]:
     """Return one auditable exception or recommendation result per input row."""
     if not scenarios.rows:
@@ -62,8 +85,43 @@ def build_batch_recommendations(
         raise ValueError("food assessments require a register hash")
     if transfer_evidence and (transfer_register_sha256 is None or structure_review is None):
         raise ValueError("package transfer evidence requires a register hash and structure review")
+    if type(include_grade_reference_comparison) is not bool:
+        raise ValueError("include_grade_reference_comparison must be boolean")
+    if type(include_produce_diagnostics) is not bool:
+        raise ValueError("include_produce_diagnostics must be boolean")
+    produce_sources = (
+        (kinetics, kinetics_register_sha256),
+        (gas_observations, gas_observation_register_sha256),
+        (water_observations, water_observation_register_sha256),
+    )
+    if any(entries and source_hash is None for entries, source_hash in produce_sources):
+        raise ValueError("produce evidence requires a source register hash")
+    if not include_produce_diagnostics and any(
+        entries or source_hash is not None for entries, source_hash in produce_sources
+    ):
+        raise ValueError("produce evidence requires include_produce_diagnostics")
+    if (public_candidates is None) != (public_candidate_catalogue_sha256 is None):
+        raise ValueError("public candidate catalogue and hash must be supplied together")
+    if pilot_candidate_id is not None:
+        if not isinstance(pilot_candidate_id, str) or not pilot_candidate_id.strip():
+            raise ValueError("pilot candidate ID must be non-empty text")
+        if public_candidates is None:
+            raise ValueError("pilot candidate requires a public candidate catalogue")
+        if pilot_candidate_id not in {
+            item["candidate_id"] for item in public_candidates["candidates"]
+        }:
+            raise ValueError(f"unknown public candidate_id: {pilot_candidate_id}")
 
     enriched = enrich_scenarios(scenarios, foods, routes, route_register_sha256)
+    produce_rows = (
+        build_produce_audit(enriched, kinetics, gas_observations, water_observations)
+        if include_produce_diagnostics else ()
+    )
+    if include_produce_diagnostics:
+        produce_rows = bind_reviewed_produce_structures(
+            enriched, produce_rows, structure_review, materials.source_sha256,
+            gas_observations, water_observations,
+        )
     assessments_by_food: dict[str, list[ProtectionAssessment]] = defaultdict(list)
     for item in assessments:
         assessments_by_food[item.food_reference_id].append(item)
@@ -75,13 +133,14 @@ def build_batch_recommendations(
     reason_counts: Counter[str] = Counter()
     requirement_gap_counts: Counter[str] = Counter()
     input_issue_counts: Counter[tuple[str, str]] = Counter()
-    for row in enriched.rows:
+    for index, row in enumerate(enriched.rows):
         if row.enriched is None:
             input_issue_counts.update((issue.field, issue.code) for issue in row.issues)
-            rows.append({
+            result_row = {
                 "row_number": row.row_number,
                 "record_id": row.record_id,
                 "food_reference_row": None,
+                "scenario": None,
                 "status": "exception",
                 "issues": [
                     {"field": issue.field, "code": issue.code, "message": issue.message}
@@ -89,7 +148,16 @@ def build_batch_recommendations(
                 ],
                 "requirement_card": None,
                 "recommendation": None,
-            })
+            }
+            if include_grade_reference_comparison:
+                result_row["grade_reference_comparison"] = None
+            if include_produce_diagnostics:
+                result_row["produce_local_diagnostics"] = produce_rows[index]
+            if public_candidates is not None:
+                result_row["supplier_application_lookup"] = None
+            if pilot_candidate_id is not None:
+                result_row["pilot_candidate_audit"] = None
+            rows.append(result_row)
             continue
 
         card = derive_requirement_card(
@@ -101,20 +169,54 @@ def build_batch_recommendations(
             card, row.enriched.scenario.commodity_type, structure_review,
             transfers_by_record.get(card.record_id, ()),
             current_material_master_sha256=materials.source_sha256,
+            scenario_source_sha256=scenarios.source_sha256,
         )
         reason_counts.update(recommendation.reason_codes)
-        rows.append({
+        result_row = {
             "row_number": row.row_number,
             "record_id": row.record_id,
             "food_reference_row": row.enriched.food_reference_row,
+            "scenario": {
+                "commodity_type": row.enriched.scenario.commodity_type,
+                "moisture_content_pct": row.enriched.scenario.moisture_content_pct,
+                "oil_fat_content_pct": row.enriched.scenario.oil_fat_content_pct,
+                "pH": row.enriched.scenario.pH,
+                "net_pack_quantity": row.enriched.scenario.net_pack_quantity,
+                "net_pack_quantity_unit": row.enriched.scenario.net_pack_quantity_unit,
+                "storage_type": row.enriched.scenario.storage_type.value,
+                "transport_mode": row.enriched.scenario.transport_mode,
+                "transport_handling_severity": (
+                    row.enriched.scenario.transport_handling_severity.value
+                ),
+                "respiration_rate": row.enriched.scenario.respiration_rate,
+                "respiration_rate_unit": row.enriched.scenario.respiration_rate_unit,
+                "respiration_reference_temperature_c": (
+                    row.enriched.scenario.respiration_reference_temperature_c
+                ),
+            },
             "status": recommendation.status.value,
             "issues": [],
             "requirement_card": card.report(),
             "recommendation": recommendation.report(),
-        })
+        }
+        if include_grade_reference_comparison:
+            result_row["grade_reference_comparison"] = compare_grade_barriers(
+                card, materials,
+            )
+        if include_produce_diagnostics:
+            result_row["produce_local_diagnostics"] = produce_rows[index]
+        if public_candidates is not None:
+            result_row["supplier_application_lookup"] = find_supplier_application_leads(
+                row.enriched.scenario, public_candidates,
+            )
+        if pilot_candidate_id is not None:
+            result_row["pilot_candidate_audit"] = audit_pilot_candidate(
+                row.enriched.scenario, public_candidates, pilot_candidate_id,
+            )
+        rows.append(result_row)
 
     status_counts = Counter(row["status"] for row in rows)
-    return {
+    report = {
         "batch_version": BATCH_VERSION,
         "scenario_source_path": scenarios.source_path,
         "scenario_sha256": scenarios.source_sha256,
@@ -167,6 +269,61 @@ def build_batch_recommendations(
         "shelf_life_predicted": False,
         "rows": rows,
     }
+    if include_grade_reference_comparison:
+        report["grade_reference_comparison_rows"] = sum(
+            row["grade_reference_comparison"] is not None for row in rows
+        )
+        report["grade_reference_frontier_rows"] = sum(
+            row["grade_reference_comparison"] is not None
+            and row["grade_reference_comparison"]["status"] == "reference_comparison"
+            for row in rows
+        )
+    if include_produce_diagnostics:
+        report["produce_local_audit_version"] = PRODUCE_AUDIT_VERSION
+        report["produce_review_binding_version"] = PRODUCE_REVIEW_BINDING_VERSION
+        report["kinetics_register_sha256"] = kinetics_register_sha256
+        report["gas_observation_register_sha256"] = gas_observation_register_sha256
+        report["water_observation_register_sha256"] = water_observation_register_sha256
+        report["produce_local_diagnostic_rows"] = len(produce_rows)
+        report["produce_local_unresolved_rows"] = sum(
+            row["status"] not in (
+                "not_applicable", "local_checks_only", "local_checks_with_warnings",
+            ) for row in produce_rows
+        )
+        report["produce_local_warning_rows"] = sum(
+            row["status"] == "local_checks_with_warnings" for row in produce_rows
+        )
+        report["produce_observed_initial_gas_limit_violation_rows"] = sum(
+            row["observed_initial_gas_limit_violation"] for row in produce_rows
+        )
+        report["produce_review_bound_structure_count"] = sum(
+            row["review_bound_structure_count"] for row in produce_rows
+        )
+        report["produce_review_unresolved_structure_count"] = sum(
+            len(row["structures"]) - row["review_bound_structure_count"]
+            for row in produce_rows
+        )
+        report["produce_diagnostic_structure_review_joined"] = (
+            report["produce_review_bound_structure_count"] > 0
+            and all(row["review_binding_status"] in ("joined", "not_applicable")
+                    for row in produce_rows)
+        )
+        report["produce_safety_certified"] = False
+    if public_candidates is not None:
+        report["public_candidate_catalogue_sha256"] = public_candidate_catalogue_sha256
+        report["supplier_application_lookup_rows"] = sum(
+            row.get("supplier_application_lookup") is not None for row in rows
+        )
+        report["supplier_application_lead_count"] = sum(
+            len(row["supplier_application_lookup"]["leads"])
+            for row in rows if row.get("supplier_application_lookup") is not None
+        )
+    if pilot_candidate_id is not None:
+        report["pilot_candidate_id"] = pilot_candidate_id
+        report["pilot_candidate_audit_rows"] = sum(
+            row["pilot_candidate_audit"] is not None for row in rows
+        )
+    return report
 
 
 def main() -> int:
@@ -184,6 +341,19 @@ def main() -> int:
     parser.add_argument("--structures", type=Path)
     parser.add_argument("--structure-reviews", type=Path)
     parser.add_argument("--transfers", type=Path)
+    parser.add_argument("--produce-diagnostics", action="store_true",
+                        help="opt-in local produce gas/water audit; never MAP approval")
+    parser.add_argument("--kinetics-register", type=Path)
+    parser.add_argument("--gas-observations", type=Path)
+    parser.add_argument("--water-observations", type=Path)
+    parser.add_argument(
+        "--compare-grade-references", action="store_true",
+        help="opt-in lab-condition film-grade comparison; never package suitability",
+    )
+    parser.add_argument("--public-candidates", type=Path,
+                        help="source-backed supplier application leads; never approved packages")
+    parser.add_argument("--pilot-candidate-id",
+                        help="audit one public candidate against each scenario; never approve it")
     parser.add_argument("--report", type=Path, required=True, help="new JSON output path")
     parser.add_argument("--summary-csv", type=Path, help="new one-row-per-scenario CSV path")
     args = parser.parse_args()
@@ -191,6 +361,14 @@ def main() -> int:
         parser.error("--structures and --structure-reviews must be supplied together")
     if args.transfers and not args.structures:
         parser.error("--transfers requires --structures and --structure-reviews")
+    if args.pilot_candidate_id is not None and not args.public_candidates:
+        parser.error("--pilot-candidate-id requires --public-candidates")
+    if args.produce_diagnostics and not args.route_register:
+        parser.error("--produce-diagnostics requires --route-register")
+    if not args.produce_diagnostics and any((
+        args.kinetics_register, args.gas_observations, args.water_observations,
+    )):
+        parser.error("produce evidence files require --produce-diagnostics")
     if args.summary_csv is not None:
         if args.summary_csv.resolve() == args.report.resolve():
             parser.error("--summary-csv and --report must be different paths")
@@ -231,12 +409,33 @@ def main() -> int:
         transfer_hash = (
             hashlib.sha256(transfer_raw).hexdigest() if transfer_raw is not None else None
         )
+        kinetics_raw = args.kinetics_register.read_bytes() if args.kinetics_register else None
+        kinetics = parse_kinetics_register(kinetics_raw) if kinetics_raw is not None else ()
+        kinetics_hash = hashlib.sha256(kinetics_raw).hexdigest() if kinetics_raw is not None else None
+        gas_raw = args.gas_observations.read_bytes() if args.gas_observations else None
+        gas = parse_gas_observations(gas_raw) if gas_raw is not None else ()
+        gas_hash = hashlib.sha256(gas_raw).hexdigest() if gas_raw is not None else None
+        water_raw = args.water_observations.read_bytes() if args.water_observations else None
+        water = parse_water_observations(water_raw) if water_raw is not None else ()
+        water_hash = hashlib.sha256(water_raw).hexdigest() if water_raw is not None else None
+        public_candidates, public_candidate_hash = (
+            load_candidate_catalogue(args.public_candidates)
+            if args.public_candidates is not None else (None, None)
+        )
         report = build_batch_recommendations(
             scenarios, foods, materials,
             routes=routes, route_register_sha256=route_hash,
             assessments=assessments, assessment_register_sha256=assessment_hash,
             structure_review=structure_review,
             transfer_evidence=transfers, transfer_register_sha256=transfer_hash,
+            include_grade_reference_comparison=args.compare_grade_references,
+            include_produce_diagnostics=args.produce_diagnostics,
+            kinetics=kinetics, kinetics_register_sha256=kinetics_hash,
+            gas_observations=gas, gas_observation_register_sha256=gas_hash,
+            water_observations=water, water_observation_register_sha256=water_hash,
+            public_candidates=public_candidates,
+            public_candidate_catalogue_sha256=public_candidate_hash,
+            pilot_candidate_id=args.pilot_candidate_id,
         )
         if args.summary_csv is not None:
             summarize_batch(report)

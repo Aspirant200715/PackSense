@@ -6,7 +6,9 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from packsense.contracts import BarrierObservation, EvidenceBasis, MaterialGrade
+from packsense.contracts import (
+    BarrierObservation, EvidenceBasis, HandlingSeverity, MaterialGrade,
+)
 from packsense.structure_review import (
     audit_structure_reviews, draft_digest, parse_structure_review_register,
 )
@@ -100,6 +102,40 @@ def _register(catalogue, reviews=None):
 
 
 class StructureReviewTests(unittest.TestCase):
+    def test_v2_review_requires_explicit_handling_scope(self):
+        catalogue = _catalogue()
+        review = _review(catalogue.entries[0])
+        base = {
+            "schema_version": 2,
+            "catalogue_sha256": catalogue.source_sha256,
+            "material_master_sha256": catalogue.material_master_sha256,
+            "catalogue_version": catalogue.catalogue_version,
+            "reviews": [{**review, "max_reviewed_handling_severity": "medium"}],
+        }
+        register = parse_structure_review_register(json.dumps(base).encode())
+        audited = audit_structure_reviews(catalogue, register)
+        self.assertEqual(audited.status, "review_attested")
+        self.assertEqual(audited.reviewed[0].max_reviewed_handling_severity,
+                         HandlingSeverity.MEDIUM)
+        self.assertEqual(audited.report()["handling_scope_declared_structures"], 1)
+        legacy = audit_structure_reviews(catalogue, _register(catalogue))
+        self.assertIsNone(legacy.reviewed[0].max_reviewed_handling_severity)
+        self.assertEqual(legacy.report()["handling_scope_declared_structures"], 0)
+        for value in (None, "HIGH", "extreme", 3):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                parse_structure_review_register(json.dumps({
+                    **base, "reviews": [{**review,
+                                         "max_reviewed_handling_severity": value}],
+                }).encode())
+        with self.assertRaises(ValueError):
+            parse_structure_review_register(json.dumps({
+                **base, "reviews": [review],
+            }).encode())
+        with self.assertRaises(ValueError):
+            parse_structure_review_register(json.dumps({
+                **base, "schema_version": 1,
+            }).encode())
+
     def test_exact_attested_draft_is_not_a_feasible_package(self):
         catalogue = _catalogue()
         result = audit_structure_reviews(catalogue, _register(catalogue))

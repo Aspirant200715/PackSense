@@ -87,6 +87,7 @@ def _reviewed(structure_id, *, scope="Dry snack", low=-5.0, high=35.0):
     return ReviewAttestedStructure(
         structure, CATALOGUE_HASH, MATERIAL_HASH, "d" * 64,
         "TEST_ONLY_REVIEW", tuple(check.review_id for check in checks), (), checks,
+        HandlingSeverity.HIGH,
     )
 
 
@@ -159,6 +160,8 @@ class BasicRecommendationTests(unittest.TestCase):
             ))), "structure_review_structure_invalid"),
             (replace(_audit(reviewed), review_register_sha256="f" * 64),
              "structure_review_version_binding_invalid"),
+            (_audit(replace(reviewed, max_reviewed_handling_severity="high")),
+             "structure_review_handling_scope_invalid"),
         )
         for audit, expected in cases:
             with self.subTest(expected=expected):
@@ -170,14 +173,14 @@ class BasicRecommendationTests(unittest.TestCase):
                 self.assertEqual(result.candidates, ())
                 self.assertIn(expected, result.reason_codes)
 
-    def test_unique_best_protection_margin_is_preferred_not_certified(self):
+    def test_unique_transfer_dominance_is_preferred_not_certified(self):
         card = _card()
         first, second = _reviewed("TEST_ONLY_A"), _reviewed("TEST_ONLY_B")
         evidence = (
-            _evidence(card, "TEST_ONLY_A", ProtectionMechanism.OXYGEN_INGRESS, 5.0),
-            _evidence(card, "TEST_ONLY_A", ProtectionMechanism.MOISTURE_GAIN, 6.0),
-            _evidence(card, "TEST_ONLY_B", ProtectionMechanism.OXYGEN_INGRESS, 8.0),
-            _evidence(card, "TEST_ONLY_B", ProtectionMechanism.MOISTURE_GAIN, 3.0),
+            _evidence(card, "TEST_ONLY_A", ProtectionMechanism.OXYGEN_INGRESS, 8.0),
+            _evidence(card, "TEST_ONLY_A", ProtectionMechanism.MOISTURE_GAIN, 9.0),
+            _evidence(card, "TEST_ONLY_B", ProtectionMechanism.OXYGEN_INGRESS, 5.0),
+            _evidence(card, "TEST_ONLY_B", ProtectionMechanism.MOISTURE_GAIN, 6.0),
         )
         evidence = (*evidence, replace(
             evidence[0], record_id="TEST_ONLY_OTHER_SCENARIO",
@@ -190,10 +193,10 @@ class BasicRecommendationTests(unittest.TestCase):
         self.assertEqual(result.status, RecommendationStatus.PRELIMINARY_SHORTLIST)
         self.assertEqual(result.preferred_structure_id, "TEST_ONLY_B")
         self.assertEqual(result.ranking_basis,
-                         "lowest_worst_case_transfer_budget_utilization")
+                         "source_limited_transfer_pareto_dominance")
         self.assertEqual(result.candidates[0].protection_rank, 2)
         self.assertEqual(result.candidates[1].protection_rank, 1)
-        self.assertEqual(result.candidates[0].worst_case_budget_utilization, 0.5)
+        self.assertEqual(result.candidates[0].worst_case_budget_utilization, 0.75)
         report = result.report()
         self.assertFalse(report["package_feasible"])
         self.assertFalse(report["shelf_life_predicted"])
@@ -222,6 +225,40 @@ class BasicRecommendationTests(unittest.TestCase):
         candidate = result.candidates[0]
         self.assertEqual(candidate.status, CandidateStatus.UNRESOLVED)
         self.assertIn("finished_package_transfer_missing", candidate.reason_codes)
+
+    def test_reviewed_handling_scope_is_required_for_shortlisting(self):
+        card = _card()
+        evidence = tuple(
+            _evidence(card, structure_id, mechanism, value)
+            for structure_id in ("TEST_ONLY_MISSING", "TEST_ONLY_LOW", "TEST_ONLY_HIGH")
+            for mechanism, value in (
+                (ProtectionMechanism.OXYGEN_INGRESS, 5.0),
+                (ProtectionMechanism.MOISTURE_GAIN, 6.0),
+            )
+        )
+        reviewed = (
+            replace(_reviewed("TEST_ONLY_MISSING"),
+                    max_reviewed_handling_severity=None),
+            replace(_reviewed("TEST_ONLY_LOW"),
+                    max_reviewed_handling_severity=HandlingSeverity.LOW),
+            _reviewed("TEST_ONLY_HIGH"),
+        )
+        result = screen_package_candidates(
+            card, "Dry snack", _audit(*reviewed), evidence,
+            current_material_master_sha256=MATERIAL_HASH,
+        )
+        self.assertEqual([item.status for item in result.candidates], [
+            CandidateStatus.UNRESOLVED, CandidateStatus.EXCLUDED,
+            CandidateStatus.ELIGIBLE_FOR_SHORTLIST,
+        ])
+        self.assertEqual(result.candidates[0].reason_codes,
+                         ("mechanical_handling_scope_missing",))
+        self.assertEqual(result.candidates[1].reason_codes,
+                         ("mechanical_handling_out_of_scope",))
+        self.assertEqual(result.preferred_structure_id, "TEST_ONLY_HIGH")
+        self.assertEqual(result.report()["candidates"][2]["structure_review"][
+            "max_reviewed_handling_severity"], "high")
+        self.assertFalse(result.report()["package_feasible"])
 
     def test_transfer_above_food_limit_excludes_package(self):
         card = _card()
@@ -290,6 +327,51 @@ class BasicRecommendationTests(unittest.TestCase):
         self.assertIsNone(result.preferred_structure_id)
         self.assertIsNone(result.ranking_basis)
         self.assertEqual([item.protection_rank for item in result.candidates], [1, 1])
+        self.assertIn("protection_tradeoff_or_tie_no_unique_preference", result.warnings)
+
+    def test_oxygen_moisture_tradeoff_does_not_force_a_preference(self):
+        card = _card()
+        evidence = (
+            _evidence(card, "TEST_ONLY_A", ProtectionMechanism.OXYGEN_INGRESS, 5.0),
+            _evidence(card, "TEST_ONLY_A", ProtectionMechanism.MOISTURE_GAIN, 9.0),
+            _evidence(card, "TEST_ONLY_B", ProtectionMechanism.OXYGEN_INGRESS, 8.0),
+            _evidence(card, "TEST_ONLY_B", ProtectionMechanism.MOISTURE_GAIN, 3.0),
+            _evidence(card, "TEST_ONLY_C", ProtectionMechanism.OXYGEN_INGRESS, 12.0),
+            _evidence(card, "TEST_ONLY_C", ProtectionMechanism.MOISTURE_GAIN, 10.0),
+        )
+        result = screen_package_candidates(
+            card, "Dry snack", _audit(*(
+                _reviewed(structure_id) for structure_id in
+                ("TEST_ONLY_A", "TEST_ONLY_B", "TEST_ONLY_C")
+            )), evidence, current_material_master_sha256=MATERIAL_HASH,
+        )
+        self.assertEqual(result.status, RecommendationStatus.PRELIMINARY_SHORTLIST)
+        self.assertIsNone(result.preferred_structure_id)
+        self.assertEqual([item.protection_rank for item in result.candidates], [1, 1, 2])
+        self.assertIn("protection_tradeoff_or_tie_no_unique_preference", result.warnings)
+
+    def test_source_assessed_no_transfer_limits_has_no_numeric_preference(self):
+        card = _card()
+        card = replace(
+            card,
+            mechanism_status=tuple(
+                (mechanism, "source_assessed_not_required")
+                for mechanism in ProtectionMechanism
+            ),
+            transfer_budgets=(),
+            applied_assessments=tuple(
+                replace(card.applied_assessments[0], mechanism=mechanism)
+                for mechanism in ProtectionMechanism
+            ),
+        )
+        result = screen_package_candidates(
+            card, "Dry snack", _audit(_reviewed("TEST_ONLY_A")), (),
+            current_material_master_sha256=MATERIAL_HASH,
+        )
+        self.assertEqual(result.status, RecommendationStatus.PRELIMINARY_SHORTLIST)
+        self.assertIsNone(result.preferred_structure_id)
+        self.assertIsNone(result.candidates[0].protection_rank)
+        self.assertIn("protection_comparison_unavailable", result.warnings)
 
 
 if __name__ == "__main__":

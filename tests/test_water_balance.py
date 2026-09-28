@@ -125,6 +125,7 @@ class WaterBalanceTests(unittest.TestCase):
 
     def test_json_register_rejects_duplicates(self) -> None:
         entry = asdict(_water())
+        del entry["structure_catalogue_sha256"]  # legacy v1 has no version binding
         self.assertEqual(len(parse_water_observations(json.dumps({
             "schema_version": 1, "observations": [entry],
         }).encode())), 1)
@@ -132,6 +133,19 @@ class WaterBalanceTests(unittest.TestCase):
             parse_water_observations(json.dumps({
                 "schema_version": 1, "observations": [entry, entry],
             }).encode())
+
+    def test_v2_register_requires_a_valid_catalogue_hash(self) -> None:
+        entry = asdict(_water(structure_catalogue_sha256="a" * 64))
+        accepted = parse_water_observations(json.dumps({
+            "schema_version": 2, "observations": [entry],
+        }).encode())
+        self.assertEqual(accepted[0].structure_catalogue_sha256, "a" * 64)
+        for invalid in (None, "not-a-hash"):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                parse_water_observations(json.dumps({
+                    "schema_version": 2,
+                    "observations": [{**entry, "structure_catalogue_sha256": invalid}],
+                }).encode())
 
 
 if __name__ == "__main__":

@@ -13,6 +13,8 @@ loss, and its food route is confirmed non-respiring. It also requires an
 approved structure-review audit tied to the current material master. Each
 candidate must have an exact reviewed commodity scope, service-temperature
 coverage across the storage, transit, and maximum-excursion envelope, and
+an explicit reviewed mechanical handling scope covering the scenario severity.
+Legacy reviews without that scope remain unresolved. The candidate also needs
 applicable whole-package transfer evidence for every source-limited mechanism.
 That evidence must match the exact scenario fingerprint, package, quantity,
 target period, temperature envelope, and transport-humidity scope.
@@ -36,17 +38,23 @@ material grades into synthetic trials.
 
 ## Preliminary preference
 
-When multiple candidates pass those gates and have comparable numeric,
-source-approved transfer budgets, the function can identify a preliminary preference by the
-lowest worst-case fraction of the approved oxygen/moisture budget consumed.
-The output names this ranking basis and preserves source locators and review
-hashes. A tied shortlist, or candidates with no comparable budget, has no
-preferred structure. Eligible candidates include their protection rank and
-budget-utilization value. This is not a weighted
+When candidates pass those gates and have comparable numeric, source-approved
+transfer budgets, the function compares their budget use separately for each
+source-limited oxygen/moisture mechanism. A candidate is preferred only when
+it is the unique non-dominated choice: no rival has lower transfer on one
+mechanism without losing on another. For example, if one package admits less
+oxygen but more water than another, both stay in the shortlist without a
+forced preference. Exact ties also remain unpreferred. `protection_rank` is
+the non-dominated layer (1 is the frontier), not a weighted score; the
+worst-case budget-utilization fraction is retained only as a diagnostic.
+Where numeric budgets are unavailable or incomparable, no preference is made.
+The output preserves source locators and review hashes. This is not a weighted
 Stop 6 ranking: cost and sustainability are not in the current material master
 and are not ranked. Light sensitivity is reported as an open warning.
 
 The output always sets `package_feasible` and `shelf_life_predicted` to false.
+The handling-scope check is necessary, not proof of real-route mechanical
+performance or a finished-package certification.
 It does not calculate MAP gas composition, approve produce films, predict
 shelf life, or replace food-contact and supplier review. Respiring produce
 remains out of this first slice until its complete Stop 4 gas/water safety
@@ -85,6 +93,13 @@ py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx
 
 The reviewed registers can be supplied with `--route-register`,
 `--assessments`, `--structures`, `--structure-reviews`, and `--transfers`.
+`--public-candidates data/public_catalogue_candidates.v1.json` optionally
+adds source-linked supplier application leads to each valid scenario's JSON
+row. These leads never become eligible structures or change `not_ready` into
+a recommendation; see [public catalogue intake](public-catalogue-intake.md).
+With that catalogue, `--pilot-candidate-id EXACT_ID` adds a separate
+one-candidate evidence-gap trace to each valid row; it also cannot change the
+shortlist or declare feasibility. The selected ID must exist in the catalogue.
 The structure catalogue and its review register must be supplied together;
 transfer evidence requires both. The command never creates missing evidence
 from material-grade OTR/WVTR or from the requested shelf life.
@@ -94,6 +109,12 @@ unmatched scenarios, `not_ready` with specific evidence gaps, or
 `preliminary_shortlist` with the screened structures. It includes source
 hashes, source-row numbers, requirement cards, review and transfer evidence,
 summary counts, and explicit false package-feasibility and shelf-life flags.
+For validated rows, it also includes a compact `scenario` summary of the
+actual commodity and input properties for the frontend; exception rows have
+`scenario: null`. This summary does not fill missing facts or create labels.
+Each recommendation also carries the source scenario-file SHA-256, separate
+from its row-level scenario fingerprint, so later offline comparisons can
+reject a stale batch version.
 An existing output path is never overwritten. Exit code 1 means the report
 contains input exception rows; code 2 means input or output creation failed.
 `not_ready` is an expected report result and does not itself make the command
@@ -110,3 +131,48 @@ report remains the detailed record for source locators, individual transfer
 checks, layer order, and all candidate reasons. The CSV is a decision report,
 not a model-training dataset; external text is protected against spreadsheet
 formula interpretation when opened in Excel.
+
+## Optional local fresh-produce diagnostics
+
+The batch can attach the existing Stop-4 local gas/water audit to the same
+per-scenario JSON report. This is an evidence-gap and instantaneous-condition
+view, **not** a fresh-produce package shortlist or MAP safety result:
+
+```powershell
+py -3.11 -m packsense.recommendation_batch scenarios.csv --food-master food.xlsx --material-master materials.xlsx --route-register reviewed-routes.json --produce-diagnostics --kinetics-register reviewed-kinetics.json --gas-observations reviewed-gas.json --water-observations reviewed-water.json --report new-batch.json
+```
+
+Only `--route-register` is mandatory with `--produce-diagnostics`; absent
+kinetics or observations remain explicit unresolved states. The detailed row
+adds `produce_local_diagnostics`, keyed to the same exact scenario row and
+record ID. The top-level report retains hashes of each supplied register,
+unresolved and warning counts, and `produce_safety_certified: false`. The
+optional CSV and ordinary `recommendation` object do not change. When a
+reviewed package catalogue is supplied, the batch now separately audits
+whether each local gas and water observation belongs to the **exact reviewed
+catalogue version**, food scope, and service-temperature range. This requires
+version-2 gas and water registers with `structure_catalogue_sha256` on every
+storage, transport, and excursion observation. Legacy version-1 observations
+remain usable as local diagnostics but cannot pass this identity join. Each
+observed structure reports `structure_review_binding.status` and explicit
+reason codes; the batch reports bound/unresolved counts. A true
+`produce_diagnostic_structure_review_joined` means internal identity and
+scope checks passed for all observed structures, **not** MAP safety or package
+approval. Missing observations, unreviewed structures, a changed catalogue,
+or out-of-scope conditions leave the binding unresolved. The ordinary
+recommendation remains `not_ready` for respiring produce, and an apparently
+clear local gas/water snapshot still cannot prove a safe trajectory or the
+requested shelf life.
+
+An initial O₂/CO₂ limit breach measured in an observation is explicitly
+reported as `observed_initial_gas_limit_violation`, with affected phases and
+a batch count. This flag describes that observed starting state, not a
+universal judgement about the package or another MAP gas fill. A successful
+catalogue identity join cannot erase the breach or turn the package into an
+approved recommendation.
+
+For fresh produce, respiration and gas transfer change with temperature,
+food mass and package surface area; a local balance cannot be extrapolated
+across distribution without validated dynamics. See the
+[USDA-ARS MAP review](https://www.ars.usda.gov/research/publications/publication/?seqNo115=222384)
+and the [gas](gas-balance.md) and [water](water-balance.md) audit contracts.

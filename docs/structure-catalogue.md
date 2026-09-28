@@ -1,5 +1,9 @@
 # Package structure catalogue intake
 
+Public supplier-claim discovery is tracked separately in the
+[candidate catalogue](public-catalogue-intake.md). Its records are not accepted
+`StructureDraft` objects and do not bypass the exact grade/gauge join below.
+
 Stop 2 needs a separate catalogue of actual package constructions. A row in
 the material workbook describes one grade or film observation; it does not
 prove that a particular layer stack can be made, sealed, used in food contact,

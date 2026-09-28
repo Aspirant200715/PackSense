@@ -6,6 +6,7 @@ proof of product mass loss, condensation amount, or package safety.
 """
 
 import json
+import re
 from dataclasses import dataclass
 from math import isclose, isfinite
 from typing import Any
@@ -16,6 +17,7 @@ from packsense.gas_balance import GasBalanceResult, PHASES
 
 
 WATER_BALANCE_VERSION = "local-water-balance-v1"
+_HASH = re.compile(r"[0-9a-f]{64}\Z")
 
 
 def _finite(value: object) -> bool:
@@ -52,6 +54,7 @@ class FinishedPackageWaterObservation:
     source_locator: str
     approval_id: str
     evidence_basis: EvidenceBasis
+    structure_catalogue_sha256: str | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -62,6 +65,11 @@ class FinishedPackageWaterObservation:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be non-empty text")
+        if self.structure_catalogue_sha256 is not None and (
+            not isinstance(self.structure_catalogue_sha256, str)
+            or not _HASH.fullmatch(self.structure_catalogue_sha256)
+        ):
+            raise ValueError("structure_catalogue_sha256 must be a lowercase SHA-256")
         if self.phase not in PHASES:
             raise ValueError("phase is not a known exposure")
         if self.evidence_basis is not EvidenceBasis.MEASURED:
@@ -288,16 +296,20 @@ def parse_water_observations(raw: bytes) -> tuple[FinishedPackageWaterObservatio
     payload = json.loads(raw, object_pairs_hook=_unique_object)
     if not isinstance(payload, dict) or set(payload) != {"schema_version", "observations"}:
         raise ValueError("water register needs schema_version and observations only")
-    if type(payload["schema_version"]) is not int or payload["schema_version"] != 1:
+    if type(payload["schema_version"]) is not int or payload["schema_version"] not in (1, 2):
         raise ValueError("unsupported water-register schema")
     if not isinstance(payload["observations"], list):
         raise ValueError("observations must be an array")
     fields = set(FinishedPackageWaterObservation.__dataclass_fields__)
+    if payload["schema_version"] == 1:
+        fields.remove("structure_catalogue_sha256")
     accepted = []
     seen = set()
     for index, item in enumerate(payload["observations"], start=1):
         if not isinstance(item, dict) or set(item) != fields:
             raise ValueError(f"observation {index}: missing or unexpected fields")
+        if payload["schema_version"] == 2 and item["structure_catalogue_sha256"] is None:
+            raise ValueError(f"observation {index}: structure catalogue hash is required")
         try:
             entry = FinishedPackageWaterObservation(**{
                 **item, "evidence_basis": EvidenceBasis(item["evidence_basis"]),

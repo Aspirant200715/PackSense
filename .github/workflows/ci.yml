@@ -1,4 +1,4 @@
-name: backend checks
+name: PackSense checks
 
 on:
   push:
@@ -28,3 +28,24 @@ jobs:
         run: python -m compileall -q packsense tests
       - name: Run backend tests
         run: python -m unittest discover -s tests -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check frontend JavaScript syntax
+        run: |
+          node --check src/app.js
+          node --check src/report.js
+          node --check src/pipeline.js
+          node --check tests/browser-smoke.mjs
+      - name: Run frontend contract tests
+        run: npm test
