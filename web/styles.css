@@ -373,10 +373,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .pipeline-studio { display: flex; flex-direction: column; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel); backdrop-filter: blur(20px); box-shadow: var(--shadow); overflow: hidden; }
 .studio-rail { min-width: 0; padding: 11px 22px 16px; border-bottom: 1px solid var(--line); }
 .studio-rail-ends { display: flex; justify-content: space-between; color: var(--quiet); font: 600 9px "IBM Plex Mono", monospace; letter-spacing: .55px; }
-#pipeline-stage-list { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); margin-top: 13px; }
+#pipeline-stage-list { position: relative; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); margin-top: 13px; }
+.stage-traveler { display: none; position: absolute; z-index: 3; top: 9px; left: var(--travel-start); width: 10px; height: 10px; transform: translateX(-50%); border: 2px solid var(--panel-solid); border-radius: 2px; background: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); pointer-events: none; }
+.pipeline-studio.is-playing .stage-traveler { display: block; animation: timeline-travel 4s linear both; }
+@keyframes timeline-travel { 0% { left: var(--travel-start); opacity: 0; } 8% { opacity: 1; } 90% { left: var(--travel-end); opacity: 1; } 100% { left: var(--travel-end); opacity: 0; } }
 .studio-stage { position: relative; min-width: 0; min-height: 49px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 4px; border: 0; background: transparent; color: var(--ink); text-align: center; }
 .studio-stage::before { content: ""; position: absolute; left: calc(50% + 15px); right: calc(-50% + 15px); top: 13px; height: 2px; background: var(--line-strong); transition: background-color .25s ease; }
-.studio-stage:last-child::before { display: none; }
+.studio-stage:last-of-type::before { display: none; }
 .studio-stage.is-past::before { background: var(--accent); }
 .stage-index { position: relative; z-index: 1; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--panel-solid); color: var(--quiet); font: 600 10px "IBM Plex Mono", monospace; transition: background-color .2s ease, border-color .2s ease, color .2s ease; }
 .studio-stage:hover .stage-index { border-color: var(--accent); color: var(--accent); }
@@ -608,6 +611,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .stage-text { display: none; }
   .stage-index { width: 25px; height: 25px; font-size: 9px; }
   .studio-stage::before { left: calc(50% + 13px); right: calc(-50% + 13px); top: 12px; }
+  .stage-traveler { top: 7px; }
   .studio-focus { min-height: 0; padding: 14px 16px 15px; }
   .studio-title-row { margin-top: 10px; }
   .studio-title-row h2 { font-size: 24px; }
@@ -625,4 +629,5 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .stage-traveler { display: none !important; }
 }

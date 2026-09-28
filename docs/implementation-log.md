@@ -1039,8 +1039,21 @@ PackSense must continue to withhold a real package or shelf-life claim.
   labels, model output or recommendation gate changed.
 - Local verification: 237 Python tests, 17 Node tests and headless browser
   smoke at 320, 390 and 1440 px passed, including the single timeline,
-  setup visibility, real
-  trace playback and no horizontal overflow. PR CI is pending this update.
+  setup visibility, real trace playback and no horizontal overflow. PR CI
+  passed on the pushed `ad212d2` head.
+
+### 2026-09-28 — animate the full pipeline route
+
+- Continued on PR #37. A small square now travels from the current timeline
+  stop to the next stop during playback, synchronized with the four-second
+  stage cadence. It disappears on Pause and is disabled for reduced-motion
+  users. The receive/check/output animation inside the current scene remains.
+- The marker is purely navigational: it does not imply that a package passed
+  a gate, and it does not generate any scenario or model output. No dataset,
+  evidence gate or backend behavior changed.
+- Headless browser smoke at 320, 390 and 1440 px verifies actual forward
+  movement, pause behavior and no horizontal overflow. CI is checked on the
+  pushed head separately.
 
 ### Template for the next entry
 

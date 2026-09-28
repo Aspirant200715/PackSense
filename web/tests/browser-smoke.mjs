@@ -138,6 +138,22 @@ try {
   assert.equal(await evaluate("document.querySelector('#studio-intake-action').hidden"), false, "intake explains where to add real data");
   assert.equal(await evaluate("getComputedStyle(document.querySelector('#backend-indicator')).display !== 'none'"), true, "single connection indicator is visible");
   assert.equal(await evaluate("document.querySelector('#pipeline-play').getAttribute('aria-pressed')"), "true", "guided tour starts from Explore");
+  await evaluate("document.querySelector('#pipeline-play').click()");
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.stage-traveler')).display"), "none", "timeline marker stops when paused");
+  await evaluate("document.querySelector('#pipeline-play').click()");
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.stage-traveler')).animationName"), "timeline-travel", "timeline marker follows playback");
+  const markerBefore = await evaluate("document.querySelector('.stage-traveler').getBoundingClientRect().left");
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  const markerAfter = await evaluate("document.querySelector('.stage-traveler').getBoundingClientRect().left");
+  const markerDetails = await evaluate("(() => { const marker = document.querySelector('.stage-traveler'); const style = getComputedStyle(marker); return {inline: marker.getAttribute('style'), start: style.getPropertyValue('--travel-start'), end: style.getPropertyValue('--travel-end'), animation: style.animationName, display: style.display, left: style.left, width: marker.parentElement.clientWidth, currentTime: marker.getAnimations()[0]?.currentTime}; })()");
+  assert.ok(markerAfter > markerBefore + 2, `timeline marker did not move forward: ${markerBefore} -> ${markerAfter}; ${JSON.stringify(markerDetails)}`);
+  await command("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.stage-traveler')).display"), "none", "reduced motion hides the moving marker");
+  await command("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
+  if (process.env.PACKSENSE_MOVING_SCREENSHOT) {
+    const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+    await writeFile(process.env.PACKSENSE_MOVING_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
+  }
   let advanced = false;
   for (let tries = 0; tries < 80; tries += 1) {
     if (await evaluate("document.querySelector('#guide-stage-caption').textContent !== 'Step 1 of 8'")) { advanced = true; break; }
@@ -202,6 +218,7 @@ try {
   assert.equal(await evaluate("document.querySelector('#guide-play-label').textContent"), "Play report trace");
   await evaluate("document.querySelector('#pipeline-play').click()");
   assert.equal(await evaluate("document.querySelector('#pipeline-play').getAttribute('aria-pressed')"), "true");
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.stage-traveler')).animationName"), "timeline-travel", "real report playback uses the same moving route marker");
   let traceAdvanced = false;
   for (let tries = 0; tries < 80; tries += 1) {
     if (await evaluate("document.querySelector('#guide-stage-caption').textContent !== 'Step 1 of 8'")) { traceAdvanced = true; break; }

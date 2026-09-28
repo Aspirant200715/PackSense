@@ -60,9 +60,11 @@ The supplied food and material masters are reference data; they are **not** a
 scenario batch. No scenario file is bundled or inferred from them.
 
 The Pipeline page plays a conceptual input-to-output tour or a trace of a
-loaded report. A single eight-step timeline shows the current check; its
-scene explains the input, PackSense check and output. Pause or select any
-step to inspect it. The conceptual tour does not generate a package result.
+loaded report. A square moves between stops on a single eight-step timeline
+while playback runs; its scene explains the input, PackSense check and
+output. Pause or select any step to inspect it. Reduced-motion settings
+disable the moving marker. The conceptual tour does not generate a package
+result.
 
 The Pipeline page has a compact **How to run a real scenario batch** section.
 It links to `/api/scenario-template`, a blank CSV header generated directly

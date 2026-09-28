@@ -343,12 +343,16 @@ function renderPipeline() {
     ? actualPipeline(state.report.rows[state.pipelineRowIndex])
     : null;
   const stageList = $("#pipeline-stage-list");
+  const stopPosition = (index) => `${((index + 0.5) / STAGES.length) * 100}%`;
+  // The page CSP blocks inline style attributes; CSSOM positions the playback marker.
+  stageList.style.setProperty("--travel-start", stopPosition(state.pipelineStep));
+  stageList.style.setProperty("--travel-end", stopPosition(Math.min(state.pipelineStep + 1, STAGES.length - 1)));
   stageList.innerHTML = STAGES.map((stage, index) => {
     const active = index === state.pipelineStep;
     const status = actualStages ? actualStages[index].state : actualMode ? "awaiting_report" : active ? "in_focus" : index < state.pipelineStep ? "viewed" : "upcoming";
     const statusText = actualMode ? (hasReport ? readableCode(status) : "Awaiting report") : active ? "In focus" : index < state.pipelineStep ? "Explored" : "Up next";
     return `<button type="button" class="studio-stage stage-status-${escapeHtml(status)}${active ? " is-active" : ""}${index < state.pipelineStep ? " is-past" : ""}" data-pipeline-index="${index}" ${active ? 'aria-current="step"' : ""} aria-label="Step ${index + 1}: ${escapeHtml(stage.title)}. ${escapeHtml(statusText)}" title="${escapeHtml(stage.title)}"><span class="stage-index">${stage.number}</span><span class="stage-text"><strong>${escapeHtml(stage.short)}</strong></span></button>`;
-  }).join("");
+  }).join("") + '<span class="stage-traveler" aria-hidden="true"></span>';
 
   if (actualMode && !hasReport) return;
   const stage = actualStages
