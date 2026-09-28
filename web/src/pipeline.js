@@ -9,7 +9,7 @@ export const STAGES = Object.freeze([
   { number: "04", title: "Produce branch", short: "Produce" },
   { number: "05", title: "Package screening", short: "Screen" },
   { number: "06", title: "Protection comparison", short: "Compare" },
-  { number: "07", title: "Prediction gate", short: "Predict" },
+  { number: "07", title: "Prediction gate", short: "Model gate" },
   { number: "08", title: "Decision record", short: "Output" },
 ]);
 
@@ -141,6 +141,8 @@ export function actualPipeline(row) {
   const gaps = row.requirement_gaps ?? [];
   const reasons = row.screening_reason_codes ?? [];
   const candidates = row.screened_candidates ?? [];
+  const supplierLookup = row.supplier_application_lookup;
+  const supplierLeadCount = supplierLookup?.leads.length ?? 0;
   const eligible = candidates.filter((candidate) => candidate.status === "eligible_for_shortlist");
   const excluded = candidates.filter((candidate) => candidate.status === "excluded");
   const unresolved = candidates.filter((candidate) => candidate.status === "unresolved");
@@ -157,6 +159,25 @@ export function actualPipeline(row) {
     ? `${respiration} ${scenario.respiration_rate_unit || "(unit not reported)"}${respirationTemperature ? ` at ${respirationTemperature}` : ""}`
     : "Respiration rate not reported";
   const notReached = stage("not_reached", "This step has no interpretable scenario to process.", "—", "—", "Stopped at validation");
+  const screenState = row.candidate_screening_allowed === false
+    ? "held" : candidates.length ? "screened" : "unresolved";
+  const screeningPermission = row.candidate_screening_allowed === true
+    ? "allowed" : row.candidate_screening_allowed === false ? "held" : "not reported";
+  const supplierNote = supplierLookup
+    ? `; ${supplierLeadCount} unapproved supplier lead${supplierLeadCount === 1 ? "" : "s"}`
+    : "";
+  const packageScreen = stage(
+    screenState,
+    supplierLookup
+      ? "Supplier applications are research leads; only reviewed complete structures enter the package screen."
+      : "The structure screen preserves eligible, excluded and unresolved outcomes.",
+    `${candidates.length} reviewed candidate${candidates.length === 1 ? "" : "s"} shown; screening ${screeningPermission}`,
+    supplierLookup
+      ? `${supplierLeadCount} source-listed application${supplierLeadCount === 1 ? "" : "s"}; food scope, service range and exact transfer evidence`
+      : "Food scope, service range and exact transfer evidence",
+    `${eligible.length} eligible · ${excluded.length} excluded · ${unresolved.length} unresolved${supplierNote}`,
+    reasons,
+  );
 
   return [
     stage("recorded", "The source row is present in the audited batch.", exception ? `Source row ${row.source_row_number}` : `${context[0].value} · ${context[1].value}`, exception ? "Food and condition fields await validation" : `Source row ${row.source_row_number}; ${context[3].value}`, row.record_id || "Record ID not available"),
@@ -175,7 +196,7 @@ export function actualPipeline(row) {
           : stage("unresolved", "The produce route is unclassified or not carried by this report.", `${row.produce_route_status || "Route not reported"}; ${respirationInput}`, "Reviewed route classification", "Route remains unresolved"),
     exception
       ? notReached
-      : stage(row.candidate_screening_allowed === false ? "held" : candidates.length ? "screened" : "unresolved", "The structure screen preserves eligible, excluded and unresolved outcomes.", `${candidates.length} reviewed candidate${candidates.length === 1 ? "" : "s"} shown; screening ${row.candidate_screening_allowed === true ? "allowed" : row.candidate_screening_allowed === false ? "held" : "not reported"}`, "Food scope, service range and exact transfer evidence", `${eligible.length} eligible · ${excluded.length} excluded · ${unresolved.length} unresolved`, reasons),
+      : packageScreen,
     exception
       ? notReached
       : stage(eligible.length ? "preliminary" : "unavailable", "Only comparable, eligible structures can receive a protection-only preference.", `${eligible.length} eligible structure${eligible.length === 1 ? "" : "s"}`, "Non-dominated protection comparison", row.preliminary_preferred_structure_id || "No unique preliminary preference"),

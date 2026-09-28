@@ -1,5 +1,7 @@
 """TEST_ONLY local HTTP tests; they do not create packaging training data."""
 
+import csv
+import io
 import json
 import os
 import tempfile
@@ -12,7 +14,14 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from packsense.web_server import AppSources, PackSenseHTTPServer, _arguments, run_configured_batch
+from packsense.units import (
+    SCENARIO_REFERENCE_COLUMNS, SCENARIO_REQUIRED_COLUMNS,
+    SCENARIO_RESPIRATION_COLUMNS,
+)
+from packsense.web_server import (
+    AppSources, PackSenseHTTPServer, _arguments, run_configured_batch,
+    scenario_template_csv,
+)
 from tests.test_frontend_contract import _report
 
 
@@ -36,6 +45,22 @@ def request_json(url, *, method="GET", headers=None):
 
 
 class WebServerTests(unittest.TestCase):
+    def test_template_download_uses_contract_headers_and_no_fake_rows(self):
+        expected = (*SCENARIO_REQUIRED_COLUMNS, *SCENARIO_RESPIRATION_COLUMNS,
+                    *SCENARIO_REFERENCE_COLUMNS)
+        self.assertEqual([list(expected)], list(csv.reader(
+            io.StringIO(scenario_template_csv().decode("utf-8"))
+        )))
+        with running(AppSources()) as base:
+            with urlopen(f"{base}/api/scenario-template", timeout=5) as response:
+                self.assertEqual(200, response.status)
+                self.assertEqual("text/csv; charset=utf-8",
+                                 response.headers["Content-Type"])
+                self.assertIn("attachment;", response.headers["Content-Disposition"])
+                self.assertEqual([list(expected)], list(csv.reader(
+                    io.StringIO(response.read().decode("utf-8"))
+                )))
+
     def test_relative_source_paths_are_frozen_before_subprocess_cwd_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -60,12 +85,40 @@ class WebServerTests(unittest.TestCase):
             _, status = request_json(f"{base}/api/status")
             self.assertEqual("unconfigured", status["mode"])
             self.assertFalse(status["can_run"])
+            self.assertFalse(status["has_public_applications"])
             self.assertFalse(status["model_deployed"])
             with self.assertRaises(HTTPError) as error:
                 request_json(f"{base}/api/run", method="POST")
             self.assertEqual(409, error.exception.code)
+            with self.assertRaises(HTTPError) as error:
+                request_json(f"{base}/api/published-applications")
+            self.assertEqual(404, error.exception.code)
             with urlopen(base, timeout=5) as response:
                 self.assertIn(b"PackSense", response.read())
+
+    def test_real_published_applications_are_visible_without_a_scenario(self):
+        catalogue = Path(__file__).resolve().parents[1] / "data" / "public_catalogue_candidates.v1.json"
+        argv = ["packsense.web_server", "--public-candidates", str(catalogue)]
+        with patch("sys.argv", argv):
+            _, sources = _arguments()
+        self.assertEqual("published_catalogue", sources.mode)
+        self.assertEqual(catalogue.resolve(), sources.public_candidates)
+        with running(sources) as base:
+            _, status = request_json(f"{base}/api/status")
+            self.assertTrue(status["has_public_applications"])
+            self.assertFalse(status["can_run"])
+            self.assertFalse(status["model_deployed"])
+            _, payload = request_json(f"{base}/api/published-applications")
+            self.assertEqual("published-applications-v1", payload["contract_version"])
+            self.assertFalse(payload["model_prediction_available"])
+            self.assertFalse(payload["package_approval_available"])
+            broccoli = [item for item in payload["applications"] if item["food"] == "broccoli"]
+            self.assertEqual(1, len(broccoli))
+            self.assertEqual("VY7K9", broccoli[0]["product_code"])
+            self.assertEqual(400, broccoli[0]["quantity"])
+            self.assertTrue(broccoli[0]["source_url"].startswith("https://"))
+            self.assertTrue(all(item["pack_format"] != "box inner liner"
+                                for item in payload["applications"]))
 
     def test_existing_backend_batch_is_projected_on_request(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -88,6 +141,7 @@ class WebServerTests(unittest.TestCase):
                 scenarios=root / "TEST_ONLY_scenarios.csv",
                 food_master=root / "TEST_ONLY_food.xlsx",
                 material_master=root / "TEST_ONLY_material.xlsx",
+                public_candidates=root / "TEST_ONLY_public.json",
                 backend_options=("--route-register", str(root / "TEST_ONLY_routes.json")),
             )
 
@@ -95,6 +149,8 @@ class WebServerTests(unittest.TestCase):
                 self.assertEqual("packsense.recommendation_batch", command[2])
                 self.assertEqual(str(sources.scenarios), command[3])
                 self.assertIn("--route-register", command)
+                self.assertEqual(str(sources.public_candidates),
+                                 command[command.index("--public-candidates") + 1])
                 Path(command[command.index("--report") + 1]).write_text(
                     json.dumps(_report()), encoding="utf-8",
                 )

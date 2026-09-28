@@ -62,6 +62,29 @@ function report(rows = [decision()]) {
   };
 }
 
+function supplierLookup() {
+  return {
+    lookup_version: "supplier-application-lookup-v1",
+    catalogue_id: "TEST_ONLY_CATALOGUE",
+    status: "published_food_application_found",
+    approved_structure_count: 0,
+    recommended_structure_id: null,
+    model_prediction_available: false,
+    leads: [{
+      candidate_id: "TEST_ONLY_SUPPLIER_PRODUCT", product_code: "TEST_ONLY_CODE",
+      pack_format: "TEST_ONLY_BAG", supplier_application_food: "TEST_ONLY_FOOD",
+      food_name_match: "exact_name", source_id: "TEST_ONLY_SOURCE",
+      source_url: "https://example.org/product", source_locator: "TEST_ONLY_ROW",
+      source_rights_review_status: "pending", published_quantity: 100,
+      published_quantity_unit: "g", published_storage_temperature_min_c: 0,
+      published_storage_temperature_max_c: 10, published_excursion_max_c: null,
+      published_excursion_max_hours: null,
+      application_status: "published_food_quantity_temperature_match_unverified",
+      reason_codes: [], approval_blockers: ["food_package_suitability_unverified"],
+    }],
+  };
+}
+
 test("accepts a conservative backend-shaped report", () => {
   const source = report([decision("not_ready"), { ...decision("exception"), source_row_number: 3 }, { ...decision("preliminary_shortlist"), source_row_number: 4 }]);
   assert.equal(parseDecisionReport(JSON.stringify(source)).rows[0].scenario.commodity_type, "TEST_ONLY_FOOD");
@@ -119,6 +142,28 @@ test("rejects unsupported route and screening permission values", () => {
   source.rows[0].produce_route_status = "unclassified";
   source.rows[0].candidate_screening_allowed = "yes";
   assert.throws(() => validateDecisionReport(source), /invalid screening permission/);
+});
+
+test("accepts source-linked supplier research leads without releasing a material", () => {
+  const source = report();
+  source.trace.public_candidate_catalogue_sha256 = "d".repeat(64);
+  source.rows[0].supplier_application_lookup = supplierLookup();
+  assert.equal(validateDecisionReport(source).rows[0].material_prediction, null);
+  assert.equal(source.rows[0].status, "not_ready");
+});
+
+test("rejects supplier approval claims, unsafe sources and detached lookups", () => {
+  const source = report();
+  source.trace.public_candidate_catalogue_sha256 = "d".repeat(64);
+  source.rows[0].supplier_application_lookup = supplierLookup();
+  source.rows[0].supplier_application_lookup.approved_structure_count = 1;
+  assert.throws(() => validateDecisionReport(source), /cannot approve a package/);
+  source.rows[0].supplier_application_lookup.approved_structure_count = 0;
+  source.rows[0].supplier_application_lookup.leads[0].source_url = "javascript:alert(1)";
+  assert.throws(() => validateDecisionReport(source), /unsupported supplier source/);
+  source.rows[0].supplier_application_lookup.leads[0].source_url = "https://example.org/product";
+  source.trace.public_candidate_catalogue_sha256 = null;
+  assert.throws(() => validateDecisionReport(source), /no catalogue fingerprint/);
 });
 
 test("turns machine reason codes into readable labels without changing the code", () => {

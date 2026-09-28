@@ -4,7 +4,11 @@ This is the build-free MVP frontend for the existing Python decision pipeline.
 It opens on a separate introduction. **Explore PackSense** enters the workspace
 and starts the eight-stage guided tour; the four decision-path stops can also
 open a specific stage. A prominent play/pause control, progress indicator, and
-clickable connected stage track show how the process advances. With reduced
+clickable connected stage track show how the process advances. A three-phase
+map (add data → follow checks → read output) and subtle moving indicators
+make the progression visible without changing any result. The same play/pause
+control can advance through an **actual reported row** after one is loaded;
+it only plays back the report and performs no new inference. With reduced
 motion enabled, the tour waits for a manual click instead of auto-playing.
 
 The workspace has a compact empty overview with four clickable checkpoints,
@@ -39,6 +43,31 @@ To open an existing **audited batch report** automatically:
 python -m packsense.web_server --batch-report path/to/batch-report.json
 ```
 
+To inspect real manufacturer-listed package uses **without making up a
+scenario**, configure only the reviewed research catalogue:
+
+```powershell
+python -m packsense.web_server --port 4182 --public-candidates data/public_catalogue_candidates.v1.json
+```
+
+The introduction then offers **View published package uses**. The Overview
+shows the six standalone food/pack-size/temperature applications in the
+current catalogue with product codes and direct manufacturer source links.
+The Overview can search those returned source uses and compare two published
+food, fill, pack format, storage and excursion claims side by side. This is
+source discovery, not a suitability score or a recommendation; different
+foods' listed uses are not interchangeable. The compact **Review updates**
+control reflects only the current backend, catalogue or decision-report
+state. Report items open the corresponding status-filtered records; it does
+not simulate notifications or report unobserved packaging outcomes.
+The box inner liner is omitted because it is not a standalone package. This
+view does not run the suitability model, predict a material, or approve a
+package. All six applications are source claims with rights review pending.
+The local API is `GET /api/published-applications`; its response carries the
+catalogue SHA-256 and explicit false prediction/approval flags. A real
+scenario batch is still needed to compare an actual food and journey with a
+published use.
+
 To run a real scenario batch from operator-selected source files:
 
 ```powershell
@@ -54,6 +83,33 @@ arguments (for example `--route-register`, `--structures`, and
 the same CLI. Run `python -m packsense.web_server --help` for the full list.
 The supplied food and material masters are reference data; they are **not** a
 scenario batch. No scenario file is bundled or inferred from them.
+
+The Pipeline page plays a conceptual input-to-output tour or a trace of a
+loaded report. A square moves between stops on a single eight-step timeline
+while playback runs; its scene explains the input, PackSense check and
+output. Pause or select any step to inspect it. Reduced-motion settings
+disable the moving marker. The conceptual tour does not generate a package
+result.
+
+The Pipeline page has a compact **How to run a real scenario batch** section.
+It links to `/api/scenario-template`, a blank CSV header generated directly
+from the backend's required, optional respiration, and reference-key columns.
+No example food or fabricated values are inserted. Fill genuine scenario
+rows, then start the backend with their file path and the two reference
+workbooks. When the service is configured, **Run configured batch** appears
+both in that section and in the top bar. When the report arrives, play its
+actual trace or open Results and Evidence. Source files remain selected at
+backend startup, not uploaded through the browser.
+
+To inspect source-linked supplier applications for those same real scenario
+rows, also pass `--public-candidates data/public_catalogue_candidates.v1.json`.
+The Results inspector then shows published product uses and their food,
+quantity, storage and transit mismatches; the actual pipeline trace counts
+them at package screening. These are **research leads only**. Even a matching
+supplier use retains pending rights and independent food-contact, complete-
+package transfer, sealing, handling and suitability blockers. It never
+populates the material-prediction field or changes a row's recommendation
+status. The browser still receives no source paths or editable scenario rows.
 
 The local service binds only to `127.0.0.1`, checks the request host and
 origin, accepts no browser-supplied source paths or row data, and runs one

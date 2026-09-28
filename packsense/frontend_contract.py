@@ -7,8 +7,11 @@ validated package or a trained material prediction.
 
 import argparse
 import json
+import re
+from math import isfinite
 from pathlib import Path
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 from packsense.recommendation_output import EXPECTED_BATCH_VERSION
 
@@ -19,6 +22,14 @@ CANDIDATE_STATUSES = frozenset({"excluded", "unresolved", "eligible_for_shortlis
 PRODUCE_ROUTE_STATUSES = frozenset({
     "unclassified", "confirmed_non_respiring", "confirmed_respiring",
     "respiration_evidence_present",
+})
+SUPPLIER_LOOKUP_VERSION = "supplier-application-lookup-v1"
+SUPPLIER_LOOKUP_STATUSES = frozenset({
+    "published_food_application_found", "no_published_food_application_match",
+})
+SUPPLIER_APPLICATION_STATUSES = frozenset({
+    "published_food_quantity_temperature_match_unverified",
+    "unresolved_or_outside_published_use",
 })
 TRACE_FIELDS = (
     "scenario_sha256", "food_master_sha256", "material_master_sha256",
@@ -44,6 +55,18 @@ def _list(value: Any, name: str) -> list[Any]:
     if not isinstance(value, list):
         raise ValueError(f"{name} must be an array")
     return value
+
+
+def _finite_number(value: Any, name: str) -> float:
+    if type(value) not in (int, float):
+        raise ValueError(f"{name} must be a finite number")
+    try:
+        number = float(value)
+    except OverflowError as exc:
+        raise ValueError(f"{name} must be a finite number") from exc
+    if not isfinite(number):
+        raise ValueError(f"{name} must be a finite number")
+    return number
 
 
 def _candidate_view(raw: Any) -> dict[str, Any]:
@@ -75,6 +98,95 @@ def _scenario_view(raw: Any) -> dict[str, Any] | None:
     return {name: scenario.get(name) for name in SCENARIO_FIELDS}
 
 
+def _supplier_lookup_view(raw: Any, record_id: Any) -> dict[str, Any]:
+    """Project source-linked research leads without promoting them to packages."""
+    lookup = _object(raw, "supplier application lookup")
+    if (lookup.get("lookup_version") != SUPPLIER_LOOKUP_VERSION
+            or lookup.get("record_id") != record_id
+            or lookup.get("status") not in SUPPLIER_LOOKUP_STATUSES
+            or not isinstance(lookup.get("catalogue_id"), str)
+            or not lookup["catalogue_id"]):
+        raise ValueError("supplier application lookup has invalid identity or status")
+    if (type(lookup.get("approved_structure_count")) is not int
+            or lookup["approved_structure_count"] != 0
+            or lookup.get("recommended_structure_id") is not None
+            or lookup.get("model_prediction_available") is not False):
+        raise ValueError("supplier application lookup cannot claim package approval or prediction")
+    leads = _list(lookup.get("leads"), "supplier application leads")
+    if (lookup["status"] == "published_food_application_found") != bool(leads):
+        raise ValueError("supplier application lookup status contradicts its leads")
+    projected_leads: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for raw_lead in leads:
+        lead = _object(raw_lead, "supplier application lead")
+        for name in ("candidate_id", "product_code", "pack_format",
+                     "supplier_application_food", "source_id", "source_locator"):
+            if not isinstance(lead.get(name), str) or not lead[name].strip():
+                raise ValueError(f"supplier application lead has invalid {name}")
+        key = (lead["candidate_id"], lead["supplier_application_food"])
+        if key in seen:
+            raise ValueError("supplier application lookup duplicates a product application")
+        seen.add(key)
+        url = lead.get("source_url")
+        parsed = urlsplit(url) if isinstance(url, str) else None
+        if (parsed is None or parsed.scheme != "https" or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None):
+            raise ValueError("supplier application lead has an invalid source URL")
+        if (lead.get("source_rights_review_status") != "pending"
+                or lead.get("food_name_match") not in
+                {"exact_name", "raw_name_variant_unreviewed"}
+                or lead.get("application_status") not in SUPPLIER_APPLICATION_STATUSES):
+            raise ValueError("supplier application lead has an unsupported review state")
+        reasons = _list(lead.get("reason_codes"), "supplier mismatch reasons")
+        blockers = _list(lead.get("approval_blockers"), "supplier approval blockers")
+        if (any(not isinstance(item, str) or not item for item in (*reasons, *blockers))
+                or len(set(reasons)) != len(reasons)
+                or "food_package_suitability_unverified" not in blockers
+                or (lead["application_status"] ==
+                    "published_food_quantity_temperature_match_unverified") !=
+                (not reasons)
+                or (lead["food_name_match"] == "raw_name_variant_unreviewed"
+                    and "food_identity_requires_review" not in reasons)):
+            raise ValueError("supplier application lead has inconsistent evidence gaps")
+        for name in ("published_quantity", "published_storage_temperature_min_c",
+                     "published_storage_temperature_max_c"):
+            _finite_number(lead.get(name), f"supplier application lead {name}")
+        if (lead["published_quantity"] <= 0
+                or lead.get("published_quantity_unit") not in {"g", "kg"}
+                or lead["published_storage_temperature_min_c"] < -273.15
+                or lead["published_storage_temperature_min_c"] >
+                lead["published_storage_temperature_max_c"]):
+            raise ValueError("supplier application lead has invalid published conditions")
+        excursion, hours = (lead.get("published_excursion_max_c"),
+                            lead.get("published_excursion_max_hours"))
+        if (excursion is None) != (hours is None):
+            raise ValueError("supplier application lead has incomplete excursion conditions")
+        if excursion is not None and (
+            _finite_number(excursion, "supplier application lead excursion") <
+            lead["published_storage_temperature_max_c"]
+            or _finite_number(hours, "supplier application lead excursion hours") <= 0
+        ):
+            raise ValueError("supplier application lead has invalid excursion conditions")
+        projected_leads.append({name: lead[name] for name in (
+            "candidate_id", "product_code", "pack_format", "supplier_application_food",
+            "food_name_match", "source_id", "source_url", "source_locator",
+            "source_rights_review_status", "published_quantity",
+            "published_quantity_unit", "published_storage_temperature_min_c",
+            "published_storage_temperature_max_c", "published_excursion_max_c",
+            "published_excursion_max_hours", "application_status", "reason_codes",
+            "approval_blockers",
+        )})
+    return {
+        "lookup_version": SUPPLIER_LOOKUP_VERSION,
+        "catalogue_id": lookup["catalogue_id"],
+        "status": lookup["status"],
+        "leads": projected_leads,
+        "approved_structure_count": 0,
+        "recommended_structure_id": None,
+        "model_prediction_available": False,
+    }
+
+
 def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
     """Expose actionable states while withholding unvalidated predictions."""
     batch = _object(report, "batch report")
@@ -85,6 +197,11 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
     rows = _list(batch.get("rows"), "batch rows")
     if not rows:
         raise ValueError("batch report has no rows")
+    public_hash = batch.get("public_candidate_catalogue_sha256")
+    if public_hash is not None and (
+        not isinstance(public_hash, str) or re.fullmatch(r"[0-9a-f]{64}", public_hash) is None
+    ):
+        raise ValueError("supplier catalogue source hash is invalid")
 
     projected = []
     for raw in rows:
@@ -97,8 +214,12 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
         issues = _list(row.get("issues"), "input issues")
         card, recommendation = row.get("requirement_card"), row.get("recommendation")
         scenario = _scenario_view(row.get("scenario"))
+        lookup_raw = row.get("supplier_application_lookup")
+        if lookup_raw is not None and public_hash is None:
+            raise ValueError("supplier application lookup has no catalogue source hash")
         if status == "exception":
-            if card is not None or recommendation is not None or scenario is not None:
+            if (card is not None or recommendation is not None or scenario is not None
+                    or lookup_raw is not None):
                 raise ValueError("input exception cannot carry a recommendation")
             if not issues:
                 raise ValueError("input exception must explain its issue")
@@ -112,6 +233,7 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
             target_days = None
             produce_route_status = None
             candidate_screening_allowed = None
+            supplier_lookup = None
         else:
             if issues:
                 raise ValueError("screened row cannot carry input issues")
@@ -149,6 +271,12 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
             if (candidate_screening_allowed is not None
                     and type(candidate_screening_allowed) is not bool):
                 raise ValueError("requirement card has an invalid screening permission")
+            if public_hash is not None and lookup_raw is None:
+                raise ValueError("supplier catalogue source has no row lookup")
+            supplier_lookup = (
+                _supplier_lookup_view(lookup_raw, row.get("record_id"))
+                if lookup_raw is not None else None
+            )
 
         projected.append({
             "source_row_number": row["row_number"],
@@ -165,6 +293,7 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
             "candidate_screening_allowed": candidate_screening_allowed,
             "temperature_exposures": exposure,
             "screened_candidates": candidates,
+            "supplier_application_lookup": supplier_lookup,
             "preliminary_preferred_structure_id": preferred,
             "recommended_structure_id": None,
             "material_prediction": None,

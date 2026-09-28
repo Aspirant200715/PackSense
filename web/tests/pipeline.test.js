@@ -36,6 +36,20 @@ test("actual not-ready row exposes gates rather than claiming approval", () => {
   assert.equal(stages[6].state, "withheld");
 });
 
+test("supplier applications appear in the actual trace only as unapproved leads", () => {
+  const row = {
+    ...base,
+    supplier_application_lookup: {
+      leads: [{ candidate_id: "TEST_ONLY_SUPPLIER" }],
+    },
+  };
+  const stages = actualPipeline(row);
+  assert.equal(stages[4].state, "held");
+  assert.match(stages[4].statement, /research leads/);
+  assert.match(stages[4].output, /1 unapproved supplier lead/);
+  assert.equal(stages[6].state, "withheld");
+});
+
 test("actual trace uses reported food, quantity, composition and temperature only", () => {
   const row = {
     ...base,

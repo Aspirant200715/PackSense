@@ -986,6 +986,127 @@ PackSense must continue to withhold a real package or shelf-life claim.
   compilation, JavaScript syntax, and diff checks. PR CI is checked on the
   pushed head separately.
 
+### 2026-09-28 — supplier research leads in the decision workspace
+
+- Branch `feat/supplier-leads-frontend` from `main` at `3bff3f1` adds an additive, guarded
+  `supplier_application_lookup` view to the frontend decision contract. The
+  existing backend lookup already compares a genuine scenario with exact
+  source-listed food, fill quantity and temperature conditions; this change
+  makes the result visible in the Results inspector and actual Stage 5 trace.
+- The product, source URL and locator, published conditions, mismatches,
+  pending rights status and approval blockers remain distinguishable from
+  reviewed complete structures. Projection and browser checks reject a lead
+  that claims package approval, model prediction or an unsafe source URL.
+  No shortlist logic, release gate, model, source data, scenario batch or
+  training label changed. The test-only scenarios and browser fixture are
+  explicitly not training data.
+- Local verification: 236 Python tests, 17 Node tests, Python compilation,
+  JavaScript syntax, diff check, and headless browser smoke at 390 px and
+  1440 px passed. PR CI and independent review are separate. The runtime
+  still needs a genuine structured scenario batch configured by the operator;
+  food and film-grade masters alone cannot produce one.
+
+### 2026-09-28 — visual input-to-output flow and blank scenario template
+
+- Continued on `feat/supplier-leads-frontend` / PR #37 to make the existing
+  eight-stop pipeline easier to demonstrate. A three-phase map tracks add →
+  analyze → output, calm motion shows a data packet moving through the
+  current receive/check/produce step, and the actual report trace can be
+  played stage by stage as well as the conceptual tour. Manual stepping and
+  reduced-motion behavior remain available.
+- Added a collapsed setup path on the Pipeline page: download a header-only
+  CSV derived from `packsense.units`, fill genuine scenario rows, configure
+  backend source paths, run the batch, then inspect Results and Evidence.
+  This is a download and instruction flow, **not** browser data upload.
+  No source data, synthetic scenario rows, training labels, model output or
+  recommendation release gate were added or changed.
+- Local verification: 237 Python tests, 17 Node tests, Python compilation,
+  JavaScript syntax and diff check passed. Headless browser smoke passed at
+  320, 390 and 1440 px, including manual and automatic conceptual flow,
+  playable actual-report flow, setup disclosure, and absence of horizontal
+  overflow. PR CI and independent review remain separate. The live flow
+  still requires a real scenario batch and independent package evidence.
+
+### 2026-09-28 — simplify the playable decision flow
+
+- Continued on PR #37. The Pipeline page now has one compact eight-step
+  timeline instead of stacked phase, playback and stage progress displays.
+  The active scene explains its input, PackSense check and output. The mode
+  switch distinguishes a conceptual tour from a recorded report trace, and
+  the first scene links directly to the real-data setup instructions.
+- Playback, manual stage navigation, fresh-produce branching and actual
+  report traces remain available. No source data, scenario rows, training
+  labels, model output or recommendation gate changed.
+- Local verification: 237 Python tests, 17 Node tests and headless browser
+  smoke at 320, 390 and 1440 px passed, including the single timeline,
+  setup visibility, real trace playback and no horizontal overflow. PR CI
+  passed on the pushed `ad212d2` head.
+
+### 2026-09-28 — animate the full pipeline route
+
+- Continued on PR #37. A small square now travels from the current timeline
+  stop to the next stop during playback, synchronized with the four-second
+  stage cadence. It disappears on Pause and is disabled for reduced-motion
+  users. The receive/check/output animation inside the current scene remains.
+- The marker is purely navigational: it does not imply that a package passed
+  a gate, and it does not generate any scenario or model output. No dataset,
+  evidence gate or backend behavior changed.
+- Headless browser smoke at 320, 390 and 1440 px verifies actual forward
+  movement, pause behavior and no horizontal overflow. CI is checked on the
+  pushed head separately.
+
+### 2026-09-28 — keep motion on the main timeline
+
+- Continued on PR #37. Removed the animated square from the lower
+  input/check/output connectors, including its narrow-screen variant. The
+  arrows remain static; the top eight-stop timeline is now the only route
+  with a traveling marker. The three scene cards still show each step's
+  information without a second moving packet.
+- Browser smoke checks that the lower connector has no generated square
+  while playback runs. No data, backend logic or recommendation gate changed.
+
+### 2026-09-28 — show real supplier-published package uses without a fabricated scenario
+
+- Continued on `feat/supplier-leads-frontend`. The local backend can start
+  with only `--public-candidates` and expose six standalone manufacturer-listed
+  food/pack-size/temperature applications from the existing validated
+  `data/public_catalogue_candidates.v1.json`. Inner liners are excluded from
+  the standalone view. The response includes the catalogue SHA-256 and false
+  model-prediction and package-approval flags.
+- The introduction links to a compact published-use view; the scenario Results
+  inspector highlights exact-condition supplier matches while keeping all
+  independent evidence blockers. Source links and use conditions are validated
+  before rendering. No food scenario, suitability label, complete-structure
+  approval, training artifact or material prediction was created or released.
+  The catalogue and its pending rights statuses are unchanged.
+- Local verification: 238 Python tests, 19 Node tests, headless browser smoke
+  at 390 px, and a real-catalogue browser check at 390/1440 px passed. The
+  browser check confirmed six cards, the published broccoli VY7K9 row, a
+  working source URL and no horizontal overflow. The current two reference
+  workbooks still cannot train or release a trustworthy material predictor.
+
+### 2026-09-28 — make source discovery and review states interactive
+
+- Continued on `feat/supplier-leads-frontend`. Added a restrained Review
+  updates panel whose items come only from the current backend state, loaded
+  supplier catalogue, or actual report status counts. Each item leads to the
+  relevant setup, source view, or filtered decision records. It is not a
+  simulated notification feed.
+- Published uses now support text discovery and a two-item source-claim
+  comparison for food, fill, format and listed temperature conditions. The
+  UI explicitly keeps these as research leads, not a suitability ranking,
+  interchangeable uses, approved packages, or model predictions.
+- No dataset, scenario rows, labels, source claims, backend calculations or
+  release gates changed. The narrow mobile header was adjusted so the new
+  control does not obscure the pipeline setup anchor.
+- Local verification: 238 scoped Python tests and 23 Node tests passed;
+  browser smoke passed against the unconfigured service at 390 px and the
+  real catalogue service at 320, 390 and 1440 px, including search,
+  comparison, review-item navigation and horizontal-overflow checks. A broad
+  `pytest -q` collection also enters an ignored Kaggle staging directory and
+  fails on that duplicate package; `pytest tests -q` is the intended scoped
+  suite and passes. CI on this change is not yet verified.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

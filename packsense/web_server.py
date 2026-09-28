@@ -7,6 +7,8 @@ trained material or shelf-life prediction is created here.
 """
 
 import argparse
+import csv
+import io
 import json
 import subprocess
 import sys
@@ -19,7 +21,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from packsense.catalogue_candidates import load_candidate_catalogue
 from packsense.frontend_contract import project_frontend_decisions
+from packsense.units import (
+    SCENARIO_REFERENCE_COLUMNS, SCENARIO_REQUIRED_COLUMNS,
+    SCENARIO_RESPIRATION_COLUMNS,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,10 +34,19 @@ WEB_ROOT = ROOT / "web"
 MAX_REPORT_BYTES = 100 * 1024 * 1024
 BACKEND_PATH_OPTIONS = (
     "route_register", "assessments", "structures", "structure_reviews",
-    "transfers", "kinetics_register", "gas_observations",
-    "water_observations", "public_candidates",
+    "transfers", "kinetics_register", "gas_observations", "water_observations",
 )
 BACKEND_FLAG_OPTIONS = ("produce_diagnostics", "compare_grade_references")
+
+
+def scenario_template_csv() -> bytes:
+    """Return the canonical header only; never invent scenario values."""
+    output = io.StringIO(newline="")
+    csv.writer(output, lineterminator="\r\n").writerow(
+        (*SCENARIO_REQUIRED_COLUMNS, *SCENARIO_RESPIRATION_COLUMNS,
+         *SCENARIO_REFERENCE_COLUMNS)
+    )
+    return output.getvalue().encode("utf-8")
 
 
 @dataclass(frozen=True)
@@ -39,6 +55,7 @@ class AppSources:
     scenarios: Path | None = None
     food_master: Path | None = None
     material_master: Path | None = None
+    public_candidates: Path | None = None
     backend_options: tuple[str, ...] = ()
 
     @property
@@ -47,6 +64,8 @@ class AppSources:
             return "audited_report"
         if self.scenarios is not None:
             return "scenario_batch"
+        if self.public_candidates is not None:
+            return "published_catalogue"
         return "unconfigured"
 
 
@@ -56,6 +75,48 @@ def _read_projected_report(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as stream:
         batch = json.load(stream, parse_constant=_reject_nonfinite)
     return project_frontend_decisions(batch)
+
+
+def published_applications_payload(path: Path) -> dict[str, Any]:
+    """Expose exact manufacturer-listed uses, not a scenario recommendation."""
+    catalogue, source_hash = load_candidate_catalogue(path)
+    sources = {item["source_id"]: item for item in catalogue["sources"]}
+    applications = []
+    for candidate in catalogue["candidates"]:
+        # An inner liner is not a complete consumer package.
+        if candidate["pack_format"] == "box inner liner":
+            continue
+        source = sources[candidate["source_id"]]
+        source_url = urlsplit(source["url"])
+        if (source_url.scheme != "https" or not source_url.hostname
+                or source_url.username or source_url.password):
+            raise ValueError("public catalogue contains an unsafe source URL")
+        for application in candidate["applications"]:
+            applications.append({
+                "candidate_id": candidate["candidate_id"],
+                "product_code": candidate["product_code"],
+                "pack_format": candidate["pack_format"],
+                "food": application["commodity"],
+                "quantity": application["quantity"],
+                "quantity_unit": application["quantity_unit"],
+                "storage_temperature_min_c": application["storage_temperature_min_c"],
+                "storage_temperature_max_c": application["storage_temperature_max_c"],
+                "excursion_max_c": application["excursion_max_c"],
+                "excursion_max_hours": application["excursion_max_hours"],
+                "source_publisher": source["publisher"],
+                "source_url": source["url"],
+                "source_locator": candidate["source_locator"],
+                "source_rights_review_status": source["rights_review_status"],
+            })
+    applications.sort(key=lambda item: (item["food"].casefold(), item["product_code"]))
+    return {
+        "contract_version": "published-applications-v1",
+        "catalogue_id": catalogue["catalogue_id"],
+        "catalogue_sha256": source_hash,
+        "model_prediction_available": False,
+        "package_approval_available": False,
+        "applications": applications,
+    }
 
 
 def _reject_nonfinite(value: str) -> None:
@@ -72,8 +133,10 @@ def run_configured_batch(sources: AppSources) -> dict[str, Any]:
             sys.executable, "-m", "packsense.recommendation_batch",
             str(sources.scenarios), "--food-master", str(sources.food_master),
             "--material-master", str(sources.material_master),
-            *sources.backend_options, "--report", str(report_path),
         ]
+        if sources.public_candidates is not None:
+            command.extend(("--public-candidates", str(sources.public_candidates)))
+        command.extend((*sources.backend_options, "--report", str(report_path)))
         try:
             completed = subprocess.run(
                 command, cwd=ROOT, capture_output=True, text=True,
@@ -128,6 +191,17 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _scenario_template(self) -> None:
+        body = scenario_template_csv()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header("Content-Disposition", 'attachment; filename="packsense-scenarios-template.csv"')
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self) -> None:
         if not self._same_host():
             self._json(HTTPStatus.FORBIDDEN, {"error": "invalid host"})
@@ -139,8 +213,20 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
                 "mode": mode,
                 "can_run": mode == "scenario_batch",
                 "has_report": mode == "audited_report",
+                "has_public_applications": self.server.sources.public_candidates is not None,
                 "model_deployed": False,
             })
+        elif path == "/api/published-applications":
+            catalogue = self.server.sources.public_candidates
+            if catalogue is None:
+                self._json(HTTPStatus.NOT_FOUND, {"error": "no public catalogue is configured"})
+                return
+            try:
+                self._json(HTTPStatus.OK, published_applications_payload(catalogue))
+            except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+                self._json(HTTPStatus.UNPROCESSABLE_ENTITY, {"error": str(exc)[:800]})
+        elif path == "/api/scenario-template":
+            self._scenario_template()
         elif path == "/api/report":
             if self.server.sources.mode != "audited_report":
                 self._json(HTTPStatus.NOT_FOUND, {"error": "no audited report is configured"})
@@ -185,6 +271,7 @@ def _arguments() -> tuple[int, AppSources]:
     parser.add_argument("--scenarios", type=Path)
     parser.add_argument("--food-master", type=Path)
     parser.add_argument("--material-master", type=Path)
+    parser.add_argument("--public-candidates", type=Path)
     parser.add_argument("--scenario-sheet")
     parser.add_argument("--food-sheet")
     parser.add_argument("--material-sheet")
@@ -201,7 +288,8 @@ def _arguments() -> tuple[int, AppSources]:
         parser.error("--scenarios, --food-master and --material-master are required together")
     if args.batch_report is not None and any(scenario_paths):
         parser.error("--batch-report cannot be combined with scenario sources")
-    for name in ("batch_report", "scenarios", "food_master", "material_master", *BACKEND_PATH_OPTIONS):
+    for name in ("batch_report", "scenarios", "food_master", "material_master",
+                 "public_candidates", *BACKEND_PATH_OPTIONS):
         path = getattr(args, name)
         if path is not None:
             if not path.is_file():
@@ -222,6 +310,7 @@ def _arguments() -> tuple[int, AppSources]:
     return args.port, AppSources(
         batch_report=args.batch_report, scenarios=args.scenarios,
         food_master=args.food_master, material_master=args.material_master,
+        public_candidates=args.public_candidates,
         backend_options=tuple(options),
     )
 
