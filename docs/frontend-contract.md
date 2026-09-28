@@ -60,6 +60,19 @@ input exceptions; older projections may omit them. The frontend's actual
 pipeline trace treats an absent route as unresolved and never infers screening
 permission from food composition.
 
+When the audited batch was run with a source-backed public candidate
+catalogue, valid rows also carry `supplier_application_lookup` under the
+existing v1 contract. The projection retains only the product identity,
+source link and locator, published food/quantity/temperature conditions,
+scenario mismatch codes, rights status, and explicit approval blockers.
+Input exceptions and batches without that catalogue carry `null`; a valid
+row with a catalogue hash but no lookup is rejected. The UI displays these
+separately as **supplier research leads**, including exact published-use
+matches and unresolved/out-of-scope uses. A lead never becomes a screened
+structure, material prediction, suitability label, or package approval.
+The reported `approved_structure_count` remains zero and the source-rights
+review remains pending.
+
 In **all** three states of this contract, `recommended_structure_id`,
 `material_prediction`, and `predicted_shelf_life_days` are `null`, and
 `package_feasible` is `false`. A frontend must not relabel a supplier lead or

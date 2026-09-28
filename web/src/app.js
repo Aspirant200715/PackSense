@@ -222,6 +222,20 @@ function renderCandidates(row) {
     <details class="candidate-card"><summary><span class="candidate-main"><strong>${escapeHtml(candidate.structure_id)}</strong><small>${displayValue(candidate.pack_format, "Format not reported")}</small></span>${statusBadge(candidate.status)}<span class="candidate-expand" aria-hidden="true">+</span></summary><div class="candidate-body"><div class="candidate-facts"><div><span>PROTECTION RANK</span><strong>${candidate.protection_rank == null ? "Not ranked" : escapeHtml(candidate.protection_rank)}</strong></div><div><span>SERVICE RANGE</span><strong>${formatNumber(candidate.service_temperature_min_c, " °C")} to ${formatNumber(candidate.service_temperature_max_c, " °C")}</strong></div></div><div class="candidate-subhead">Layer structure</div>${candidate.layers.length ? `<div class="layer-list">${candidate.layers.map((layer, index) => `<div class="layer-row"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(layer.grade_id ?? "Unspecified grade")}</strong><small>${formatNumber(layer.thickness_um, " µm")}${layer.role ? ` · ${escapeHtml(layer.role)}` : ""}${layer.is_food_contact ? " · food contact" : ""}</small></div>`).join("")}</div>` : `<p class="candidate-empty">Layer details not supplied.</p>`}${candidate.reason_codes.length ? `<div class="candidate-subhead">Screening reasons</div><div class="candidate-reasons">${candidate.reason_codes.map((reason) => `<span>${escapeHtml(readableCode(reason))}</span>`).join("")}</div>` : ""}</div></details>`).join("")}</div></details>`;
 }
 
+function renderSupplierLookup(row) {
+  const lookup = row.supplier_application_lookup;
+  if (!lookup) return "";
+  const leads = lookup.leads;
+  return `<details class="inspector-disclosure supplier-disclosure" ${leads.length ? "open" : ""}><summary><span>Supplier applications · research only</span><small>${leads.length} source-listed ${leads.length === 1 ? "lead" : "leads"}</small></summary>
+    <div class="supplier-lookup"><p class="supplier-boundary">These are published product uses compared with this scenario. A match is not a material prediction, approved package, or suitability label.</p>
+    ${leads.length ? `<div class="supplier-leads">${leads.map((lead) => `
+      <article class="supplier-lead"><div class="supplier-lead-heading"><div><strong>${escapeHtml(lead.product_code)}</strong><small>${escapeHtml(lead.candidate_id)} · ${escapeHtml(lead.pack_format)}</small></div><span class="supplier-match-state">${lead.application_status === "published_food_quantity_temperature_match_unverified" ? "Published conditions match · unverified" : "Outside use or needs review"}</span></div>
+      <div class="supplier-conditions"><span>Listed for <strong>${escapeHtml(lead.supplier_application_food)}</strong></span><span>Fill <strong>${formatNumber(lead.published_quantity, ` ${escapeHtml(lead.published_quantity_unit)}`)}</strong></span><span>Storage <strong>${formatNumber(lead.published_storage_temperature_min_c, " °C")} to ${formatNumber(lead.published_storage_temperature_max_c, " °C")}</strong></span>${lead.published_excursion_max_c === null ? "" : `<span>Excursion <strong>up to ${formatNumber(lead.published_excursion_max_c, " °C")} for ${formatNumber(lead.published_excursion_max_hours, " h")}</strong></span>`}</div>
+      ${lead.reason_codes.length ? `<p class="supplier-lead-reasons"><strong>Scenario mismatches:</strong> ${lead.reason_codes.map((code) => escapeHtml(readableCode(code))).join(" · ")}</p>` : ""}
+      <p class="supplier-lead-reasons"><strong>Still unverified:</strong> ${lead.approval_blockers.map((code) => escapeHtml(readableCode(code))).join(" · ")}</p>
+      <div class="supplier-source"><span>Rights review pending · ${escapeHtml(lead.source_id)} · ${escapeHtml(lead.source_locator)}</span><a href="${escapeHtml(lead.source_url)}" target="_blank" rel="noopener noreferrer">Open source ↗</a></div></article>`).join("")}</div>` : `<div class="quiet-empty">No source-listed application matched this food. This does not prove that a suitable package does not exist.</div>`}</div></details>`;
+}
+
 function renderInspector(row) {
   const root = $("#record-inspector");
   if (!row) {
@@ -238,6 +252,7 @@ function renderInspector(row) {
     ${renderReasonGroup("Screening reasons", row.screening_reason_codes, "amber")}
     ${renderReasonGroup("Warnings", row.warnings, "neutral")}
     ${renderExposures(row.temperature_exposures)}
+    ${row.status !== "exception" ? renderSupplierLookup(row) : ""}
     ${row.status !== "exception" ? renderCandidates(row) : ""}
     <div class="inspector-boundary"><strong>Decision boundary</strong><p>Package feasibility and predicted material are withheld. A requested shelf life is not a predicted shelf life.</p></div>
     <button type="button" class="text-button inspector-trace-link" data-trace-row="${state.selectedIndex}">Follow this row through the pipeline →</button>`;

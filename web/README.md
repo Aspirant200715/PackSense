@@ -55,6 +55,16 @@ the same CLI. Run `python -m packsense.web_server --help` for the full list.
 The supplied food and material masters are reference data; they are **not** a
 scenario batch. No scenario file is bundled or inferred from them.
 
+To inspect source-linked supplier applications for those same real scenario
+rows, also pass `--public-candidates data/public_catalogue_candidates.v1.json`.
+The Results inspector then shows published product uses and their food,
+quantity, storage and transit mismatches; the actual pipeline trace counts
+them at package screening. These are **research leads only**. Even a matching
+supplier use retains pending rights and independent food-contact, complete-
+package transfer, sealing, handling and suitability blockers. It never
+populates the material-prediction field or changes a row's recommendation
+status. The browser still receives no source paths or editable scenario rows.
+
 The local service binds only to `127.0.0.1`, checks the request host and
 origin, accepts no browser-supplied source paths or row data, and runs one
 batch at a time. It is a local development MVP, not a public deployment.

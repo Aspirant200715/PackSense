@@ -3,7 +3,11 @@
 import copy
 import json
 import unittest
+from dataclasses import replace
+from pathlib import Path
 
+from packsense.catalogue_candidates import load_candidate_catalogue
+from packsense.catalogue_leads import find_supplier_application_leads
 from packsense.frontend_contract import (
     CONTRACT_VERSION, project_frontend_decisions,
 )
@@ -71,6 +75,62 @@ def _report():
 
 
 class FrontendContractTests(unittest.TestCase):
+    def test_projects_real_source_linked_supplier_application_as_research_only(self):
+        catalogue_path = (Path(__file__).resolve().parents[1] / "data" /
+                          "public_catalogue_candidates.v1.json")
+        catalogue, digest = load_candidate_catalogue(catalogue_path)
+        scenario = replace(
+            _scenario("TEST_ONLY_GAP"), commodity_type="edamame",
+            net_pack_quantity=300.0, transport_duration_hours=8.0,
+            transport_temperature_c=8.0, transport_max_temperature_c=25.0,
+        )
+        batch = _report()
+        batch["public_candidate_catalogue_sha256"] = digest
+        batch["rows"][1]["supplier_application_lookup"] = (
+            find_supplier_application_leads(scenario, catalogue)
+        )
+        # The catalogue is supplied to the whole batch, including other valid rows.
+        batch["rows"][2]["supplier_application_lookup"] = (
+            find_supplier_application_leads(
+                replace(scenario, record_id="TEST_ONLY_SHORTLIST",
+                        commodity_type="TEST_ONLY_OTHER_FOOD"), catalogue,
+            )
+        )
+        projected = project_frontend_decisions(batch)
+        lookup = projected["rows"][1]["supplier_application_lookup"]
+        self.assertEqual("SUMITOMO-PPLUS-EY7K7", lookup["leads"][0]["candidate_id"])
+        self.assertEqual("published_food_quantity_temperature_match_unverified",
+                         lookup["leads"][0]["application_status"])
+        self.assertEqual("pending", lookup["leads"][0]["source_rights_review_status"])
+        self.assertEqual(0, lookup["approved_structure_count"])
+        self.assertIsNone(projected["rows"][1]["material_prediction"])
+        self.assertEqual("not_ready", projected["rows"][1]["status"])
+        self.assertIsNone(projected["rows"][0]["supplier_application_lookup"])
+        self.assertEqual("no_published_food_application_match",
+                         projected["rows"][2]["supplier_application_lookup"]["status"])
+        tampered = copy.deepcopy(batch)
+        tampered["rows"][1]["supplier_application_lookup"]["leads"][0][
+            "source_url"] = "javascript:alert(1)"
+        with self.assertRaisesRegex(ValueError, "invalid source URL"):
+            project_frontend_decisions(tampered)
+
+    def test_rejects_supplier_lead_promoted_without_evidence(self):
+        batch = _report()
+        batch["public_candidate_catalogue_sha256"] = "d" * 64
+        batch["rows"][1]["supplier_application_lookup"] = {
+            "lookup_version": "supplier-application-lookup-v1",
+            "record_id": "TEST_ONLY_GAP", "catalogue_id": "TEST_ONLY_CATALOGUE",
+            "status": "no_published_food_application_match", "leads": [],
+            "approved_structure_count": 1,
+            "recommended_structure_id": "TEST_ONLY_PACKAGE",
+            "model_prediction_available": True,
+        }
+        with self.assertRaisesRegex(ValueError, "cannot claim package approval"):
+            project_frontend_decisions(batch)
+        batch["rows"][1]["supplier_application_lookup"] = None
+        with self.assertRaisesRegex(ValueError, "no row lookup"):
+            project_frontend_decisions(batch)
+
     def test_projects_real_batch_contract_without_source_evidence(self):
         batch = build_batch_recommendations(*_sources(_scenario()))
         result = project_frontend_decisions(batch)

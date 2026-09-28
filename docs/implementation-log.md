@@ -986,6 +986,26 @@ PackSense must continue to withhold a real package or shelf-life claim.
   compilation, JavaScript syntax, and diff checks. PR CI is checked on the
   pushed head separately.
 
+### 2026-09-28 — supplier research leads in the decision workspace
+
+- Branch `feat/supplier-leads-frontend` from `main` at `3bff3f1` adds an additive, guarded
+  `supplier_application_lookup` view to the frontend decision contract. The
+  existing backend lookup already compares a genuine scenario with exact
+  source-listed food, fill quantity and temperature conditions; this change
+  makes the result visible in the Results inspector and actual Stage 5 trace.
+- The product, source URL and locator, published conditions, mismatches,
+  pending rights status and approval blockers remain distinguishable from
+  reviewed complete structures. Projection and browser checks reject a lead
+  that claims package approval, model prediction or an unsafe source URL.
+  No shortlist logic, release gate, model, source data, scenario batch or
+  training label changed. The test-only scenarios and browser fixture are
+  explicitly not training data.
+- Local verification: 236 Python tests, 17 Node tests, Python compilation,
+  JavaScript syntax, diff check, and headless browser smoke at 390 px and
+  1440 px passed. PR CI and independent review are separate. The runtime
+  still needs a genuine structured scenario batch configured by the operator;
+  food and film-grade masters alone cannot produce one.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

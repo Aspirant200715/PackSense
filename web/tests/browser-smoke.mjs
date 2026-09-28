@@ -62,6 +62,34 @@ function testOnlyReport() {
     recommended_structure_id: null, material_prediction: null,
     predicted_shelf_life_days: null, package_feasible: false,
   });
+  const rows = [row(2, "not_ready"), row(3, "exception"), row(4, "preliminary_shortlist")];
+  rows[0].supplier_application_lookup = {
+    lookup_version: "supplier-application-lookup-v1",
+    catalogue_id: "TEST_ONLY_CATALOGUE",
+    status: "published_food_application_found",
+    approved_structure_count: 0,
+    recommended_structure_id: null,
+    model_prediction_available: false,
+    leads: [{
+      candidate_id: "TEST_ONLY_SUPPLIER", product_code: "TEST_ONLY_CODE",
+      pack_format: "TEST_ONLY_BAG", supplier_application_food: "TEST_ONLY_FOOD",
+      food_name_match: "exact_name", source_id: "TEST_ONLY_SOURCE",
+      source_url: "https://example.org/product", source_locator: "TEST_ONLY_ROW",
+      source_rights_review_status: "pending", published_quantity: 100,
+      published_quantity_unit: "g", published_storage_temperature_min_c: 0,
+      published_storage_temperature_max_c: 10, published_excursion_max_c: null,
+      published_excursion_max_hours: null,
+      application_status: "published_food_quantity_temperature_match_unverified",
+      reason_codes: [], approval_blockers: ["food_package_suitability_unverified"],
+    }],
+  };
+  rows[2].supplier_application_lookup = {
+    lookup_version: "supplier-application-lookup-v1",
+    catalogue_id: "TEST_ONLY_CATALOGUE",
+    status: "no_published_food_application_match", leads: [],
+    approved_structure_count: 0, recommended_structure_id: null,
+    model_prediction_available: false,
+  };
   return {
     contract_version: "frontend-decision-v1",
     source_batch_version: "basic-recommendation-batch-v1",
@@ -71,9 +99,9 @@ function testOnlyReport() {
       "scenario_sha256", "food_master_sha256", "material_master_sha256",
       "route_register_sha256", "assessment_register_sha256", "structure_catalogue_sha256",
       "structure_review_register_sha256", "transfer_register_sha256", "public_candidate_catalogue_sha256",
-    ].map((key) => [key, null])),
+    ].map((key) => [key, key === "public_candidate_catalogue_sha256" ? "d".repeat(64) : null])),
     total_rows: 3,
-    rows: [row(2, "not_ready"), row(3, "exception"), row(4, "preliminary_shortlist")],
+    rows,
   };
 }
 
@@ -153,6 +181,10 @@ try {
   }
   assert.equal(await evaluate("document.querySelector('#decisions-loaded').hidden"), false);
   assert.equal(await evaluate("document.querySelector('[data-filter=\"all\"] span').textContent"), "3");
+  assert.equal(await evaluate("document.querySelector('#record-inspector .supplier-lead-heading strong')?.textContent"), "TEST_ONLY_CODE");
+  assert.equal(await evaluate("document.querySelector('#record-inspector .supplier-source a')?.getAttribute('href')"), "https://example.org/product");
+  assert.match(await evaluate("document.querySelector('#record-inspector .supplier-boundary')?.textContent"), /not a material prediction/);
+  assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "supplier research lead has no horizontal overflow");
   await evaluate("document.querySelector('[data-filter=\"preliminary_shortlist\"]').click()");
   assert.equal(await evaluate("document.querySelector('#record-filter-count').textContent"), "1 of 3 rows");
   assert.equal(await evaluate("document.querySelectorAll('#record-list .record-list-row').length"), 1);
