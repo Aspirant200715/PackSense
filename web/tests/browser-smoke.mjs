@@ -142,6 +142,7 @@ try {
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.stage-traveler')).display"), "none", "timeline marker stops when paused");
   await evaluate("document.querySelector('#pipeline-play').click()");
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.stage-traveler')).animationName"), "timeline-travel", "timeline marker follows playback");
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.flow-connector'), '::after').content"), "none", "lower arrows have no moving square");
   const markerBefore = await evaluate("document.querySelector('.stage-traveler').getBoundingClientRect().left");
   await new Promise((resolve) => setTimeout(resolve, 600));
   const markerAfter = await evaluate("document.querySelector('.stage-traveler').getBoundingClientRect().left");

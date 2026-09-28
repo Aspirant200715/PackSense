@@ -1055,6 +1055,16 @@ PackSense must continue to withhold a real package or shelf-life claim.
   movement, pause behavior and no horizontal overflow. CI is checked on the
   pushed head separately.
 
+### 2026-09-28 — keep motion on the main timeline
+
+- Continued on PR #37. Removed the animated square from the lower
+  input/check/output connectors, including its narrow-screen variant. The
+  arrows remain static; the top eight-stop timeline is now the only route
+  with a traveling marker. The three scene cards still show each step's
+  information without a second moving packet.
+- Browser smoke checks that the lower connector has no generated square
+  while playback runs. No data, backend logic or recommendation gate changed.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

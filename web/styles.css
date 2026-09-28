@@ -410,10 +410,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .studio-context-action { display: flex; align-items: center; gap: 9px; margin-top: 12px; color: var(--quiet); font-size: 11px; }
 .studio-context-action .text-button { font-size: 11px; }
 .flow-connector { position: relative; display: grid; place-items: center; color: var(--accent); font-size: 18px; }
-.flow-connector::after { content: ""; position: absolute; left: 0; top: calc(50% - 3px); width: 6px; height: 6px; border-radius: 1px; background: var(--accent); opacity: 0; }
-.pipeline-studio.is-playing .flow-connector::after { animation: connector-packet 4s linear infinite; }
-.pipeline-studio.is-playing .flow-connector:nth-child(4)::after { animation-delay: 1.3s; }
-@keyframes connector-packet { 0%, 12% { left: 0; opacity: 0; } 18% { opacity: 1; } 37% { left: calc(100% - 6px); opacity: 1; } 43%, 100% { left: calc(100% - 6px); opacity: 0; } }
 .studio-boundary { margin-top: 14px; padding: 10px 13px; border-left: 2px solid var(--amber); background: var(--amber-soft); }
 .studio-boundary span { color: var(--amber); font: 600 9px "IBM Plex Mono", monospace; letter-spacing: .6px; }
 .studio-boundary p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
@@ -504,9 +500,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .flow-unit span { margin-bottom: 8px; }
   .flow-connector { min-height: 20px; font-size: 0; }
   .flow-connector::before { content: "↓"; font-size: 16px; }
-  .flow-connector::after { left: calc(50% - 3px); top: 0; }
-  .pipeline-studio.is-playing .flow-connector::after { animation-name: connector-packet-vertical; }
-  @keyframes connector-packet-vertical { 0%, 12% { top: 0; opacity: 0; } 18% { opacity: 1; } 37% { top: calc(100% - 6px); opacity: 1; } 43%, 100% { top: calc(100% - 6px); opacity: 0; } }
 }
 @media (max-width: 820px) {
   .topbar { flex-wrap: wrap; gap: 0; padding-top: 12px; padding-bottom: 10px; }
