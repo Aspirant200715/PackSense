@@ -43,7 +43,7 @@ class SupplierApplicationLeadTests(unittest.TestCase):
     def test_exact_supplier_food_quantity_temperature_use_is_still_unapproved(self):
         report = self._lead(_scenario())
         self.assertEqual("published_food_application_found", report["status"])
-        self.assertEqual(1, len(report["leads"]))
+        self.assertEqual(2, len(report["leads"]))
         lead = report["leads"][0]
         self.assertEqual("SUMITOMO-PPLUS-EY7K7", lead["candidate_id"])
         self.assertEqual("exact_name", lead["food_name_match"])
@@ -51,6 +51,16 @@ class SupplierApplicationLeadTests(unittest.TestCase):
                          lead["application_status"])
         self.assertEqual([], lead["reason_codes"])
         self.assertIn("food_package_suitability_unverified", lead["approval_blockers"])
+        self.assertIn("pack_quantity_outside_published_use",
+                      report["leads"][1]["reason_codes"])
+
+    def test_second_edamame_sku_matches_only_its_published_500g_use(self):
+        report = self._lead(_scenario(net_pack_quantity=500))
+        leads = {lead["candidate_id"]: lead for lead in report["leads"]}
+        self.assertEqual("published_food_quantity_temperature_match_unverified",
+                         leads["SUMITOMO-PPLUS-EY8K3"]["application_status"])
+        self.assertIn("pack_quantity_outside_published_use",
+                      leads["SUMITOMO-PPLUS-EY7K7"]["reason_codes"])
 
     def test_equivalent_mass_units_are_compared_without_guessing(self):
         report = self._lead(_scenario(net_pack_quantity=0.3,
@@ -77,10 +87,27 @@ class SupplierApplicationLeadTests(unittest.TestCase):
         self.assertIn("food_identity_requires_review",
                       report["leads"][0]["reason_codes"])
 
+    def test_qualified_raw_name_is_a_related_use_not_a_verified_match(self):
+        report = self._lead(_scenario(
+            commodity_type="Asparagus, green, raw", net_pack_quantity=150,
+        ))
+        self.assertEqual("published_food_application_found", report["status"])
+        self.assertEqual(1, len(report["leads"]))
+        lead = report["leads"][0]
+        self.assertEqual("SUMITOMO-PPLUS-AY8K7", lead["candidate_id"])
+        self.assertEqual("raw_name_variant_unreviewed", lead["food_name_match"])
+        self.assertEqual(["food_identity_requires_review"], lead["reason_codes"])
+        self.assertEqual("unresolved_or_outside_published_use", lead["application_status"])
+        self.assertIn("food_package_suitability_unverified", lead["approval_blockers"])
+
     def test_processed_food_does_not_inherit_fresh_food_application(self):
-        report = self._lead(_scenario(commodity_type="Broccoli, cooked"))
-        self.assertEqual("no_published_food_application_match", report["status"])
-        self.assertEqual([], report["leads"])
+        for food in ("Broccoli, cooked", "Broccoli, frozen, raw",
+                     "Broccoli, green, frozen, raw"):
+            with self.subTest(food=food):
+                report = self._lead(_scenario(commodity_type=food))
+                self.assertEqual("no_published_food_application_match",
+                                 report["status"])
+                self.assertEqual([], report["leads"])
 
     def test_inner_liner_cannot_be_treated_as_complete_bag(self):
         report = self._lead(_scenario(commodity_type="apple",

@@ -2,7 +2,7 @@
 
 The first source-backed candidate register is
 [`data/public_catalogue_candidates.v1.json`](../data/public_catalogue_candidates.v1.json).
-It contains **ten selected product records from five directly accessible
+It contains **thirteen selected product records from five directly accessible
 supplier sources**. These are traceable claims, not approved complete
 structures, food/package suitability labels, measured trial outcomes, or
 model-training rows. No values were filled from polymer-family averages.
@@ -60,7 +60,7 @@ quantity and temperature conditions expressly listed for a SKU.
   requires a compatible PE lid. No tested, identified tray/lid combination
   or finished-package gas transfer is supplied. The 450 µm test value was
   not extrapolated to the product's full 250–700 µm gauge range.
-- **Sumitomo P-Plus — included as six narrow produce-bag candidates.** The
+- **Sumitomo P-Plus — included as nine narrow produce-bag candidates.** The
   [standard-bag list](https://www.sumibe.co.jp/product/p-plus/business/standard/index.html)
   supplies exact SKU, produce, fill amount, bag gauge and dimensions, and
   recommended storage temperature; several rows also state a limited warm
@@ -68,7 +68,11 @@ quantity and temperature conditions expressly listed for a SKU.
   independently verified material service limit. The list does not provide
   per-SKU O₂/CO₂ transfer, construction or seal strength. Its PK601 apple
   product is explicitly an inner liner, not a standalone package. The
-  first value in each published three-part bag-size expression is interpreted
+  three added rows are EY8K3 (500 g edamame), VY7K4 (500 g broccoli), and
+  HY8K7 (200 g spinach); all three list 1–10°C storage and an up-to-25°C,
+  eight-hour excursion. These are separate SKUs, not interchangeable sizes
+  of an established suitability result. The first value in each published
+  three-part bag-size expression is interpreted
   as a gauge in millimetres; the supplier should confirm this interpretation
   before approval. The
   [manufacturer's adoption guidance](https://www.sumibe.co.jp/product/p-plus/business/introduction/index.html)
@@ -114,8 +118,11 @@ report. The lookup compares only supplier-listed food, pack quantity, storage
 temperature, and transit temperature/duration. `g` and `kg` are converted
 exactly. Food names are matched case/whitespace-insensitively. A food-master
 name of the form `broccoli, raw` versus a supplier's `broccoli` is shown only
-as an **unreviewed name variant**; cooked, frozen, and other forms are not
-silently mapped to a fresh-food application. A supplier-listed warm excursion
+as an **unreviewed name variant**. A single colour-qualified form such as
+`asparagus, green, raw` is also exposed as an unreviewed lead, never an exact
+identity match; arbitrary middle qualifiers are not accepted, so
+cooked, frozen, and other forms are not silently mapped to a fresh-food
+application. A supplier-listed warm excursion
 is checked conservatively against the full transport duration. The box-inner
 liner remains flagged as incomplete without its outer package. Products with
 no exact food application, including the broad PLANTIC component claims, are
@@ -126,6 +133,10 @@ or material recommendation. Even a food/quantity/temperature match cannot
 establish food-contact scope, source rights, service limits, gas balance,
 whole-package OTR/CO2TR/WVTR, target-life performance, or handling strength.
 It leaves the existing recommendation status and preferred structure unchanged.
+The Results UI groups these leads into listed-condition matches, related raw-food
+names that still require identity review, and out-of-scope uses. A separate
+engineering tier displays only candidates from the existing complete-structure
+screen; supplier-listed products cannot be promoted into it by this grouping.
 The real 5,000-food workbook has no actual scenario pack quantities or exposure
 inputs; a separate genuine scenario batch is still required to exercise this
 lookup. No scenarios or labels were generated from the food workbook.

@@ -110,9 +110,15 @@ try {
   assert.equal(await evaluate("document.querySelector('#view-decisions').hidden"), false);
   assert.equal(await evaluate("document.querySelector('#record-filter-count').textContent"), "1 of 1 rows");
   assert.equal(await evaluate("document.querySelector('[data-filter=not_ready] span').textContent"), "1", "the test-only scenario remains evidence-gated");
+  assert.equal(await evaluate("document.querySelector('#record-inspector .source-option-card[data-source-option-state=related] .supplier-lead-heading strong')?.textContent"), "AY8K7", "a supplier-listed asparagus use remains identity-unverified");
+  assert.match(await evaluate("document.querySelector('#record-inspector .package-tier-engineering').textContent"), /Not ready to shortlist/);
   assert.match(await evaluate("document.querySelector('#record-inspector').textContent"), /source|submitted|evidence/i);
   assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "result overflows viewport");
   await screenshot(process.env.PACKSENSE_RESULT_SCREENSHOT);
+  if (process.env.PACKSENSE_OPTION_SCREENSHOT) {
+    await evaluate("document.querySelector('#record-inspector .package-pathway').scrollIntoView({ block: 'start' })");
+    await screenshot(process.env.PACKSENSE_OPTION_SCREENSHOT);
+  }
   assert.deepEqual(exceptions, []);
   console.log(`Browser intake smoke passed at ${width}px: source ${foodId}, one evidence-gated decision.`);
 } finally {

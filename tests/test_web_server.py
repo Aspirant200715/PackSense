@@ -114,9 +114,9 @@ class WebServerTests(unittest.TestCase):
             self.assertFalse(payload["model_prediction_available"])
             self.assertFalse(payload["package_approval_available"])
             broccoli = [item for item in payload["applications"] if item["food"] == "broccoli"]
-            self.assertEqual(1, len(broccoli))
-            self.assertEqual("VY7K9", broccoli[0]["product_code"])
-            self.assertEqual(400, broccoli[0]["quantity"])
+            self.assertEqual(2, len(broccoli))
+            self.assertEqual({("VY7K9", 400), ("VY7K4", 500)},
+                             {(item["product_code"], item["quantity"]) for item in broccoli})
             self.assertTrue(broccoli[0]["source_url"].startswith("https://"))
             self.assertTrue(all(item["pack_format"] != "box inner liner"
                                 for item in payload["applications"]))

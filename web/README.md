@@ -52,7 +52,7 @@ python -m packsense.web_server --port 4182 --public-candidates data/public_catal
 ```
 
 The introduction then offers **View published package uses**. The Overview
-shows the six standalone food/pack-size/temperature applications in the
+shows the nine standalone food/pack-size/temperature applications in the
 current catalogue with product codes and direct manufacturer source links.
 The Overview can search those returned source uses and compare two published
 food, fill, pack format, storage and excursion claims side by side. This is
@@ -63,7 +63,7 @@ state. Report items open the corresponding status-filtered records; it does
 not simulate notifications or report unobserved packaging outcomes.
 The box inner liner is omitted because it is not a standalone package. This
 view does not run the suitability model, predict a material, or approve a
-package. All six applications are source claims with rights review pending.
+package. All nine applications are source claims with rights review pending.
 The local API is `GET /api/published-applications`; its response carries the
 catalogue SHA-256 and explicit false prediction/approval flags. A real
 scenario batch is still needed to compare an actual food and journey with a
@@ -132,12 +132,17 @@ backend startup, not uploaded through the browser.
 
 To inspect source-linked supplier applications for those same real scenario
 rows, also pass `--public-candidates data/public_catalogue_candidates.v1.json`.
-The Results inspector then shows published product uses and their food,
-quantity, storage and transit mismatches; the actual pipeline trace counts
-them at package screening. These are **research leads only**. Even a matching
+The Results inspector now separates two evidence tiers. **Source-listed
+options** show manufacturer-published food, fill, storage, and excursion
+conditions, with exact-condition matches apart from related raw-food names
+that still need identity review. Differing uses stay collapsible and are not
+presented as matches. **Engineering shortlist** shows only reviewed complete
+structures that passed the backend's narrow protection screen, or states why
+that screen is not ready. The actual pipeline trace counts supplier uses at
+package screening. These are **research leads only**. Even an exact-condition
 supplier use retains pending rights and independent food-contact, complete-
-package transfer, sealing, handling and suitability blockers. It never
-populates the material-prediction field or changes a row's recommendation
+package transfer, sealing, handling, and suitability blockers. This change
+does not populate the material-prediction field or change a row's recommendation
 status. The browser still receives no source paths; the one-scenario form
 submits only the selected food-reference ID and user-entered conditions.
 
