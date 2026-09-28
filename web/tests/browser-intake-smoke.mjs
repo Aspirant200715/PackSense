@@ -70,6 +70,10 @@ try {
   await command("Page.navigate", { url: appUrl });
   await until("document.readyState === 'complete' && document.querySelector('#start-evaluation')?.hidden === false", "interactive backend did not connect");
   assert.equal(await evaluate("document.querySelector('#backend-indicator').dataset.state"), "interactive_scenario");
+  assert.match(await evaluate("document.querySelector('#welcome-screen h1').textContent"), /Food first\.\s*Evidence always\./);
+  assert.equal(await evaluate("document.querySelector('#start-evaluation').classList.contains('button-light')"), true, "evaluation is the primary entry when real reference masters are configured");
+  assert.equal(await evaluate("document.querySelector('.welcome-enter').classList.contains('button-secondary')"), true);
+  await screenshot(process.env.PACKSENSE_INTRO_SCREENSHOT);
   await evaluate("document.querySelector('#start-evaluation').click()");
   assert.equal(await evaluate("document.querySelector('#view-evaluate').hidden"), false);
   assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "form overflows viewport");
