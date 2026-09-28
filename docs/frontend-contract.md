@@ -1,10 +1,10 @@
 # Frontend decision JSON contract
 
-The frontend can be designed against `frontend-decision-v1` while the material
-model and package-release gates remain unfulfilled. This is a versioned
-projection of the existing batch report, **not** an HTTP API or a new
-prediction engine. It does not expose the source workbook paths or raw food
-rows. Generate it from a completed batch audit:
+The frontend uses `frontend-decision-v1` while the material model and
+package-release gates remain unfulfilled. This is a versioned projection of
+the existing batch report, **not** a new prediction engine. It does not expose
+the source workbook paths or raw food rows. Generate it from a completed batch
+audit:
 
 ```powershell
 python -m packsense.frontend_contract batch-report.json --output new-frontend-decisions.json
@@ -74,5 +74,8 @@ workbooks remain reference features, not package-choice labels. See
 [material-suitability intake](material-suitability.md) and
 [preliminary recommendation](basic-recommendation.md).
 
-The [static decision workspace](../web/README.md) can display this contract
-from a local file. It does not yet call a live backend API.
+The [decision workspace](../web/README.md) can display this contract from a
+local file or fetch it from the localhost-only `packsense.web_server` API. The
+service can also run an operator-configured scenario batch through the existing
+backend and project its output; it does not change the evidence gates or add a
+material predictor.

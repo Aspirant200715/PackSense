@@ -860,6 +860,34 @@ PackSense must continue to withhold a real package or shelf-life claim.
   and a `TEST_ONLY` report import/trace produced no browser exceptions. The
   real package recommendation and material prediction gates remain withheld.
 
+### 2026-09-28 — connected decision workspace and introductory map
+
+- Continued on `feat/frontend-workspace` for PR #36. Replaced the global left
+  sidebar with an accessible top icon navigation, added an introductory
+  four-stop decision map, and made the eight-stage pipeline a horizontal,
+  clickable process track. The layout uses restrained navy/cobalt glass
+  surfaces, DM Sans for readable headings, and dark/light themes. Mobile
+  navigation and stage centering were checked at a true 390 px viewport.
+- Added a localhost-only Python web service. `GET /api/status` exposes whether
+  a source batch or audited report is configured. `GET /api/report` projects
+  an operator-selected audited batch, and `POST /api/run` invokes the existing
+  recommendation-batch CLI for operator-selected scenario and reference
+  files. Browser requests cannot choose source paths or submit scenario rows.
+  The existing projection and evidence gates remain authoritative; no model
+  prediction or package release is introduced.
+- No new food/package data, suitability labels, measured outcomes, estimates,
+  or model artifacts were added. The supplied food and material masters are
+  still reference inputs, not a scenario batch or supervised labels. A real
+  scenario batch must be configured to run the pipeline from the UI. Reviewed
+  complete-package outcomes are still required for a trustworthy trained
+  material predictor.
+- Local verification: 233 Python tests, 14 Node contract tests, compilation,
+  JavaScript syntax, diff check, local API checks, and a headless-browser
+  mobile interaction check passed. The browser check covers the intro map,
+  selected-stage visibility, route switching, empty actual-trace state, top
+  navigation, theme toggle, and absence of JavaScript exceptions. PR CI and
+  independent review remain separate.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

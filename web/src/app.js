@@ -19,6 +19,7 @@ const TRACE_LABELS = {
 const state = {
   report: null,
   fileName: null,
+  reportOrigin: null,
   view: "overview",
   search: "",
   filter: "all",
@@ -29,6 +30,8 @@ const state = {
   pipelineStep: 0,
   pipelineRowIndex: 0,
   pipelineOptionsFor: null,
+  backendMode: "checking",
+  backendBusy: false,
 };
 let playbackTimer = null;
 
@@ -79,13 +82,6 @@ function notify(message, error = false) {
   notify.timeout = setTimeout(() => { toast.hidden = true; }, 5200);
 }
 
-function closeMobileMenu() {
-  $("#sidebar").classList.remove("is-open");
-  $("#sidebar-scrim").hidden = true;
-  $("#menu-toggle").setAttribute("aria-expanded", "false");
-  $("#menu-toggle").setAttribute("aria-label", "Open navigation");
-}
-
 function setTheme(theme) {
   const selected = theme === "light" ? "light" : "dark";
   document.documentElement.dataset.theme = selected;
@@ -103,6 +99,15 @@ function stopPlayback() {
   $("#pipeline-play").setAttribute("aria-label", "Play walkthrough");
 }
 
+function centerActiveStage() {
+  const stageList = $("#pipeline-stage-list");
+  const activeStage = stageList.querySelector(".is-active");
+  if (!activeStage || stageList.scrollWidth <= stageList.clientWidth) return;
+  const listBounds = stageList.getBoundingClientRect();
+  const stageBounds = activeStage.getBoundingClientRect();
+  stageList.scrollLeft += stageBounds.left - listBounds.left - (stageList.clientWidth - stageBounds.width) / 2;
+}
+
 function goTo(view) {
   if (!VIEWS.has(view)) return;
   if (view !== "pipeline") stopPlayback();
@@ -118,28 +123,19 @@ function goTo(view) {
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
   });
-  $("#breadcrumb-current").textContent = {
-    overview: "Overview", decisions: "Decision records", pipeline: "Pipeline", evidence: "Evidence & sources",
-  }[view];
-  closeMobileMenu();
+  if (view === "pipeline") centerActiveStage();
   window.scrollTo(0, 0);
 }
 
-function emptyRecords() {
-  return `<div class="records-empty" data-drop-zone><div class="records-empty-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><rect x="10" y="7" width="28" height="34" rx="2"/><path d="M17 17h14M17 24h14M17 31h8"/></svg></div><strong>No report loaded</strong><p>Bring in a generated decision report to see your scenarios here.</p><button type="button" class="button button-secondary button-small" data-import>Choose JSON file</button></div>`;
-}
-
 function renderOverview() {
-  const counts = state.report ? summarizeReport(state.report) : null;
-  $("#metric-total").textContent = counts ? counts.total.toLocaleString() : "—";
-  $("#metric-not-ready").textContent = counts ? counts.not_ready.toLocaleString() : "—";
-  $("#metric-shortlist").textContent = counts ? counts.preliminary_shortlist.toLocaleString() : "—";
-  $("#metric-exception").textContent = counts ? counts.exception.toLocaleString() : "—";
+  $("#overview-results").hidden = !state.report;
+  if (!state.report) return;
+  const counts = summarizeReport(state.report);
+  $("#metric-total").textContent = counts.total.toLocaleString();
+  $("#metric-not-ready").textContent = counts.not_ready.toLocaleString();
+  $("#metric-shortlist").textContent = counts.preliminary_shortlist.toLocaleString();
+  $("#metric-exception").textContent = counts.exception.toLocaleString();
   const root = $("#overview-records");
-  if (!state.report) {
-    root.innerHTML = emptyRecords();
-    return;
-  }
   root.innerHTML = `<div class="overview-record-list">${state.report.rows.slice(0, 5).map((row, index) => `
     <button type="button" class="overview-record" data-select-row="${index}">
       <span class="overview-record-id"><strong>${escapeHtml(row.scenario?.commodity_type || row.record_id || `Source row ${row.source_row_number}`)}</strong><small>${escapeHtml(row.record_id || `Row ${row.source_row_number}`)} · Row ${row.source_row_number}</small></span>
@@ -285,12 +281,7 @@ function renderPipeline() {
     const statusText = actualMode ? (hasReport ? readableCode(status) : "Awaiting report") : active ? "In focus" : index < state.pipelineStep ? "Explored" : "Up next";
     return `<button type="button" class="studio-stage${active ? " is-active" : ""}" data-pipeline-index="${index}" ${actualMode && !hasReport ? "disabled" : ""} ${active ? 'aria-current="step"' : ""}><span class="stage-index">${stage.number}</span><span class="stage-text"><strong>${escapeHtml(stage.title)}</strong><small>${escapeHtml(statusText)}</small></span><span class="stage-light stage-${escapeHtml(status)}" aria-hidden="true"></span></button>`;
   }).join("");
-  if (window.matchMedia("(max-width: 650px)").matches) {
-    const activeStage = stageList.querySelector(".is-active");
-    const listBounds = stageList.getBoundingClientRect();
-    const stageBounds = activeStage.getBoundingClientRect();
-    stageList.scrollLeft += stageBounds.left - listBounds.left - (stageList.clientWidth - stageBounds.width) / 2;
-  }
+  centerActiveStage();
 
   if (actualMode && !hasReport) return;
   const stage = actualStages
@@ -327,6 +318,48 @@ function render() {
   renderPipeline();
 }
 
+function renderBackendState() {
+  const messages = {
+    checking: ["Checking backend", "Connecting to the local decision pipeline.", "Checking"],
+    unavailable: ["Open a decision report", "The local backend is not running. You can still inspect a PackSense report here.", "Report mode"],
+    unconfigured: ["Backend online; add source files", "Configure a scenario batch and reference masters when starting the local backend, or open an existing report.", "Backend online"],
+    audited_report: ["Audited report connected", "This report is projected directly from the local Python backend. Explore its records and source trace.", "Report connected"],
+    scenario_batch: ["Source files connected", "Run the configured scenario batch through the real ingestion, requirement and package-screening steps.", "Backend ready"],
+  };
+  const [title, detail, indicator] = messages[state.backendMode] || messages.unavailable;
+  const localReport = state.report && state.reportOrigin === "local";
+  $("#backend-banner-title").textContent = state.backendBusy ? "Running evidence checks" : localReport ? "Local decision report open" : title;
+  $("#backend-banner-detail").textContent = state.backendBusy
+    ? "The Python backend is processing the configured source files. This may take a moment."
+    : localReport ? "Explore the report's recorded conditions, screening status and source trace." : detail;
+  $("#backend-indicator-text").textContent = state.backendBusy ? "Backend running" : indicator;
+  $("#backend-indicator").dataset.state = state.backendBusy ? "running" : state.backendMode;
+  $$('[data-run-backend]').forEach((button) => {
+    button.hidden = state.backendMode !== "scenario_batch";
+    button.disabled = state.backendBusy;
+    button.textContent = state.backendBusy ? "Running…" : button.id === "banner-run-backend" ? "Run configured batch →" : "Run batch";
+  });
+}
+
+function acceptReport(report, label, destination, origin = "local") {
+  state.report = report;
+  state.fileName = label;
+  state.reportOrigin = origin;
+  state.search = "";
+  state.filter = "all";
+  state.page = 1;
+  state.selectedIndex = 0;
+  state.pipelineRowIndex = 0;
+  state.pipelineOptionsFor = null;
+  if (destination === "pipeline") state.pipelineMode = "actual";
+  $("#record-search").value = "";
+  $("#record-filter").value = "all";
+  goTo(destination);
+  render();
+  renderBackendState();
+  notify(`${report.rows.length.toLocaleString()} decision rows ready.`);
+}
+
 async function loadFile(file) {
   if (!file) return;
   const returnToTrace = state.view === "pipeline" && state.pipelineMode === "actual";
@@ -336,21 +369,62 @@ async function loadFile(file) {
   }
   try {
     const report = parseDecisionReport(await file.text());
-    state.report = report;
-    state.fileName = file.name;
-    state.search = "";
-    state.filter = "all";
-    state.page = 1;
-    state.selectedIndex = 0;
-    state.pipelineRowIndex = 0;
-    state.pipelineOptionsFor = null;
-    $("#record-search").value = "";
-    $("#record-filter").value = "all";
-    render();
-    goTo(returnToTrace ? "pipeline" : "decisions");
-    notify(`${report.rows.length.toLocaleString()} decision rows loaded locally.`);
+    acceptReport(report, file.name, returnToTrace ? "pipeline" : "decisions");
   } catch (error) {
     notify(error instanceof Error ? error.message : "Could not read the report.", true);
+  }
+}
+
+async function responseError(response) {
+  try {
+    const payload = await response.json();
+    return typeof payload.error === "string" ? payload.error : `Backend returned ${response.status}.`;
+  } catch {
+    return `Backend returned ${response.status}.`;
+  }
+}
+
+async function connectBackend() {
+  try {
+    const response = await fetch("/api/status", { cache: "no-store" });
+    if (!response.ok) throw new Error("Local backend is unavailable.");
+    const status = await response.json();
+    if (!["unconfigured", "audited_report", "scenario_batch"].includes(status.mode) || status.model_deployed !== false) {
+      throw new Error("Local backend state is unsupported.");
+    }
+    state.backendMode = status.mode;
+    renderBackendState();
+    if (status.has_report && status.mode === "audited_report") {
+      try {
+        const reportResponse = await fetch("/api/report", { cache: "no-store" });
+        if (!reportResponse.ok) throw new Error(await responseError(reportResponse));
+        acceptReport(parseDecisionReport(await reportResponse.text()), "Connected backend report", "overview", "backend");
+      } catch (error) {
+        $("#backend-banner-title").textContent = "Report could not be loaded";
+        $("#backend-banner-detail").textContent = "The backend is online, but its configured report needs attention.";
+        notify(error instanceof Error ? error.message : "Could not load the configured report.", true);
+      }
+    }
+  } catch (error) {
+    state.backendMode = "unavailable";
+    renderBackendState();
+    if (error.message !== "Local backend is unavailable.") notify(error.message, true);
+  }
+}
+
+async function runBackend() {
+  if (state.backendMode !== "scenario_batch" || state.backendBusy) return;
+  state.backendBusy = true;
+  renderBackendState();
+  try {
+    const response = await fetch("/api/run", { method: "POST", cache: "no-store" });
+    if (!response.ok) throw new Error(await responseError(response));
+    acceptReport(parseDecisionReport(await response.text()), "Current backend run", "pipeline", "backend");
+  } catch (error) {
+    notify(error instanceof Error ? error.message : "The backend run failed.", true);
+  } finally {
+    state.backendBusy = false;
+    renderBackendState();
   }
 }
 
@@ -369,6 +443,14 @@ document.addEventListener("click", (event) => {
   if (target.matches("[data-nav]")) goTo(target.dataset.nav);
   else if (target.matches("[data-go]")) goTo(target.dataset.go);
   else if (target.matches("[data-import]")) $("#report-input").click();
+  else if (target.matches("[data-run-backend]")) runBackend();
+  else if (target.matches("[data-jump-stage]")) {
+    stopPlayback();
+    state.pipelineMode = "walkthrough";
+    state.pipelineStep = Number(target.dataset.jumpStage);
+    goTo("pipeline");
+    renderPipeline();
+  }
   else if (target.matches("#theme-toggle")) {
     setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
   } else if (target.matches("[data-pipeline-mode]")) {
@@ -411,8 +493,8 @@ document.addEventListener("click", (event) => {
     state.pipelineRowIndex = Number(target.dataset.traceRow);
     state.pipelineMode = "actual";
     state.pipelineStep = 0;
-    renderPipeline();
     goTo("pipeline");
+    renderPipeline();
   } else if (target.matches("[data-select-row]")) {
     state.selectedIndex = Number(target.dataset.selectRow);
     state.pipelineRowIndex = state.selectedIndex;
@@ -422,8 +504,6 @@ document.addEventListener("click", (event) => {
   } else if (target.matches("[data-page]")) {
     state.page += target.dataset.page === "next" ? 1 : -1;
     renderDecisions();
-  } else if (target.matches("[data-copy-command]")) {
-    copyText($("#projection-command").textContent, "Command copied.");
   } else if (target.matches("[data-copy-hash]")) {
     copyText(target.dataset.copyHash, "Source fingerprint copied.");
   }
@@ -449,14 +529,6 @@ $("#pipeline-record-select").addEventListener("change", (event) => {
   state.pipelineStep = 0;
   renderPipeline();
 });
-$("#menu-toggle").addEventListener("click", () => {
-  const opened = $("#sidebar").classList.toggle("is-open");
-  $("#sidebar-scrim").hidden = !opened;
-  $("#menu-toggle").setAttribute("aria-expanded", String(opened));
-  $("#menu-toggle").setAttribute("aria-label", opened ? "Close navigation" : "Open navigation");
-});
-$("#sidebar-scrim").addEventListener("click", closeMobileMenu);
-document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeMobileMenu(); });
 document.addEventListener("dragover", (event) => {
   if ([...(event.dataTransfer?.types ?? [])].includes("Files")) event.preventDefault();
 });
@@ -471,3 +543,5 @@ let storedTheme = "dark";
 try { storedTheme = localStorage.getItem("packsense-theme") || "dark"; } catch { /* Private mode may block storage. */ }
 setTheme(storedTheme);
 render();
+renderBackendState();
+connectBackend();

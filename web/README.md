@@ -1,43 +1,65 @@
 # PackSense decision workspace
 
-A build-free frontend for the backend's `frontend-decision-v1` JSON. It
-provides an overview, searchable and paginated decision records, an interactive
-eight-step pipeline walkthrough, a trace of one imported decision row, and
-source-hash inspection. The walkthrough can follow either a reviewed
-non-respiring route or a fresh-produce route and can be played step by step.
-It is an explanation, not a computed recommendation. The actual trace uses
-only fields in the imported report and does not run a new screen or predictor.
-No demonstration food/package rows or model predictions are bundled.
-The actual trace shows the imported food, pack quantity, requested-life target,
-and every recorded temperature phase, then exposes recorded composition,
-respiration, evidence gaps, and candidate counts at the relevant stages. If a
-field was not reported, it stays visibly unreported. Importing a report from
-the trace view returns to that trace.
+This is the build-free MVP frontend for the existing Python decision pipeline.
+It has an interactive introductory map, an eight-stage walkthrough, searchable
+decision records, an actual trace for one audited scenario, and source-hash
+inspection. The walkthrough explains the logic; it does **not** calculate a
+packaging answer. An actual trace only displays values in a backend report.
 
-The workspace defaults to a dark theme and has a light-mode toggle. The theme
-choice alone is stored in browser local storage. A report is read into browser
-memory; it is not uploaded or persisted. IBM Plex fonts load from Google Fonts
-when available; system fallbacks are used offline. No report contents are sent
-to the font provider.
+The app defaults to dark mode and has a light-mode toggle. Only the theme is
+stored in browser local storage. No demonstration rows or predictions are
+bundled. DM Sans and IBM Plex Mono are fetched from Google Fonts when online;
+system fonts are used offline. Report contents are not sent to the font host.
 
-From the repository root:
+## Run locally
+
+From the repository root, start the connected local app:
 
 ```powershell
-python -m http.server 4173 --bind 127.0.0.1 --directory web
+python -m packsense.web_server --port 4173
 ```
 
-Open `http://localhost:4173` and import a JSON file produced by:
+Open `http://127.0.0.1:4173/`. With no scenario sources configured, the
+backend reports that it is online but cannot run a batch. You can still open
+an already projected `frontend-decision-v1` JSON file in the browser.
+
+To open an existing **audited batch report** automatically:
 
 ```powershell
-python -m packsense.frontend_contract batch-report.json --output frontend-decisions.json
+python -m packsense.web_server --batch-report path/to/batch-report.json
 ```
 
-The backend batch report is **not** the file to import; project it first.
-Run UI contract tests with `npm test` inside `web/` (Node 18 or newer). No
-`npm install` step is needed. Python backend tests remain separate.
+To run a real scenario batch from operator-selected source files:
 
-The app refuses an unknown contract version, inconsistent rows, and any
-report that claims a deployed model, package feasibility, material prediction,
-or shelf-life prediction in this preliminary contract. A shortlist is clearly
-marked preliminary. This is a static file viewer, not a live HTTP API or a
-trained recommendation model.
+```powershell
+python -m packsense.web_server --scenarios path/to/scenarios.csv --food-master path/to/food-master.xlsx --material-master path/to/material-master.xlsx
+```
+
+The app then shows **Run configured batch**. Clicking it invokes the existing
+`packsense.recommendation_batch` CLI and projects its audited output through
+`packsense.frontend_contract`. The scenario and master paths are set at server
+startup, not supplied by the browser. The backend's optional evidence-register
+arguments (for example `--route-register`, `--structures`, and
+`--structure-reviews`) are also accepted by the web server and forwarded to
+the same CLI. Run `python -m packsense.web_server --help` for the full list.
+The supplied food and material masters are reference data; they are **not** a
+scenario batch. No scenario file is bundled or inferred from them.
+
+The local service binds only to `127.0.0.1`, checks the request host and
+origin, accepts no browser-supplied source paths or row data, and runs one
+batch at a time. It is a local development MVP, not a public deployment.
+
+Alternatively, project a batch report yourself and open that JSON through
+the **Open report** button:
+
+```powershell
+python -m packsense.frontend_contract path/to/batch-report.json --output path/to/frontend-decisions.json
+```
+
+The browser import expects the **projected** JSON, not the raw batch report.
+It rejects an unknown contract version or claims of a deployed material model,
+package feasibility, or predicted shelf life. A preliminary shortlist is a
+screened engineering candidate, not a validated ML recommendation.
+
+Run the UI tests with `npm test` inside `web/` (Node 18 or newer; no install
+step). Run the local API tests with `python -m pytest tests/test_web_server.py`.
