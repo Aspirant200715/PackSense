@@ -174,7 +174,6 @@ function goTo(view) {
 function renderOverview() {
   $("#overview-results").hidden = !state.report;
   $("#overview-empty").hidden = Boolean(state.report);
-  $("#backend-banner").hidden = !state.report;
   if (!state.report) return;
   const counts = summarizeReport(state.report);
   $("#metric-total").textContent = counts.total.toLocaleString();
@@ -376,32 +375,21 @@ function render() {
 }
 
 function renderBackendState() {
-  const messages = {
-    checking: ["Checking backend", "Connecting to the local decision pipeline.", "Checking"],
-    unavailable: ["Open a decision report", "The local backend is not running. You can still inspect a PackSense report here.", "Report mode"],
-    unconfigured: ["Backend online; add source files", "Configure a scenario batch and reference masters when starting the local backend, or open an existing report.", "Backend online"],
-    audited_report: ["Audited report connected", "This report is projected directly from the local Python backend. Explore its records and source trace.", "Report connected"],
-    scenario_batch: ["Source files connected", "Run the configured scenario batch through the real ingestion, requirement and package-screening steps.", "Backend ready"],
+  const statuses = {
+    checking: ["Checking", "Checking the local backend connection."],
+    unavailable: ["Offline", "Local backend unavailable; report import still works."],
+    unconfigured: ["Connected", "Local backend connected; no scenario batch is configured."],
+    audited_report: ["Connected", "Local backend connected; an audited report is configured."],
+    scenario_batch: ["Connected", "Local backend connected; scenario sources are configured."],
   };
-  const [title, detail, indicator] = messages[state.backendMode] || messages.unavailable;
-  const localReport = state.report && state.reportOrigin === "local";
-  const shownTitle = state.backendBusy ? "Running evidence checks" : localReport ? "Local decision report open" : title;
-  const shownDetail = state.backendBusy
-    ? "The Python backend is processing the configured source files. This may take a moment."
-    : localReport ? "Explore the report's recorded conditions, screening status and source trace." : detail;
-  $("#backend-banner-title").textContent = shownTitle;
-  $("#backend-banner-detail").textContent = shownDetail;
-  $("#overview-backend-title").textContent = shownTitle;
-  $("#overview-backend-detail").textContent = shownDetail;
-  $("#overview-empty-status").dataset.state = state.backendBusy ? "running" : state.backendMode;
-  $("#backend-indicator-text").textContent = state.backendBusy ? "Backend running" : indicator;
+  const [label, detail] = statuses[state.backendMode] || statuses.unavailable;
+  $("#backend-indicator-text").textContent = state.backendBusy ? "Running" : label;
   $("#backend-indicator").dataset.state = state.backendBusy ? "running" : state.backendMode;
-  $("#backend-indicator").title = state.backendBusy ? "Backend running" : indicator;
-  $$('[data-run-backend]').forEach((button) => {
-    button.hidden = state.backendMode !== "scenario_batch";
-    button.disabled = state.backendBusy;
-    button.textContent = state.backendBusy ? "Running…" : ["banner-run-backend", "overview-run-backend"].includes(button.id) ? "Run configured batch →" : "Run batch";
-  });
+  $("#backend-indicator").title = state.backendBusy ? "Running the configured scenario batch." : detail;
+  const runButton = $("#run-backend");
+  runButton.hidden = state.backendMode !== "scenario_batch";
+  runButton.disabled = state.backendBusy;
+  runButton.textContent = state.backendBusy ? "Running…" : "Run batch";
 }
 
 function acceptReport(report, label, destination, origin = "local") {
@@ -462,10 +450,9 @@ async function connectBackend() {
         if (!reportResponse.ok) throw new Error(await responseError(reportResponse));
         acceptReport(parseDecisionReport(await reportResponse.text()), "Connected backend report", "overview", "backend");
       } catch (error) {
-        $("#backend-banner-title").textContent = "Report could not be loaded";
-        $("#backend-banner-detail").textContent = "The backend is online, but its configured report needs attention.";
-        $("#overview-backend-title").textContent = "Report could not be loaded";
-        $("#overview-backend-detail").textContent = "The backend is online, but its configured report needs attention.";
+        $("#backend-indicator-text").textContent = "Report error";
+        $("#backend-indicator").dataset.state = "report_error";
+        $("#backend-indicator").title = "The local backend is connected, but its configured report could not be loaded.";
         notify(error instanceof Error ? error.message : "Could not load the configured report.", true);
       }
     }

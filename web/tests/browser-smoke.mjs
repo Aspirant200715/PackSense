@@ -87,14 +87,14 @@ try {
   await command("Page.navigate", { url: appUrl });
   await command("Page.bringToFront");
   for (let tries = 0; tries < 30; tries += 1) {
-    if (await evaluate("document.readyState === 'complete' && document.querySelector('#backend-banner-title')?.textContent !== 'Checking the backend'")) break;
+    if (await evaluate("document.readyState === 'complete' && document.querySelector('#backend-indicator-text')?.textContent !== 'Checking'")) break;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  const layout = await evaluate("({viewport: innerWidth, page: document.documentElement.scrollWidth, intro: !document.querySelector('#welcome-screen').hidden, appHidden: document.querySelector('.app-shell').hidden, banner: document.querySelector('#backend-banner-title').textContent})");
+  const layout = await evaluate("({viewport: innerWidth, page: document.documentElement.scrollWidth, intro: !document.querySelector('#welcome-screen').hidden, appHidden: document.querySelector('.app-shell').hidden, connection: document.querySelector('#backend-indicator-text').textContent})");
   assert.ok(layout.page <= layout.viewport, `horizontal overflow: ${JSON.stringify(layout)}`);
   assert.equal(layout.intro, true, "dedicated introduction is visible first");
   assert.equal(layout.appHidden, true, "workspace is not crowded into the introduction");
-  assert.notEqual(layout.banner, "Checking the backend", "backend status resolved");
+  assert.notEqual(layout.connection, "Checking", "backend status resolved");
 
   if (process.env.PACKSENSE_SCREENSHOT) {
     const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
@@ -104,6 +104,7 @@ try {
   await evaluate("document.querySelector('[data-enter-app]').click()");
   assert.equal(await evaluate("document.querySelector('.app-shell').hidden"), false);
   assert.equal(await evaluate("document.querySelector('#view-pipeline').hidden"), false);
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('#backend-indicator')).display !== 'none'"), true, "single connection indicator is visible");
   assert.equal(await evaluate("document.querySelector('#pipeline-play').getAttribute('aria-pressed')"), "true", "guided tour starts from Explore");
   let advanced = false;
   for (let tries = 0; tries < 80; tries += 1) {
@@ -128,9 +129,9 @@ try {
   await evaluate("document.querySelector('[data-nav=\"overview\"]').click()");
   assert.equal(await evaluate("document.querySelector('#view-overview').hidden"), false);
   assert.equal(await evaluate("document.querySelectorAll('[data-nav].is-active').length"), 1);
+  assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "workspace has no horizontal overflow");
   assert.equal(await evaluate("document.querySelector('#overview-empty').hidden"), false);
-  assert.equal(await evaluate("document.querySelector('#backend-banner').hidden"), true, "empty overview has one integrated status panel");
-  assert.notEqual(await evaluate("document.querySelector('#overview-backend-title').textContent"), "Checking the backend");
+  assert.equal(await evaluate("document.querySelector('#backend-banner, #overview-empty-status')"), null, "overview repeats no connection message");
   await new Promise((resolve) => setTimeout(resolve, 200));
   if (process.env.PACKSENSE_OVERVIEW_SCREENSHOT) {
     const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
@@ -158,6 +159,9 @@ try {
   assert.equal(await evaluate("Boolean(document.querySelector('#record-inspector .inspector-disclosure[open] .candidate-list'))"), true);
   await evaluate("document.querySelector('[data-filter=\"exception\"]').click()");
   assert.equal(await evaluate("Boolean(document.querySelector('#record-inspector .inspector-disclosure[open] .reason-stack'))"), true);
+  await evaluate("document.querySelector('[data-nav=\"overview\"]').click()");
+  assert.equal(await evaluate("document.querySelector('#overview-results').hidden"), false);
+  assert.equal(await evaluate("document.querySelectorAll('#backend-indicator').length"), 1);
   await evaluate("document.querySelector('[data-welcome]').click()");
   assert.equal(await evaluate("document.querySelector('#welcome-screen').hidden"), false);
   assert.deepEqual(exceptions, []);

@@ -925,6 +925,20 @@ PackSense must continue to withhold a real package or shelf-life claim.
   checks the integrated status and checkpoint navigation; the imported
   report used by that test remains `TEST_ONLY` UI data.
 
+### 2026-09-28 — one connection-status source
+
+- Continued on `feat/frontend-workspace` for PR #36. Removed the redundant
+  backend banner and empty-Overview status strip. The top bar is now the one
+  visible connection-status location across workspace views, including on
+  mobile; it distinguishes connected, offline, running, and report-load error
+  states. Its tooltip retains the configuration detail without repeating it
+  in the page body. The existing top-bar Run action remains visible only for
+  an operator-configured scenario batch.
+- The Overview keeps its compact method actions and clickable checkpoints.
+  No backend API, source data, report projection, training artifact, or
+  release gate changed. Browser smoke now verifies that the single indicator
+  is visible and that neither Overview state duplicates the status message.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

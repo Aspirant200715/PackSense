@@ -57,7 +57,7 @@
             <button type="button" class="nav-item" data-nav="evidence" aria-label="Evidence and sources" title="Evidence and sources"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg><span>Evidence</span></button>
           </nav>
           <div class="topbar-actions">
-            <span class="backend-indicator" id="backend-indicator" role="status" title="Checking backend"><span aria-hidden="true"></span><span id="backend-indicator-text" class="sr-only">Checking backend</span></span>
+            <span class="backend-indicator" id="backend-indicator" role="status" title="Checking local backend"><span class="backend-indicator-dot" aria-hidden="true"></span><span class="backend-indicator-prefix">BACKEND</span><span id="backend-indicator-text">Checking</span></span>
             <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
               <svg class="theme-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
               <svg class="theme-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20.2 15.8A8.7 8.7 0 0 1 8.2 3.8a8.7 8.7 0 1 0 12 12Z"/></svg>
@@ -74,17 +74,7 @@
         <main class="main-content">
           <section class="view is-visible" id="view-overview" aria-labelledby="overview-title">
             <div class="page-heading overview-heading"><div><div class="page-kicker">DECISION WORKSPACE</div><h1 id="overview-title">Overview</h1><p>Explore the method or inspect the evidence behind a real batch.</p></div></div>
-            <div class="backend-banner" id="backend-banner">
-              <div class="backend-banner-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/><circle cx="7" cy="7" r="1"/><circle cx="7" cy="12" r="1"/><circle cx="7" cy="17" r="1"/></svg></div>
-              <div><strong id="backend-banner-title">Checking the backend</strong><p id="backend-banner-detail">Connecting to the local decision pipeline.</p></div>
-              <button type="button" class="button button-primary button-small" id="banner-run-backend" data-run-backend hidden>Run configured batch →</button>
-            </div>
             <section class="overview-empty" id="overview-empty" aria-labelledby="overview-empty-title">
-              <div class="overview-empty-status" id="overview-empty-status" role="status">
-                <span class="overview-status-light" aria-hidden="true"></span>
-                <div><span>LOCAL PIPELINE</span><strong id="overview-backend-title">Checking the backend</strong><p id="overview-backend-detail">Connecting to the local decision pipeline.</p></div>
-                <button type="button" class="button button-primary button-small" id="overview-run-backend" data-run-backend hidden>Run configured batch →</button>
-              </div>
               <div class="overview-empty-content">
                 <div class="overview-empty-copy">
                   <div class="section-kicker">START WITH THE METHOD</div>

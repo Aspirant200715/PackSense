@@ -7,12 +7,14 @@ open a specific stage. A prominent play/pause control, progress indicator, and
 clickable connected stage track show how the process advances. With reduced
 motion enabled, the tour waits for a manual click instead of auto-playing.
 
-The workspace has a compact empty overview with live local-backend status and
-four clickable checkpoints, searchable decision records with status filters,
-expandable evidence details, an actual trace for one audited
+The workspace has a compact empty overview with four clickable checkpoints,
+searchable decision records with status filters, expandable evidence details,
+an actual trace for one audited
 scenario, and source-hash inspection. Long record details are collapsed until
 requested. The walkthrough explains the logic; it does **not** calculate a
 packaging answer. An actual trace only displays values in a backend report.
+The top bar is the single connection-status display; it shows Connected,
+Offline, Running, or a report-loading error as appropriate.
 
 The app defaults to dark mode and has a light-mode toggle. Only the theme is
 stored in browser local storage. No demonstration rows or predictions are
