@@ -1085,6 +1085,28 @@ PackSense must continue to withhold a real package or shelf-life claim.
   working source URL and no horizontal overflow. The current two reference
   workbooks still cannot train or release a trustworthy material predictor.
 
+### 2026-09-28 — make source discovery and review states interactive
+
+- Continued on `feat/supplier-leads-frontend`. Added a restrained Review
+  updates panel whose items come only from the current backend state, loaded
+  supplier catalogue, or actual report status counts. Each item leads to the
+  relevant setup, source view, or filtered decision records. It is not a
+  simulated notification feed.
+- Published uses now support text discovery and a two-item source-claim
+  comparison for food, fill, format and listed temperature conditions. The
+  UI explicitly keeps these as research leads, not a suitability ranking,
+  interchangeable uses, approved packages, or model predictions.
+- No dataset, scenario rows, labels, source claims, backend calculations or
+  release gates changed. The narrow mobile header was adjusted so the new
+  control does not obscure the pipeline setup anchor.
+- Local verification: 238 scoped Python tests and 23 Node tests passed;
+  browser smoke passed against the unconfigured service at 390 px and the
+  real catalogue service at 320, 390 and 1440 px, including search,
+  comparison, review-item navigation and horizontal-overflow checks. A broad
+  `pytest -q` collection also enters an ignored Kaggle staging directory and
+  fails on that duplicate package; `pytest tests -q` is the intended scoped
+  suite and passes. CI on this change is not yet verified.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

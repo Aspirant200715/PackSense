@@ -1,6 +1,7 @@
 import { parseDecisionReport, readableCode, summarizeReport } from "./report.js";
 import { actualContext, actualPipeline, STAGES, walkthroughStage } from "./pipeline.js";
-import { validatePublishedApplications } from "./catalogue.js";
+import { filterPublishedApplications, validatePublishedApplications } from "./catalogue.js";
+import { deriveReviewItems } from "./review.js";
 
 const VIEWS = new Set(["overview", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
@@ -22,6 +23,8 @@ const state = {
   fileName: null,
   reportOrigin: null,
   publishedApplications: null,
+  publishedSearch: "",
+  publishedCompareIndices: [],
   view: "overview",
   search: "",
   filter: "all",
@@ -172,23 +175,42 @@ function enterPublishedApplications() {
   goTo("overview");
 }
 
+function renderPublishedApplications() {
+  const applications = state.publishedApplications.applications;
+  const visible = filterPublishedApplications(applications, state.publishedSearch);
+  const selected = state.publishedCompareIndices;
+  $("#published-applications-count").textContent = `${visible.length} of ${applications.length} source-listed ${applications.length === 1 ? "use" : "uses"}`;
+  $("#published-selection-hint").textContent = selected.length
+    ? `${selected.length} of 2 selected · source uses are not suitability matches`
+    : "Select two source uses to compare their listed conditions.";
+  $("#published-applications-list").innerHTML = visible.length ? visible.map(({ item, index }) => `
+    <article class="published-application-card">
+      <div class="published-application-top"><span>MANUFACTURER-LISTED USE</span><span>${escapeHtml(item.source_publisher)}</span></div>
+      <h3>${escapeHtml(item.food)}</h3>
+      <div class="published-application-product"><strong>${escapeHtml(item.product_code)}</strong><span>${escapeHtml(item.pack_format)}</span></div>
+      <dl><div><dt>Published fill</dt><dd>${formatNumber(item.quantity, ` ${escapeHtml(item.quantity_unit)}`)}</dd></div><div><dt>Storage</dt><dd>${formatNumber(item.storage_temperature_min_c, " °C")} to ${formatNumber(item.storage_temperature_max_c, " °C")}</dd></div>${item.excursion_max_c === null ? "" : `<div><dt>Listed excursion</dt><dd>Up to ${formatNumber(item.excursion_max_c, " °C")} for ${formatNumber(item.excursion_max_hours, " h")}</dd></div>`}</dl>
+      <div class="published-application-actions"><button type="button" class="compare-button${selected.includes(index) ? " is-selected" : ""}" data-compare-index="${index}" aria-pressed="${selected.includes(index)}">${selected.includes(index) ? "Selected for comparison" : "Add to compare"}</button><a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">View source ↗</a></div>
+      <div class="published-application-source">${escapeHtml(item.source_locator)}</div>
+    </article>`).join("") : `<div class="published-no-match"><strong>No published uses match “${escapeHtml(state.publishedSearch.trim())}”.</strong><p>Try another food, product code or package format. No suitability conclusion follows from an empty search.</p></div>`;
+  $("#published-comparison").hidden = selected.length === 0;
+  $("#published-comparison-content").innerHTML = selected.length < 2
+    ? `<p class="published-comparison-waiting">Choose one more published use to compare its source-listed conditions.</p>`
+    : `<div class="published-comparison-grid">${selected.map((index) => {
+      const item = applications[index];
+      return `<article class="published-comparison-card"><div><span>MANUFACTURER-LISTED</span><strong>${escapeHtml(item.product_code)}</strong><small>${escapeHtml(item.source_publisher)}</small></div><dl><div><dt>Food</dt><dd>${escapeHtml(item.food)}</dd></div><div><dt>Package</dt><dd>${escapeHtml(item.pack_format)}</dd></div><div><dt>Fill</dt><dd>${formatNumber(item.quantity, ` ${escapeHtml(item.quantity_unit)}`)}</dd></div><div><dt>Storage</dt><dd>${formatNumber(item.storage_temperature_min_c, " °C")} to ${formatNumber(item.storage_temperature_max_c, " °C")}</dd></div><div><dt>Excursion</dt><dd>${item.excursion_max_c === null ? "Not listed" : `Up to ${formatNumber(item.excursion_max_c, " °C")} for ${formatNumber(item.excursion_max_hours, " h")}`}</dd></div></dl><a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">Check source ↗</a></article>`;
+    }).join("")}</div>`;
+}
+
 function renderOverview() {
   $("#overview-results").hidden = !state.report;
   const showPublished = Boolean(state.publishedApplications) && !state.report;
+  $("#overview-title").textContent = showPublished ? "Explore package uses" : "Overview";
+  $("#overview-description").textContent = showPublished
+    ? "Search manufacturer-listed food applications and compare the published conditions."
+    : "Explore the method or inspect the evidence behind a real batch.";
   $("#overview-empty").hidden = Boolean(state.report) || showPublished;
   $("#published-applications").hidden = !showPublished;
-  if (showPublished) {
-    const applications = state.publishedApplications.applications;
-    $("#published-applications-count").textContent = `${applications.length} source-listed uses`;
-    $("#published-applications-list").innerHTML = applications.map((item) => `
-      <article class="published-application-card">
-        <div class="published-application-top"><span>MANUFACTURER-LISTED USE</span><span>${escapeHtml(item.source_publisher)}</span></div>
-        <h3>${escapeHtml(item.food)}</h3>
-        <div class="published-application-product"><strong>${escapeHtml(item.product_code)}</strong><span>${escapeHtml(item.pack_format)}</span></div>
-        <dl><div><dt>Published fill</dt><dd>${formatNumber(item.quantity, ` ${escapeHtml(item.quantity_unit)}`)}</dd></div><div><dt>Storage</dt><dd>${formatNumber(item.storage_temperature_min_c, " °C")} to ${formatNumber(item.storage_temperature_max_c, " °C")}</dd></div>${item.excursion_max_c === null ? "" : `<div><dt>Listed excursion</dt><dd>Up to ${formatNumber(item.excursion_max_c, " °C")} for ${formatNumber(item.excursion_max_hours, " h")}</dd></div>`}</dl>
-        <div class="published-application-source"><span>${escapeHtml(item.source_locator)}</span><a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">View manufacturer source ↗</a></div>
-      </article>`).join("");
-  }
+  if (showPublished) renderPublishedApplications();
   if (!state.report) return;
   const counts = summarizeReport(state.report);
   $("#metric-total").textContent = counts.total.toLocaleString();
@@ -408,6 +430,44 @@ function render() {
   renderDecisions();
   renderEvidence();
   renderPipeline();
+  renderReviewItems();
+}
+
+function setReviewOpen(open) {
+  $("#review-panel").hidden = !open;
+  $("#review-toggle").setAttribute("aria-expanded", String(open));
+}
+
+function renderReviewItems() {
+  const items = deriveReviewItems(state);
+  $("#review-count").hidden = items.length === 0;
+  $("#review-count").textContent = String(items.length);
+  $("#review-toggle").setAttribute("aria-label", items.length ? `Review updates: ${items.length} ${items.length === 1 ? "item" : "items"}` : "Review updates: no items");
+  $("#review-items").innerHTML = items.length ? items.map((item) => `
+    <button type="button" class="review-item review-item-${item.tone}" data-review-action="${item.action}"><span class="review-item-mark" aria-hidden="true"></span><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></span><span class="review-item-arrow" aria-hidden="true">↗</span></button>`).join("")
+    : `<div class="review-empty">${state.backendMode === "checking" ? "Checking the local workspace…" : "No review items in the current workspace."}</div>`;
+}
+
+function followReviewAction(action) {
+  setReviewOpen(false);
+  if (["exception", "not_ready", "preliminary_shortlist"].includes(action) && state.report) {
+    state.search = "";
+    state.filter = action;
+    state.page = 1;
+    $("#record-search").value = "";
+    renderDecisions();
+    goTo("decisions");
+  } else if (action === "published" && state.publishedApplications) {
+    enterPublishedApplications();
+  } else if (action === "run") {
+    runBackend();
+  } else if (action === "setup") {
+    goTo("pipeline");
+    $("#run-path").open = true;
+    $("#run-path").scrollIntoView({ block: "start", behavior: "auto" });
+  } else if (action === "import") {
+    $("#report-input").click();
+  }
 }
 
 function renderBackendState() {
@@ -418,11 +478,13 @@ function renderBackendState() {
     audited_report: ["Connected", "Local backend connected; an audited report is configured."],
     scenario_batch: ["Connected", "Local backend connected; scenario sources are configured."],
     published_catalogue: ["Connected", "Local backend connected; published supplier applications are available."],
+    report_error: ["Report error", "The local backend is connected, but its configured report could not be loaded."],
   };
   const [label, detail] = statuses[state.backendMode] || statuses.unavailable;
   $("#backend-indicator-text").textContent = state.backendBusy ? "Running" : label;
   $("#backend-indicator").dataset.state = state.backendBusy ? "running" : state.backendMode;
   $("#backend-indicator").title = state.backendBusy ? "Running the configured scenario batch." : detail;
+  $("#backend-indicator").setAttribute("aria-label", state.backendBusy ? "Backend running a scenario batch" : `Backend ${label.toLowerCase()}: ${detail}`);
   const runButton = $("#run-backend");
   runButton.hidden = state.backendMode !== "scenario_batch";
   runButton.disabled = state.backendBusy;
@@ -432,6 +494,7 @@ function renderBackendState() {
   setupRunButton.disabled = state.backendBusy;
   setupRunButton.textContent = state.backendBusy ? "Running…" : "Run configured batch";
   $("#setup-open-results").hidden = !state.report;
+  renderReviewItems();
 }
 
 function acceptReport(report, label, destination, origin = "local") {
@@ -445,6 +508,7 @@ function acceptReport(report, label, destination, origin = "local") {
   state.pipelineRowIndex = 0;
   state.pipelineStep = 0;
   state.pipelineOptionsFor = null;
+  $("#browse-real-applications").hidden = true;
   if (destination === "pipeline") state.pipelineMode = "actual";
   $("#record-search").value = "";
   goTo(destination);
@@ -495,6 +559,7 @@ async function connectBackend() {
         $("#browse-real-applications").hidden = false;
         $("#hero-tour-hint").hidden = true;
         renderOverview();
+        renderReviewItems();
       } catch (error) {
         notify(error instanceof Error ? error.message : "Could not load published applications.", true);
       }
@@ -505,9 +570,8 @@ async function connectBackend() {
         if (!reportResponse.ok) throw new Error(await responseError(reportResponse));
         acceptReport(parseDecisionReport(await reportResponse.text()), "Connected backend report", "overview", "backend");
       } catch (error) {
-        $("#backend-indicator-text").textContent = "Report error";
-        $("#backend-indicator").dataset.state = "report_error";
-        $("#backend-indicator").title = "The local backend is connected, but its configured report could not be loaded.";
+        state.backendMode = "report_error";
+        renderBackendState();
         notify(error instanceof Error ? error.message : "Could not load the configured report.", true);
       }
     }
@@ -544,9 +608,12 @@ async function copyText(value, successMessage) {
 }
 
 document.addEventListener("click", (event) => {
+  if (!event.target.closest("#review-menu")) setReviewOpen(false);
   const target = event.target.closest("button");
   if (!target) return;
-  if (target.matches("[data-enter-app]")) enterWorkspace();
+  if (target.matches("#review-toggle")) setReviewOpen($("#review-panel").hidden);
+  else if (target.matches("[data-review-action]")) followReviewAction(target.dataset.reviewAction);
+  else if (target.matches("[data-enter-app]")) enterWorkspace();
   else if (target.matches("[data-enter-published]")) enterPublishedApplications();
   else if (target.matches("[data-enter-stage]")) enterWorkspace(Number(target.dataset.enterStage), false);
   else if (target.matches("[data-welcome]")) returnToWelcome();
@@ -554,6 +621,21 @@ document.addEventListener("click", (event) => {
   else if (target.matches("[data-go]")) goTo(target.dataset.go);
   else if (target.matches("[data-import]")) $("#report-input").click();
   else if (target.matches("[data-run-backend]")) runBackend();
+  else if (target.matches("[data-compare-index]")) {
+    const index = Number(target.dataset.compareIndex);
+    if (!Number.isInteger(index) || index < 0 || index >= (state.publishedApplications?.applications.length ?? 0)) return;
+    const selected = state.publishedCompareIndices;
+    if (selected.includes(index)) state.publishedCompareIndices = selected.filter((value) => value !== index);
+    else if (selected.length < 2) state.publishedCompareIndices = [...selected, index];
+    else { notify("Compare two source uses at a time. Remove one to choose another."); return; }
+    renderPublishedApplications();
+    $(`[data-compare-index="${index}"]`)?.focus();
+  }
+  else if (target.matches("[data-clear-comparison]")) {
+    state.publishedCompareIndices = [];
+    renderPublishedApplications();
+    $("#published-search").focus();
+  }
   else if (target.matches("[data-show-setup]")) {
     stopPlayback();
     $("#run-path").open = true;
@@ -615,6 +697,16 @@ $("#record-search").addEventListener("input", (event) => {
   state.search = event.target.value;
   state.page = 1;
   renderDecisions();
+});
+$("#published-search").addEventListener("input", (event) => {
+  state.publishedSearch = event.target.value;
+  if (state.publishedApplications && !state.report) renderPublishedApplications();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#review-panel").hidden) {
+    setReviewOpen(false);
+    $("#review-toggle").focus();
+  }
 });
 $("#report-input").addEventListener("change", (event) => {
   loadFile(event.target.files?.[0]);

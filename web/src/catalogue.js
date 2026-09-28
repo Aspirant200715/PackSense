@@ -48,3 +48,12 @@ export function validatePublishedApplications(payload) {
   }
   return payload;
 }
+
+/** Text discovery never infers suitability or compares use conditions. */
+export function filterPublishedApplications(applications, query) {
+  const term = String(query ?? "").trim().toLocaleLowerCase();
+  if (!term) return applications.map((item, index) => ({ item, index }));
+  return applications.map((item, index) => ({ item, index })).filter(({ item }) =>
+    [item.food, item.product_code, item.pack_format, item.source_publisher]
+      .some((value) => value.toLocaleLowerCase().includes(term)));
+}

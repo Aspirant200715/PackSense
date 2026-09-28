@@ -97,9 +97,31 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .backend-indicator-dot { width: 7px; height: 7px; flex: 0 0 7px; border: 1px solid currentColor; border-radius: 50%; }
 .backend-indicator-prefix { font-size: 9px; letter-spacing: .45px; }
 #backend-indicator-text { color: var(--muted); }
-.backend-indicator[data-state="unconfigured"] .backend-indicator-dot, .backend-indicator[data-state="scenario_batch"] .backend-indicator-dot, .backend-indicator[data-state="audited_report"] .backend-indicator-dot { background: var(--accent); border-color: var(--accent); }
+.backend-indicator[data-state="unconfigured"] .backend-indicator-dot, .backend-indicator[data-state="scenario_batch"] .backend-indicator-dot, .backend-indicator[data-state="audited_report"] .backend-indicator-dot, .backend-indicator[data-state="published_catalogue"] .backend-indicator-dot { background: var(--accent); border-color: var(--accent); }
 .backend-indicator[data-state="running"] .backend-indicator-dot { background: var(--amber); border-color: var(--amber); }
 .backend-indicator[data-state="unavailable"] .backend-indicator-dot, .backend-indicator[data-state="report_error"] .backend-indicator-dot { background: var(--rose); border-color: var(--rose); }
+.review-menu { position: relative; flex: 0 0 auto; }
+.review-toggle { position: relative; width: 36px; min-height: 36px; display: grid; place-items: center; padding: 7px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--muted); }
+.review-toggle:hover, .review-toggle[aria-expanded="true"] { color: var(--strong); border-color: var(--line-strong); background: var(--panel-hover); }
+.review-toggle svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.review-count { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; display: grid; place-items: center; padding: 0 3px; border: 2px solid var(--bg); border-radius: 5px; background: var(--accent); color: var(--accent-ink); font: 700 9px/1 "IBM Plex Mono", monospace; }
+.review-panel { position: absolute; top: calc(100% + 13px); right: 0; z-index: 80; width: min(360px, calc(100vw - 32px)); overflow: hidden; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--panel-solid); box-shadow: 0 24px 65px rgba(1, 8, 19, .3); }
+.review-panel-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 17px 18px 13px; border-bottom: 1px solid var(--line); }
+.review-panel-heading strong { color: var(--strong); font-size: 14px; }
+.review-panel-heading span { color: var(--quiet); font: 500 9px "IBM Plex Mono", monospace; }
+.review-items { max-height: min(62vh, 370px); overflow-y: auto; }
+.review-item { width: 100%; display: grid; grid-template-columns: 8px minmax(0, 1fr) 12px; align-items: start; gap: 11px; padding: 15px 18px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; color: var(--ink); }
+.review-item:hover, .review-item:focus-visible { background: var(--accent-soft); }
+.review-item-mark { width: 7px; height: 7px; margin-top: 5px; border-radius: 2px; background: var(--quiet); }
+.review-item-blue .review-item-mark { background: var(--accent); }
+.review-item-amber .review-item-mark { background: var(--amber); }
+.review-item-red .review-item-mark { background: var(--rose); }
+.review-item strong, .review-item small { display: block; }
+.review-item strong { color: var(--strong); font-size: 12px; font-weight: 600; }
+.review-item small { margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.review-item-arrow { color: var(--accent); font-size: 12px; }
+.review-empty { padding: 23px 18px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.review-panel-footnote { margin: 0; padding: 11px 18px 13px; color: var(--quiet); font-size: 9px; line-height: 1.5; }
 .theme-toggle { border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--muted); }
 .theme-toggle { display: inline-flex; align-items: center; justify-content: center; width: 36px; min-height: 36px; padding: 7px; font-size: 11px; font-weight: 600; }
 .theme-toggle span { display: none; }
@@ -175,8 +197,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .published-applications-header h2 { margin: 7px 0 6px; font-size: 27px; font-weight: 600; letter-spacing: -.8px; }
 .published-applications-header p { max-width: 720px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .published-applications-count { flex: 0 0 auto; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--accent); font: 600 10px "IBM Plex Mono", monospace; }
+.published-tools { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: 0 0 16px; padding: 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--input); }
+.published-tools > span { color: var(--quiet); font-size: 10px; text-align: right; line-height: 1.4; }
+.published-search { min-width: 250px; width: min(420px, 100%); display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--panel-solid); }
+.published-search:focus-within { border-color: var(--accent); }
+.published-search svg { width: 16px; height: 16px; stroke: var(--quiet); stroke-width: 1.7; }
+.published-search input { min-width: 0; width: 100%; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 11px; }
+.published-search input::placeholder { color: var(--quiet); }
 .published-applications-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.published-application-card { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--input); }
+.published-application-card { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--input); transition: border-color .18s, background-color .18s, transform .18s; }
+.published-application-card:hover, .published-application-card:focus-within { border-color: var(--line-strong); background: var(--panel-hover); transform: translateY(-2px); }
 .published-application-top { display: flex; justify-content: space-between; gap: 8px; color: var(--quiet); font: 600 9px "IBM Plex Mono", monospace; letter-spacing: .45px; }
 .published-application-top span:last-child { text-align: right; }
 .published-application-card h3 { margin: 14px 0 5px; font-size: 21px; font-weight: 600; text-transform: capitalize; letter-spacing: -.5px; }
@@ -186,10 +216,30 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .published-application-card dl { display: flex; flex-wrap: wrap; gap: 9px 20px; margin: 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .published-application-card dt { color: var(--quiet); font-size: 9px; }
 .published-application-card dd { margin: 3px 0 0; color: var(--strong); font-size: 11px; }
-.published-application-source { display: flex; justify-content: space-between; gap: 10px; align-items: flex-end; margin-top: 12px; }
-.published-application-source span { min-width: 0; color: var(--quiet); font-size: 9px; line-height: 1.4; overflow-wrap: anywhere; }
-.published-application-source a { flex: 0 0 auto; color: var(--accent); font-size: 10px; text-decoration: none; }
-.published-application-source a:hover { text-decoration: underline; }
+.published-application-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; }
+.published-application-actions a, .published-comparison-card a { color: var(--accent); font-size: 10px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.published-application-actions a:hover, .published-comparison-card a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.compare-button { min-height: 29px; padding: 5px 8px; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--panel); color: var(--muted); font-size: 10px; font-weight: 600; }
+.compare-button:hover, .compare-button.is-selected { color: var(--accent-strong); border-color: var(--accent); background: var(--accent-soft); }
+.published-application-source { margin-top: 9px; color: var(--quiet); font-size: 9px; line-height: 1.4; overflow-wrap: anywhere; }
+.published-no-match { grid-column: 1 / -1; padding: 28px 18px; border: 1px dashed var(--line-strong); border-radius: 6px; color: var(--muted); text-align: center; }
+.published-no-match strong { color: var(--strong); font-size: 12px; }
+.published-no-match p { max-width: 430px; margin: 7px auto 0; font-size: 10px; line-height: 1.5; }
+.published-comparison { margin: 0 0 16px; padding: 17px; border: 1px solid var(--line-strong); border-left: 3px solid var(--accent); border-radius: 7px; background: var(--input); }
+.published-comparison-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.published-comparison-heading h3 { margin: 5px 0 3px; font-size: 17px; font-weight: 600; }
+.published-comparison-heading p { margin-bottom: 14px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.published-comparison-waiting { margin: 0; padding: 17px; border: 1px dashed var(--line-strong); border-radius: 5px; color: var(--muted); font-size: 11px; text-align: center; }
+.published-comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.published-comparison-card { min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); }
+.published-comparison-card > div > span, .published-comparison-card > div > strong, .published-comparison-card > div > small { display: block; }
+.published-comparison-card > div > span { color: var(--quiet); font: 600 9px "IBM Plex Mono", monospace; }
+.published-comparison-card > div > strong { margin-top: 5px; color: var(--strong); font-size: 16px; }
+.published-comparison-card > div > small { margin-top: 3px; color: var(--muted); font-size: 9px; }
+.published-comparison-card dl { margin: 12px 0; border-top: 1px solid var(--line); }
+.published-comparison-card dl > div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.published-comparison-card dt { color: var(--quiet); font-size: 10px; }
+.published-comparison-card dd { margin: 0; color: var(--strong); font-size: 10px; text-align: right; }
 .published-applications-footnote { margin: 15px 0 0; color: var(--quiet); font-size: 10px; line-height: 1.5; }
 
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 20px 0 25px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); backdrop-filter: blur(18px); box-shadow: var(--shadow); }
@@ -562,6 +612,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .theme-toggle span { display: none; }
   .theme-toggle { width: 37px; padding: 8px; }
   .topbar-actions { gap: 5px; }
+  .review-toggle { width: 37px; min-height: 37px; }
+  .review-panel { position: fixed; top: 62px; right: 16px; left: 16px; width: auto; }
   .topbar-actions .header-import { width: 37px; min-height: 37px; padding: 8px; font-size: 0; }
   .topbar-actions .header-import span { display: none; }
   .topbar-actions .button svg { width: 18px; height: 18px; }
@@ -587,7 +639,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .published-applications-header { flex-direction: column; gap: 10px; }
   .published-applications-header h2 { font-size: 23px; }
   .published-applications-grid { grid-template-columns: 1fr; }
-  .published-application-source { align-items: flex-start; flex-direction: column; }
+  .published-tools { flex-direction: column; align-items: stretch; gap: 8px; }
+  .published-tools > span { text-align: left; }
+  .published-search { min-width: 0; width: 100%; }
+  .published-comparison-heading { flex-direction: column; gap: 0; }
+  .published-comparison-heading .text-button { margin-bottom: 12px; }
+  .published-comparison-grid { grid-template-columns: 1fr; }
   .overview-empty-copy { padding: 24px 22px 21px; }
   .overview-empty-copy h2 { font-size: 25px; }
   .overview-empty-copy p { margin-bottom: 18px; }
@@ -655,6 +712,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .studio-controls { flex-wrap: wrap; }
   .studio-controls .button { flex: 1; }
   .footer { align-items: flex-start; flex-direction: column; padding-top: 16px; padding-bottom: 16px; gap: 3px; }
+}
+@media (max-width: 380px) {
+  #backend-indicator-text { display: none; }
+  .backend-indicator { width: 10px; margin-right: 4px; }
+  #run-path { scroll-margin-top: 165px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }

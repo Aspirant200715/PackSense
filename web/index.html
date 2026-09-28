@@ -58,6 +58,17 @@
           </nav>
           <div class="topbar-actions">
             <span class="backend-indicator" id="backend-indicator" role="status" title="Checking local backend"><span class="backend-indicator-dot" aria-hidden="true"></span><span class="backend-indicator-prefix">BACKEND</span><span id="backend-indicator-text">Checking</span></span>
+            <div class="review-menu" id="review-menu">
+              <button type="button" class="review-toggle" id="review-toggle" aria-label="Review updates" aria-expanded="false" aria-controls="review-panel" title="Review updates">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></svg>
+                <span class="review-count" id="review-count" aria-live="polite" hidden></span>
+              </button>
+              <div class="review-panel" id="review-panel" hidden>
+                <div class="review-panel-heading"><strong>Review updates</strong><span>Current workspace</span></div>
+                <div id="review-items" class="review-items"></div>
+                <p class="review-panel-footnote">Only actual source and report states appear here.</p>
+              </div>
+            </div>
             <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
               <svg class="theme-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
               <svg class="theme-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20.2 15.8A8.7 8.7 0 0 1 8.2 3.8a8.7 8.7 0 1 0 12 12Z"/></svg>
@@ -73,7 +84,7 @@
 
         <main class="main-content">
           <section class="view is-visible" id="view-overview" aria-labelledby="overview-title">
-            <div class="page-heading overview-heading"><div><div class="page-kicker">DECISION WORKSPACE</div><h1 id="overview-title">Overview</h1><p>Explore the method or inspect the evidence behind a real batch.</p></div></div>
+            <div class="page-heading overview-heading"><div><div class="page-kicker">DECISION WORKSPACE</div><h1 id="overview-title">Overview</h1><p id="overview-description">Explore the method or inspect the evidence behind a real batch.</p></div></div>
             <section class="overview-empty" id="overview-empty" aria-labelledby="overview-empty-title">
               <div class="overview-empty-content">
                 <div class="overview-empty-copy">
@@ -94,6 +105,8 @@
             </section>
             <section class="published-applications" id="published-applications" aria-labelledby="published-applications-title" hidden>
               <div class="published-applications-header"><div><div class="section-kicker">REAL SOURCE RECORDS</div><h2 id="published-applications-title">Published package uses</h2><p>These are manufacturer-listed food, pack-size and temperature applications. They are options to investigate, not PackSense predictions or approved packaging.</p></div><span id="published-applications-count" class="published-applications-count"></span></div>
+              <div class="published-tools"><label class="published-search"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><span class="sr-only">Search published package uses</span><input id="published-search" type="search" placeholder="Search food, product or format" autocomplete="off" /></label><span id="published-selection-hint" aria-live="polite">Select two source uses to compare their listed conditions.</span></div>
+              <section class="published-comparison" id="published-comparison" aria-labelledby="published-comparison-title" hidden><div class="published-comparison-heading"><div><span class="section-kicker">RESEARCH WORKSPACE</span><h3 id="published-comparison-title">Compare published conditions</h3><p>Side-by-side source claims, not interchangeable food uses or a package recommendation.</p></div><button type="button" class="text-button" data-clear-comparison>Clear selection</button></div><div id="published-comparison-content"></div></section>
               <div id="published-applications-list" class="published-applications-grid"></div>
               <p class="published-applications-footnote">Use a real scenario batch and reviewed package evidence before making a packaging decision. Source rights review is pending.</p>
             </section>

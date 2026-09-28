@@ -123,6 +123,45 @@ try {
   assert.equal(layout.intro, true, "dedicated introduction is visible first");
   assert.equal(layout.appHidden, true, "workspace is not crowded into the introduction");
   assert.notEqual(layout.connection, "Checking", "backend status resolved");
+  const hasPublishedCatalogue = await evaluate("document.querySelector('#backend-indicator').dataset.state === 'published_catalogue'");
+
+  if (hasPublishedCatalogue) {
+    for (let tries = 0; tries < 30; tries += 1) {
+      if (await evaluate("document.querySelector('#browse-real-applications').hidden === false")) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.equal(await evaluate("document.querySelector('#browse-real-applications').hidden"), false, "source-listed catalogue loads");
+    await evaluate("document.querySelector('#browse-real-applications').click()");
+    assert.equal(await evaluate("document.querySelector('#overview-title').textContent"), "Explore package uses");
+    assert.equal(await evaluate("document.querySelectorAll('.published-application-card').length"), 6, "six real standalone source uses are shown");
+    assert.match(await evaluate("document.querySelector('#published-applications').textContent"), /not PackSense predictions or approved packaging/);
+    assert.equal(await evaluate("document.querySelector('#review-count').textContent"), "1", "catalogue creates one real review update");
+    await evaluate("document.querySelector('#review-toggle').click()");
+    assert.match(await evaluate("document.querySelector('#review-items').textContent"), /rights review is pending/);
+    if (process.env.PACKSENSE_REVIEW_SCREENSHOT) {
+      const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      await writeFile(process.env.PACKSENSE_REVIEW_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
+    }
+    await evaluate("document.querySelector('#review-items [data-review-action=published]').click()");
+    assert.equal(await evaluate("document.querySelector('#review-panel').hidden"), true, "review action closes the panel");
+    await evaluate("(() => { const input = document.querySelector('#published-search'); input.value = 'broccoli'; input.dispatchEvent(new Event('input', {bubbles: true})); })()");
+    assert.equal(await evaluate("document.querySelectorAll('.published-application-card').length"), 1, "source uses are searchable by food");
+    assert.match(await evaluate("document.querySelector('.published-application-card').textContent"), /VY7K9/);
+    await evaluate("document.querySelector('.published-application-card [data-compare-index]').click()");
+    assert.equal(await evaluate("document.querySelector('#published-comparison').hidden"), false, "comparison explains the second selection");
+    await evaluate("(() => { const input = document.querySelector('#published-search'); input.value = ''; input.dispatchEvent(new Event('input', {bubbles: true})); })()");
+    await evaluate("document.querySelector('#published-applications-list [data-compare-index]:not([aria-pressed=true])').click()");
+    assert.equal(await evaluate("document.querySelectorAll('.published-comparison-card').length"), 2, "comparison contains two actual source uses");
+    assert.match(await evaluate("document.querySelector('#published-comparison').textContent"), /not interchangeable food uses or a package recommendation/);
+    assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "catalogue tools and comparison have no horizontal overflow");
+    if (process.env.PACKSENSE_CATALOGUE_SCREENSHOT) {
+      const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      await writeFile(process.env.PACKSENSE_CATALOGUE_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
+    }
+    await evaluate("document.querySelector('[data-clear-comparison]').click()");
+    assert.equal(await evaluate("document.querySelector('#published-comparison').hidden"), true);
+    await evaluate("document.querySelector('[data-welcome]').click()");
+  }
 
   if (process.env.PACKSENSE_SCREENSHOT) {
     const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
@@ -131,6 +170,13 @@ try {
 
   await evaluate("document.querySelector('[data-enter-app]').click()");
   assert.equal(await evaluate("document.querySelector('.app-shell').hidden"), false);
+  await evaluate("document.querySelector('#review-toggle').click()");
+  assert.equal(await evaluate("document.querySelector('#review-toggle').getAttribute('aria-expanded')"), "true");
+  await evaluate("document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true}))");
+  assert.equal(await evaluate("document.querySelector('#review-panel').hidden"), true, "Escape closes review updates");
+  await evaluate("document.querySelector('#review-toggle').click()");
+  await evaluate("document.querySelector('#view-pipeline').click()");
+  assert.equal(await evaluate("document.querySelector('#review-panel').hidden"), true, "clicking outside closes review updates");
   assert.equal(await evaluate("document.querySelector('#view-pipeline').hidden"), false);
   assert.equal(await evaluate("document.querySelectorAll('#pipeline-stage-list .studio-stage').length"), 8, "one compact timeline shows all eight stages");
   assert.equal(await evaluate("document.querySelector('#pipeline-stage-list .studio-stage.is-active').dataset.pipelineIndex"), "0");
@@ -191,14 +237,19 @@ try {
   assert.equal(await evaluate("document.querySelector('#view-overview').hidden"), false);
   assert.equal(await evaluate("document.querySelectorAll('[data-nav].is-active').length"), 1);
   assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "workspace has no horizontal overflow");
-  assert.equal(await evaluate("document.querySelector('#overview-empty').hidden"), false);
+  assert.equal(await evaluate("document.querySelector('#overview-empty').hidden"), hasPublishedCatalogue);
   assert.equal(await evaluate("document.querySelector('#backend-banner, #overview-empty-status')"), null, "overview repeats no connection message");
   await new Promise((resolve) => setTimeout(resolve, 200));
   if (process.env.PACKSENSE_OVERVIEW_SCREENSHOT) {
     const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
     await writeFile(process.env.PACKSENSE_OVERVIEW_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
   }
-  await evaluate("document.querySelector('#overview-empty [data-enter-stage=\"4\"]').click()");
+  if (hasPublishedCatalogue) {
+    await evaluate("document.querySelector('[data-nav=pipeline]').click()");
+    await evaluate("document.querySelector('[data-pipeline-index=\"4\"]').click()");
+  } else {
+    await evaluate("document.querySelector('#overview-empty [data-enter-stage=\"4\"]').click()");
+  }
   assert.equal(await evaluate("document.querySelector('#view-pipeline').hidden"), false);
   assert.equal(await evaluate("document.querySelector('#guide-stage-caption').textContent"), "Step 5 of 8");
   await evaluate("document.querySelector('[data-nav=\"overview\"]').click()");
@@ -214,6 +265,12 @@ try {
   }
   assert.equal(await evaluate("document.querySelector('#decisions-loaded').hidden"), false);
   assert.equal(await evaluate("document.querySelector('[data-filter=\"all\"] span').textContent"), "3");
+  assert.equal(await evaluate("document.querySelector('#review-count').textContent"), "3", "report statuses drive review items");
+  await evaluate("document.querySelector('#review-toggle').click()");
+  assert.match(await evaluate("document.querySelector('#review-items').textContent"), /input exception/);
+  await evaluate("document.querySelector('#review-items [data-review-action=not_ready]').click()");
+  assert.equal(await evaluate("document.querySelector('#record-filter-count').textContent"), "1 of 3 rows", "review update opens the relevant filtered records");
+  await evaluate("document.querySelector('[data-filter=all]').click()");
   await evaluate("document.querySelector('#record-inspector [data-trace-row]').click()");
   assert.equal(await evaluate("document.querySelector('#pipeline-guide-bar').hidden"), false, "a real report has a playable trace");
   assert.equal(await evaluate("document.querySelector('#guide-play-label').textContent"), "Play report trace");

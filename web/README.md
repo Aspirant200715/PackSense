@@ -53,6 +53,13 @@ python -m packsense.web_server --port 4182 --public-candidates data/public_catal
 The introduction then offers **View published package uses**. The Overview
 shows the six standalone food/pack-size/temperature applications in the
 current catalogue with product codes and direct manufacturer source links.
+The Overview can search those returned source uses and compare two published
+food, fill, pack format, storage and excursion claims side by side. This is
+source discovery, not a suitability score or a recommendation; different
+foods' listed uses are not interchangeable. The compact **Review updates**
+control reflects only the current backend, catalogue or decision-report
+state. Report items open the corresponding status-filtered records; it does
+not simulate notifications or report unobserved packaging outcomes.
 The box inner liner is omitted because it is not a standalone package. This
 view does not run the suitability model, predict a material, or approve a
 package. All six applications are source claims with rights review pending.

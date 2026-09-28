@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validatePublishedApplications } from "../src/catalogue.js";
+import { filterPublishedApplications, validatePublishedApplications } from "../src/catalogue.js";
 
 function catalogue() {
   return {
@@ -35,4 +35,13 @@ test("rejects claims, unsafe links and incomplete use conditions", () => {
   source.applications[0].source_url = "https://example.org/product";
   source.applications[0].excursion_max_hours = null;
   assert.throws(() => validatePublishedApplications(source), /excursion conditions/);
+});
+
+test("search finds actual source fields and preserves catalogue positions for comparison", () => {
+  const applications = catalogue().applications;
+  applications.push({ ...applications[0], food: "BROCCOLI", product_code: "TEST_ONLY_SECOND" });
+  assert.deepEqual(filterPublishedApplications(applications, " broccoli ").map(({ index }) => index), [1]);
+  assert.deepEqual(filterPublishedApplications(applications, "test_only_code").map(({ index }) => index), [0]);
+  assert.equal(filterPublishedApplications(applications, "not present").length, 0);
+  assert.deepEqual(filterPublishedApplications(applications, "").map(({ index }) => index), [0, 1]);
 });
