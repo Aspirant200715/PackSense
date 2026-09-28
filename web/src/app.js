@@ -94,15 +94,18 @@ function setTheme(theme) {
 
 function updatePlaybackControls() {
   const playing = playbackTimer !== null;
+  const actualTrace = state.pipelineMode === "actual";
+  const subject = actualTrace ? "report trace" : "guided tour";
   $(".pipeline-studio").classList.toggle("is-playing", playing);
-  $("#guide-play-label").textContent = playing ? "Pause tour" : state.pipelineStep === STAGES.length - 1 ? "Replay tour" : "Play guided tour";
+  $("#journey-map").classList.toggle("is-playing", playing);
+  $("#guide-play-label").textContent = playing ? (actualTrace ? "Pause trace" : "Pause tour") : state.pipelineStep === STAGES.length - 1 ? (actualTrace ? "Replay trace" : "Replay tour") : `Play ${subject}`;
   $("#guide-play-icon").textContent = playing ? "Ⅱ" : "▶";
-  $("#pipeline-play").setAttribute("aria-label", playing ? "Pause guided tour" : state.pipelineStep === STAGES.length - 1 ? "Replay guided tour" : "Play guided tour");
+  $("#pipeline-play").setAttribute("aria-label", playing ? `Pause ${subject}` : state.pipelineStep === STAGES.length - 1 ? `Replay ${subject}` : `Play ${subject}`);
   $("#pipeline-play").setAttribute("aria-pressed", String(playing));
   $("#guide-playback-status").textContent = playing
-    ? "Playing automatically · select any stage or pause to inspect it."
-    : state.pipelineStep === STAGES.length - 1 ? "Tour complete · replay or explore any stage."
-      : "Press Play to watch the stages advance automatically.";
+    ? actualTrace ? "Following the reported row · pause to inspect any check." : "Playing automatically · select any stage or pause to inspect it."
+    : state.pipelineStep === STAGES.length - 1 ? (actualTrace ? "Report trace complete · inspect the result or replay." : "Tour complete · replay or explore any stage.")
+      : actualTrace ? "Press Play to follow this reported row through every check." : "Press Play to watch the stages advance automatically.";
 }
 
 function stopPlayback() {
@@ -112,7 +115,8 @@ function stopPlayback() {
 }
 
 function startPlayback() {
-  if (state.pipelineMode !== "walkthrough" || playbackTimer !== null) return;
+  if (state.view !== "pipeline" || playbackTimer !== null
+      || (state.pipelineMode === "actual" && !state.report)) return;
   if (state.pipelineStep === STAGES.length - 1) state.pipelineStep = 0;
   playbackTimer = setInterval(() => {
     if (state.pipelineStep >= STAGES.length - 1) {
@@ -301,11 +305,24 @@ function renderEvidence() {
 function renderPipeline() {
   const actualMode = state.pipelineMode === "actual";
   const hasReport = Boolean(state.report);
+  const journeyPhase = state.pipelineStep < 2 ? 0 : state.pipelineStep < 7 ? 1 : 2;
   $("#pipeline-heading-step").textContent = STAGES[state.pipelineStep].number;
-  $("#pipeline-guide-bar").hidden = actualMode;
+  $("#pipeline-guide-bar").hidden = actualMode && !hasReport;
+  $("#guide-type-label").textContent = actualMode ? "ACTUAL REPORT FLOW" : "GUIDED TOUR";
   $("#guide-stage-caption").textContent = `Step ${state.pipelineStep + 1} of ${STAGES.length} · ${STAGES[state.pipelineStep].title}`;
   $("#guide-progress").setAttribute("aria-valuenow", String(state.pipelineStep + 1));
   $("#guide-progress-fill").style.width = `${((state.pipelineStep + 1) / STAGES.length) * 100}%`;
+  const journeyProgress = `${((state.pipelineStep + 1) / STAGES.length) * 100}%`;
+  $("#journey-progress-fill").style.width = journeyProgress;
+  $("#journey-progress-cursor").style.left = journeyProgress;
+  $$('[data-journey-start]').forEach((button, index) => {
+    const active = index === journeyPhase;
+    button.classList.toggle("is-active", active);
+    button.classList.toggle("is-past", index < journeyPhase);
+    button.disabled = actualMode && !hasReport;
+    if (active) button.setAttribute("aria-current", "step");
+    else button.removeAttribute("aria-current");
+  });
   updatePlaybackControls();
   $$('[data-pipeline-mode]').forEach((button) => {
     const active = button.dataset.pipelineMode === state.pipelineMode;
@@ -324,6 +341,8 @@ function renderPipeline() {
     : "Conceptual walkthrough · no food/package result is generated";
   $("#pipeline-empty").hidden = !actualMode || hasReport;
   $("#studio-focus").hidden = actualMode && !hasReport;
+  $("#studio-finish").hidden = actualMode || state.pipelineStep !== STAGES.length - 1;
+  $("#studio-actual-finish").hidden = !actualMode || !hasReport || state.pipelineStep !== STAGES.length - 1;
 
   if (actualMode && hasReport) {
     state.pipelineRowIndex = Math.min(state.pipelineRowIndex, state.report.rows.length - 1);
@@ -405,6 +424,11 @@ function renderBackendState() {
   runButton.hidden = state.backendMode !== "scenario_batch";
   runButton.disabled = state.backendBusy;
   runButton.textContent = state.backendBusy ? "Running…" : "Run batch";
+  const setupRunButton = $("#setup-run-batch");
+  setupRunButton.hidden = state.backendMode !== "scenario_batch";
+  setupRunButton.disabled = state.backendBusy;
+  setupRunButton.textContent = state.backendBusy ? "Running…" : "Run configured batch";
+  $("#setup-open-results").hidden = !state.report;
 }
 
 function acceptReport(report, label, destination, origin = "local") {
@@ -416,6 +440,7 @@ function acceptReport(report, label, destination, origin = "local") {
   state.page = 1;
   state.selectedIndex = 0;
   state.pipelineRowIndex = 0;
+  state.pipelineStep = 0;
   state.pipelineOptionsFor = null;
   if (destination === "pipeline") state.pipelineMode = "actual";
   $("#record-search").value = "";
@@ -513,6 +538,19 @@ document.addEventListener("click", (event) => {
   else if (target.matches("[data-go]")) goTo(target.dataset.go);
   else if (target.matches("[data-import]")) $("#report-input").click();
   else if (target.matches("[data-run-backend]")) runBackend();
+  else if (target.matches("[data-show-setup]")) {
+    stopPlayback();
+    $("#run-path").open = true;
+    $("#run-path").scrollIntoView({ block: "start", behavior: "auto" });
+  }
+  else if (target.matches("[data-copy-setup]")) {
+    copyText($("#startup-command").textContent.trim(), "Command copied. Replace the example paths before running it.");
+  }
+  else if (target.matches("[data-journey-start]")) {
+    stopPlayback();
+    state.pipelineStep = Number(target.dataset.journeyStart);
+    renderPipeline();
+  }
   else if (target.matches("[data-filter]")) {
     state.filter = target.dataset.filter;
     state.page = 1;

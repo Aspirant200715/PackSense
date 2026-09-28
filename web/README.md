@@ -4,7 +4,11 @@ This is the build-free MVP frontend for the existing Python decision pipeline.
 It opens on a separate introduction. **Explore PackSense** enters the workspace
 and starts the eight-stage guided tour; the four decision-path stops can also
 open a specific stage. A prominent play/pause control, progress indicator, and
-clickable connected stage track show how the process advances. With reduced
+clickable connected stage track show how the process advances. A three-phase
+map (add data → follow checks → read output) and subtle moving indicators
+make the progression visible without changing any result. The same play/pause
+control can advance through an **actual reported row** after one is loaded;
+it only plays back the report and performs no new inference. With reduced
 motion enabled, the tour waits for a manual click instead of auto-playing.
 
 The workspace has a compact empty overview with four clickable checkpoints,
@@ -54,6 +58,16 @@ arguments (for example `--route-register`, `--structures`, and
 the same CLI. Run `python -m packsense.web_server --help` for the full list.
 The supplied food and material masters are reference data; they are **not** a
 scenario batch. No scenario file is bundled or inferred from them.
+
+The Pipeline page has a compact **How to run a real scenario batch** section.
+It links to `/api/scenario-template`, a blank CSV header generated directly
+from the backend's required, optional respiration, and reference-key columns.
+No example food or fabricated values are inserted. Fill genuine scenario
+rows, then start the backend with their file path and the two reference
+workbooks. When the service is configured, **Run configured batch** appears
+both in that section and in the top bar. When the report arrives, play its
+actual trace or open Results and Evidence. Source files remain selected at
+backend startup, not uploaded through the browser.
 
 To inspect source-linked supplier applications for those same real scenario
 rows, also pass `--public-candidates data/public_catalogue_candidates.v1.json`.

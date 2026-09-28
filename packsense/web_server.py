@@ -7,6 +7,8 @@ trained material or shelf-life prediction is created here.
 """
 
 import argparse
+import csv
+import io
 import json
 import subprocess
 import sys
@@ -20,6 +22,10 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from packsense.frontend_contract import project_frontend_decisions
+from packsense.units import (
+    SCENARIO_REFERENCE_COLUMNS, SCENARIO_REQUIRED_COLUMNS,
+    SCENARIO_RESPIRATION_COLUMNS,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +37,16 @@ BACKEND_PATH_OPTIONS = (
     "water_observations", "public_candidates",
 )
 BACKEND_FLAG_OPTIONS = ("produce_diagnostics", "compare_grade_references")
+
+
+def scenario_template_csv() -> bytes:
+    """Return the canonical header only; never invent scenario values."""
+    output = io.StringIO(newline="")
+    csv.writer(output, lineterminator="\r\n").writerow(
+        (*SCENARIO_REQUIRED_COLUMNS, *SCENARIO_RESPIRATION_COLUMNS,
+         *SCENARIO_REFERENCE_COLUMNS)
+    )
+    return output.getvalue().encode("utf-8")
 
 
 @dataclass(frozen=True)
@@ -128,6 +144,17 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _scenario_template(self) -> None:
+        body = scenario_template_csv()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header("Content-Disposition", 'attachment; filename="packsense-scenarios-template.csv"')
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self) -> None:
         if not self._same_host():
             self._json(HTTPStatus.FORBIDDEN, {"error": "invalid host"})
@@ -141,6 +168,8 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
                 "has_report": mode == "audited_report",
                 "model_deployed": False,
             })
+        elif path == "/api/scenario-template":
+            self._scenario_template()
         elif path == "/api/report":
             if self.server.sources.mode != "audited_report":
                 self._json(HTTPStatus.NOT_FOUND, {"error": "no audited report is configured"})

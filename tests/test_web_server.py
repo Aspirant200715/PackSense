@@ -1,5 +1,7 @@
 """TEST_ONLY local HTTP tests; they do not create packaging training data."""
 
+import csv
+import io
 import json
 import os
 import tempfile
@@ -12,7 +14,14 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from packsense.web_server import AppSources, PackSenseHTTPServer, _arguments, run_configured_batch
+from packsense.units import (
+    SCENARIO_REFERENCE_COLUMNS, SCENARIO_REQUIRED_COLUMNS,
+    SCENARIO_RESPIRATION_COLUMNS,
+)
+from packsense.web_server import (
+    AppSources, PackSenseHTTPServer, _arguments, run_configured_batch,
+    scenario_template_csv,
+)
 from tests.test_frontend_contract import _report
 
 
@@ -36,6 +45,22 @@ def request_json(url, *, method="GET", headers=None):
 
 
 class WebServerTests(unittest.TestCase):
+    def test_template_download_uses_contract_headers_and_no_fake_rows(self):
+        expected = (*SCENARIO_REQUIRED_COLUMNS, *SCENARIO_RESPIRATION_COLUMNS,
+                    *SCENARIO_REFERENCE_COLUMNS)
+        self.assertEqual([list(expected)], list(csv.reader(
+            io.StringIO(scenario_template_csv().decode("utf-8"))
+        )))
+        with running(AppSources()) as base:
+            with urlopen(f"{base}/api/scenario-template", timeout=5) as response:
+                self.assertEqual(200, response.status)
+                self.assertEqual("text/csv; charset=utf-8",
+                                 response.headers["Content-Type"])
+                self.assertIn("attachment;", response.headers["Content-Disposition"])
+                self.assertEqual([list(expected)], list(csv.reader(
+                    io.StringIO(response.read().decode("utf-8"))
+                )))
+
     def test_relative_source_paths_are_frozen_before_subprocess_cwd_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

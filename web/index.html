@@ -27,7 +27,7 @@
             <div class="hero-eyebrow"><span class="eyebrow-line"></span> FOOD PACKAGING / DECISION INTELLIGENCE</div>
             <h1>Packaging intelligence,<br /><em>with the evidence in view.</em></h1>
             <p>See how a food's properties and journey become protection needs, package checks, and an auditable decision. Every step explains what it knows—and what it still needs.</p>
-            <div class="hero-actions"><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">→</span></button><span>Starts a guided tour of the pipeline</span></div>
+            <div class="hero-actions"><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">→</span></button><span>Watch the 30-second input-to-output tour</span></div>
             <div class="intro-footnote"><span></span> Engineering screening now. Learned material prediction is not deployed.</div>
           </div>
           <div class="intro-system" aria-label="Decision path preview">
@@ -138,11 +138,18 @@
               <button type="button" class="mode-button is-active" data-pipeline-mode="walkthrough" aria-pressed="true">Interactive walkthrough <span>Learn the logic</span></button>
               <button type="button" class="mode-button" data-pipeline-mode="actual" aria-pressed="false">Actual report trace <span>Use imported evidence</span></button>
             </div>
-            <div class="pipeline-guide-bar" id="pipeline-guide-bar"><div class="guide-bar-copy"><span>GUIDED TOUR</span><strong id="guide-stage-caption">Step 1 of 8 · Scenario intake</strong><small id="guide-playback-status">Press Play to watch the stages advance automatically.</small></div><button type="button" class="button button-primary guide-play-button" id="pipeline-play" aria-label="Play guided tour" aria-pressed="false"><span aria-hidden="true" id="guide-play-icon">▶</span> <span id="guide-play-label">Play guided tour</span></button><div class="guide-progress" role="progressbar" id="guide-progress" aria-label="Walkthrough progress" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1"><span id="guide-progress-fill"></span></div></div>
+            <div class="pipeline-guide-bar" id="pipeline-guide-bar"><div class="guide-bar-copy"><span id="guide-type-label">GUIDED TOUR</span><strong id="guide-stage-caption">Step 1 of 8 · Scenario intake</strong><small id="guide-playback-status">Press Play to watch the stages advance automatically.</small></div><button type="button" class="button button-primary guide-play-button" id="pipeline-play" aria-label="Play guided tour" aria-pressed="false"><span aria-hidden="true" id="guide-play-icon">▶</span> <span id="guide-play-label">Play guided tour</span></button><div class="guide-progress" role="progressbar" id="guide-progress" aria-label="Pipeline stage progress" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1"><span id="guide-progress-fill"></span></div></div>
+            <div class="journey-map" id="journey-map" role="group" aria-label="From data to decision report">
+              <button type="button" class="journey-phase is-active" data-journey-start="0" aria-current="step"><span class="journey-phase-index">01 / ADD</span><strong>Bring real data</strong><small>Scenario CSV + reference masters</small></button>
+              <button type="button" class="journey-phase" data-journey-start="2"><span class="journey-phase-index">02 / ANALYZE</span><strong>Follow the checks</strong><small>Food needs + package evidence</small></button>
+              <button type="button" class="journey-phase" data-journey-start="7"><span class="journey-phase-index">03 / OUTPUT</span><strong>Read the decision</strong><small>Status + source trace</small></button>
+              <div class="journey-progress" aria-hidden="true"><span id="journey-progress-fill"></span><i id="journey-progress-cursor"></i></div>
+            </div>
             <div class="pipeline-toolbar">
               <div class="route-control" id="route-control"><span>FOLLOW A ROUTE</span><div><button type="button" data-route="non_respiring" class="is-active" aria-pressed="true">Non-respiring food</button><button type="button" data-route="fresh_produce" aria-pressed="false">Fresh produce</button></div></div>
               <label class="actual-record-control" id="actual-record-control" hidden><span>REPORT RECORD</span><select id="pipeline-record-select"></select></label>
               <div class="pipeline-mode-note" id="pipeline-mode-note">Conceptual walkthrough · no food/package result is generated</div>
+              <button type="button" class="text-button pipeline-setup-link" data-show-setup>How to add a batch →</button>
             </div>
             <dl class="actual-context" id="actual-context" aria-label="Imported scenario facts" hidden></dl>
             <div class="pipeline-studio">
@@ -156,10 +163,23 @@
                   <div class="studio-flow"><div class="flow-unit"><span>01 / RECEIVES</span><strong id="studio-input"></strong></div><div class="flow-connector" aria-hidden="true">→</div><div class="flow-unit"><span>02 / CHECKS</span><strong id="studio-check"></strong></div><div class="flow-connector" aria-hidden="true">→</div><div class="flow-unit flow-unit-result"><span>03 / PRODUCES</span><strong id="studio-output"></strong></div></div>
                   <div class="studio-boundary"><span id="studio-boundary-label">EVIDENCE BOUNDARY</span><p id="studio-boundary-text"></p></div>
                   <div class="studio-evidence" id="studio-evidence" hidden></div>
+                  <div class="studio-finish" id="studio-finish" hidden><strong>Ready to use your own data?</strong><p>Prepare one genuine scenario batch, run the backend, then inspect its reported status and sources. The walkthrough did not invent a package result.</p><div><button type="button" class="button button-primary button-small" data-show-setup>See setup steps</button><button type="button" class="button button-secondary button-small" data-import>Open existing report</button></div></div>
+                  <div class="studio-finish" id="studio-actual-finish" hidden><strong>Trace complete. Inspect the reported outcome.</strong><p>This row's status and source trail are recorded. Any unresolved evidence remains visible; no trained material prediction was made.</p><div><button type="button" class="button button-primary button-small" data-go="decisions">View this result</button><button type="button" class="button button-secondary button-small" data-go="evidence">Inspect sources</button></div></div>
                   <div class="studio-controls"><button type="button" class="button button-secondary" data-pipeline-step="previous" id="pipeline-previous">← Previous</button><span class="studio-step-caption" id="studio-step-caption">Step 1 of 8</span><button type="button" class="button button-primary" data-pipeline-step="next" id="pipeline-next">Next step →</button></div>
                 </div>
               </div>
             </div>
+            <details class="run-path" id="run-path"><summary><span class="run-path-kicker">FROM INPUT TO OUTPUT</span><strong>How to run a real scenario batch</strong><span class="run-path-toggle-text">Show the three steps ↓</span></summary>
+              <div class="run-path-content"><div class="run-path-steps">
+                <div class="run-path-step"><span>01 / ADD</span><strong>Fill the scenario CSV</strong><p>One row per real food-and-storage case. Include actual food properties, target life, pack quantity, temperature, humidity and transport conditions. Produce also needs sourced respiration data where required.</p><a class="button button-secondary button-small" href="/api/scenario-template" download="packsense-scenarios-template.csv">Download blank CSV header</a></div>
+                <div class="run-path-step"><span>02 / RUN</span><strong>Connect the reference files</strong><p>Start the local backend with the scenario CSV and food/material workbooks. Replace the example paths below, then use Run batch in the top bar.</p><button type="button" class="button button-primary button-small" id="setup-run-batch" data-run-backend hidden>Run configured batch</button></div>
+                <div class="run-path-step"><span>03 / READ</span><strong>Inspect the decision record</strong><p>Results shows each row's status and blockers; Pipeline traces each check; Evidence shows the exact input fingerprints. A supplier lead is not an approved package.</p><button type="button" class="button button-secondary button-small" id="setup-open-results" data-go="decisions" hidden>View results</button></div>
+              </div><div class="run-path-command"><div><span>LOCAL BACKEND STARTUP · POWERSHELL</span><button type="button" class="text-button" data-copy-setup>Copy command</button></div><pre id="startup-command"><code>python -m packsense.web_server `
+  --scenarios "C:\path\scenarios.csv" `
+  --food-master "C:\path\food-master.xlsx" `
+  --material-master "C:\path\material-master.xlsx" `
+  --public-candidates "data\public_catalogue_candidates.v1.json"</code></pre><p>Replace the paths with your actual files. The browser does not upload or fabricate scenario rows.</p></div></div>
+            </details>
           </section>
 
           <section class="view" id="view-evidence" aria-labelledby="evidence-title" hidden>

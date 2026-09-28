@@ -132,6 +132,8 @@ try {
   await evaluate("document.querySelector('[data-enter-app]').click()");
   assert.equal(await evaluate("document.querySelector('.app-shell').hidden"), false);
   assert.equal(await evaluate("document.querySelector('#view-pipeline').hidden"), false);
+  assert.equal(await evaluate("document.querySelectorAll('#journey-map .journey-phase').length"), 3, "input-to-output map has three phases");
+  assert.equal(await evaluate("document.querySelector('#journey-map .journey-phase.is-active strong').textContent"), "Bring real data");
   assert.equal(await evaluate("getComputedStyle(document.querySelector('#backend-indicator')).display !== 'none'"), true, "single connection indicator is visible");
   assert.equal(await evaluate("document.querySelector('#pipeline-play').getAttribute('aria-pressed')"), "true", "guided tour starts from Explore");
   let advanced = false;
@@ -142,6 +144,9 @@ try {
   assert.equal(advanced, true, "tour advances to the next stage");
   await evaluate("document.querySelector('#pipeline-play').click()");
   assert.equal(await evaluate("document.querySelector('#pipeline-play').getAttribute('aria-pressed')"), "false");
+  await evaluate("document.querySelector('[data-journey-start=\"2\"]').click()");
+  assert.equal(await evaluate("document.querySelector('#pipeline-heading-step').textContent"), "03");
+  assert.equal(await evaluate("document.querySelector('#journey-map .journey-phase.is-active strong').textContent"), "Follow the checks");
   await evaluate("document.querySelector('[data-pipeline-index=\"4\"]').click()");
   assert.equal(await evaluate("document.querySelector('#pipeline-heading-step').textContent"), "05");
   const stageLayout = await evaluate("(() => { const list = document.querySelector('#pipeline-stage-list'); const active = list.querySelector('.is-active'); return {client: list.clientWidth, scroll: list.scrollWidth, left: list.scrollLeft, activeLeft: active.getBoundingClientRect().left, activeRight: active.getBoundingClientRect().right, viewportLeft: list.getBoundingClientRect().left, viewportRight: list.getBoundingClientRect().right}; })()");
@@ -152,6 +157,15 @@ try {
   }
   await evaluate("document.querySelector('[data-route=\"fresh_produce\"]').click()");
   assert.equal(await evaluate("document.querySelector('[data-route=\"fresh_produce\"]').getAttribute('aria-pressed')"), "true");
+  await evaluate("document.querySelector('[data-journey-start=\"7\"]').click()");
+  assert.equal(await evaluate("document.querySelector('#studio-finish').hidden"), false);
+  await evaluate("document.querySelector('#studio-finish [data-show-setup]').click()");
+  assert.equal(await evaluate("document.querySelector('#run-path').open"), true, "setup steps open from the end of the tour");
+  const setupPosition = await evaluate("({summary: document.querySelector('#run-path > summary').getBoundingClientRect().top, guideBottom: document.querySelector('#pipeline-guide-bar').getBoundingClientRect().bottom})");
+  assert.ok(setupPosition.summary >= setupPosition.guideBottom - 5, `setup summary is obscured by sticky controls: ${JSON.stringify(setupPosition)}`);
+  assert.match(await evaluate("document.querySelector('#startup-command').textContent"), /--scenarios/);
+  assert.equal(await evaluate("document.querySelector('#run-path a[download]').getAttribute('href')"), "/api/scenario-template");
+  assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "setup instructions have no horizontal overflow");
   await evaluate("document.querySelector('[data-pipeline-mode=\"actual\"]').click()");
   assert.equal(await evaluate("document.querySelector('#pipeline-empty').hidden"), false);
   await evaluate("document.querySelector('[data-nav=\"overview\"]').click()");
@@ -181,6 +195,21 @@ try {
   }
   assert.equal(await evaluate("document.querySelector('#decisions-loaded').hidden"), false);
   assert.equal(await evaluate("document.querySelector('[data-filter=\"all\"] span').textContent"), "3");
+  await evaluate("document.querySelector('#record-inspector [data-trace-row]').click()");
+  assert.equal(await evaluate("document.querySelector('#pipeline-guide-bar').hidden"), false, "a real report has a playable trace");
+  assert.equal(await evaluate("document.querySelector('#guide-play-label').textContent"), "Play report trace");
+  await evaluate("document.querySelector('#pipeline-play').click()");
+  assert.equal(await evaluate("document.querySelector('#pipeline-play').getAttribute('aria-pressed')"), "true");
+  let traceAdvanced = false;
+  for (let tries = 0; tries < 80; tries += 1) {
+    if (await evaluate("document.querySelector('#pipeline-heading-step').textContent !== '01'")) { traceAdvanced = true; break; }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.equal(traceAdvanced, true, "actual report playback advances through the recorded stages");
+  await evaluate("document.querySelector('[data-journey-start=\"7\"]').click()");
+  assert.equal(await evaluate("document.querySelector('#studio-actual-finish').hidden"), false);
+  assert.match(await evaluate("document.querySelector('#studio-output').textContent"), /not ready/);
+  await evaluate("document.querySelector('#studio-actual-finish [data-go=\"decisions\"]').click()");
   assert.equal(await evaluate("document.querySelector('#record-inspector .supplier-lead-heading strong')?.textContent"), "TEST_ONLY_CODE");
   assert.equal(await evaluate("document.querySelector('#record-inspector .supplier-source a')?.getAttribute('href')"), "https://example.org/product");
   assert.match(await evaluate("document.querySelector('#record-inspector .supplier-boundary')?.textContent"), /not a material prediction/);

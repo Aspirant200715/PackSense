@@ -1006,6 +1006,27 @@ PackSense must continue to withhold a real package or shelf-life claim.
   still needs a genuine structured scenario batch configured by the operator;
   food and film-grade masters alone cannot produce one.
 
+### 2026-09-28 — visual input-to-output flow and blank scenario template
+
+- Continued on `feat/supplier-leads-frontend` / PR #37 to make the existing
+  eight-stop pipeline easier to demonstrate. A three-phase map tracks add →
+  analyze → output, calm motion shows a data packet moving through the
+  current receive/check/produce step, and the actual report trace can be
+  played stage by stage as well as the conceptual tour. Manual stepping and
+  reduced-motion behavior remain available.
+- Added a collapsed setup path on the Pipeline page: download a header-only
+  CSV derived from `packsense.units`, fill genuine scenario rows, configure
+  backend source paths, run the batch, then inspect Results and Evidence.
+  This is a download and instruction flow, **not** browser data upload.
+  No source data, synthetic scenario rows, training labels, model output or
+  recommendation release gate were added or changed.
+- Local verification: 237 Python tests, 17 Node tests, Python compilation,
+  JavaScript syntax and diff check passed. Headless browser smoke passed at
+  320, 390 and 1440 px, including manual and automatic conceptual flow,
+  playable actual-report flow, setup disclosure, and absence of horizontal
+  overflow. PR CI and independent review remain separate. The live flow
+  still requires a real scenario batch and independent package evidence.
+
 ### Template for the next entry
 
 Add a dated heading, then record:
