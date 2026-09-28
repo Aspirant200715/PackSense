@@ -27,7 +27,7 @@
             <div class="hero-eyebrow"><span class="eyebrow-line"></span> FOOD PACKAGING / DECISION INTELLIGENCE</div>
             <h1>Packaging intelligence,<br /><em>with the evidence in view.</em></h1>
             <p>See how a food's properties and journey become protection needs, package checks, and an auditable decision. Every step explains what it knows—and what it still needs.</p>
-            <div class="hero-actions"><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">→</span></button><span>Watch the 30-second input-to-output tour</span></div>
+            <div class="hero-actions"><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">→</span></button><button type="button" class="button button-secondary" id="browse-real-applications" data-enter-published hidden>View published package uses</button><span id="hero-tour-hint">Watch the 30-second input-to-output tour</span></div>
             <div class="intro-footnote"><span></span> Engineering screening now. Learned material prediction is not deployed.</div>
           </div>
           <div class="intro-system" aria-label="Decision path preview">
@@ -91,6 +91,11 @@
                   <button type="button" data-enter-stage="7"><span class="overview-path-index">04</span><span><strong>Decision trace</strong><small>Shortlist, evidence gap, or exception</small></span><span aria-hidden="true">↗</span></button>
                 </div>
               </div>
+            </section>
+            <section class="published-applications" id="published-applications" aria-labelledby="published-applications-title" hidden>
+              <div class="published-applications-header"><div><div class="section-kicker">REAL SOURCE RECORDS</div><h2 id="published-applications-title">Published package uses</h2><p>These are manufacturer-listed food, pack-size and temperature applications. They are options to investigate, not PackSense predictions or approved packaging.</p></div><span id="published-applications-count" class="published-applications-count"></span></div>
+              <div id="published-applications-list" class="published-applications-grid"></div>
+              <p class="published-applications-footnote">Use a real scenario batch and reviewed package evidence before making a packaging decision. Source rights review is pending.</p>
             </section>
             <div id="overview-results" hidden>
             <div class="metric-grid" aria-label="Report summary">

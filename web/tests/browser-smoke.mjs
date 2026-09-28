@@ -230,6 +230,8 @@ try {
   assert.equal(await evaluate("document.querySelector('#studio-actual-finish').hidden"), false);
   assert.match(await evaluate("document.querySelector('#studio-output').textContent"), /not ready/);
   await evaluate("document.querySelector('#studio-actual-finish [data-go=\"decisions\"]').click()");
+  assert.equal(await evaluate("document.querySelector('#record-inspector .published-match-callout strong')?.textContent.trim()"), "TEST_ONLY_CODE TEST_ONLY_BAG");
+  assert.match(await evaluate("document.querySelector('#record-inspector .published-match-callout p')?.textContent"), /not approved these packages or made a model prediction/);
   assert.equal(await evaluate("document.querySelector('#record-inspector .supplier-lead-heading strong')?.textContent"), "TEST_ONLY_CODE");
   assert.equal(await evaluate("document.querySelector('#record-inspector .supplier-source a')?.getAttribute('href')"), "https://example.org/product");
   assert.match(await evaluate("document.querySelector('#record-inspector .supplier-boundary')?.textContent"), /not a material prediction/);

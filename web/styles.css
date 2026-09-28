@@ -170,6 +170,28 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .overview-empty-path button strong { display: block; color: var(--strong); font-size: 12px; font-weight: 600; }
 .overview-empty-path button small { display: block; margin-top: 3px; color: var(--quiet); font-size: 10px; }
 
+.published-applications { margin-top: 18px; padding: 25px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel); box-shadow: var(--shadow); }
+.published-applications-header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; margin-bottom: 19px; }
+.published-applications-header h2 { margin: 7px 0 6px; font-size: 27px; font-weight: 600; letter-spacing: -.8px; }
+.published-applications-header p { max-width: 720px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.published-applications-count { flex: 0 0 auto; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--accent); font: 600 10px "IBM Plex Mono", monospace; }
+.published-applications-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.published-application-card { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--input); }
+.published-application-top { display: flex; justify-content: space-between; gap: 8px; color: var(--quiet); font: 600 9px "IBM Plex Mono", monospace; letter-spacing: .45px; }
+.published-application-top span:last-child { text-align: right; }
+.published-application-card h3 { margin: 14px 0 5px; font-size: 21px; font-weight: 600; text-transform: capitalize; letter-spacing: -.5px; }
+.published-application-product { display: flex; align-items: baseline; gap: 9px; margin-bottom: 13px; }
+.published-application-product strong { color: var(--accent); font-size: 13px; }
+.published-application-product span { color: var(--muted); font-size: 11px; }
+.published-application-card dl { display: flex; flex-wrap: wrap; gap: 9px 20px; margin: 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.published-application-card dt { color: var(--quiet); font-size: 9px; }
+.published-application-card dd { margin: 3px 0 0; color: var(--strong); font-size: 11px; }
+.published-application-source { display: flex; justify-content: space-between; gap: 10px; align-items: flex-end; margin-top: 12px; }
+.published-application-source span { min-width: 0; color: var(--quiet); font-size: 9px; line-height: 1.4; overflow-wrap: anywhere; }
+.published-application-source a { flex: 0 0 auto; color: var(--accent); font-size: 10px; text-decoration: none; }
+.published-application-source a:hover { text-decoration: underline; }
+.published-applications-footnote { margin: 15px 0 0; color: var(--quiet); font-size: 10px; line-height: 1.5; }
+
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 20px 0 25px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); backdrop-filter: blur(18px); box-shadow: var(--shadow); }
 .metric-card { min-width: 0; padding: 19px 22px 20px; border-left: 1px solid var(--line); }
 .metric-card:first-child { border-left: 0; }
@@ -264,6 +286,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .inspector-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 17px 0; border-bottom: 1px solid var(--line); }
 .inspector-facts span, .candidate-facts span { display: block; color: var(--quiet); font: 500 9px "IBM Plex Mono", monospace; letter-spacing: .5px; margin-bottom: 6px; }
 .inspector-facts strong, .candidate-facts strong { display: block; color: var(--strong); font-size: 11px; font-weight: 600; overflow-wrap: anywhere; }
+.published-match-callout { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--line-strong); border-left: 3px solid var(--amber); border-radius: 5px; background: var(--amber-soft); }
+.published-match-callout > span { color: var(--amber); font: 600 9px "IBM Plex Mono", monospace; letter-spacing: .4px; }
+.published-match-callout > div { display: flex; flex-wrap: wrap; gap: 8px 17px; margin-top: 8px; }
+.published-match-callout strong { color: var(--strong); font-size: 13px; }
+.published-match-callout small { color: var(--muted); font-size: 10px; font-weight: 400; }
+.published-match-callout p { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.published-match-callout a { color: var(--accent); text-decoration: none; }
+.published-match-callout a:hover { text-decoration: underline; }
 .preliminary-callout { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--line-strong); border-left: 3px solid var(--accent); border-radius: 5px; background: var(--accent-soft); }
 .preliminary-callout span { display: block; margin-bottom: 6px; color: var(--accent); font: 500 9px "IBM Plex Mono", monospace; }
 .preliminary-callout strong { display: block; color: var(--strong); font-size: 12px; overflow-wrap: anywhere; }
@@ -507,6 +537,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .main-content { padding: 29px 25px 70px; }
   .topbar, .footer { padding-left: 25px; padding-right: 25px; }
   .metric-grid { grid-template-columns: repeat(2,1fr); }
+  .published-applications-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metric-card:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
   .metric-card:nth-child(4) { border-top: 1px solid var(--line); }
   .decision-layout { grid-template-columns: 1fr; }
@@ -552,6 +583,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .backend-indicator { margin-right: 0; font-size: 9px; }
   .overview-heading { margin-bottom: 13px; }
   .overview-heading p { display: none; }
+  .published-applications { padding: 18px; }
+  .published-applications-header { flex-direction: column; gap: 10px; }
+  .published-applications-header h2 { font-size: 23px; }
+  .published-applications-grid { grid-template-columns: 1fr; }
+  .published-application-source { align-items: flex-start; flex-direction: column; }
   .overview-empty-copy { padding: 24px 22px 21px; }
   .overview-empty-copy h2 { font-size: 25px; }
   .overview-empty-copy p { margin-bottom: 18px; }

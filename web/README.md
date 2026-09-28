@@ -43,6 +43,24 @@ To open an existing **audited batch report** automatically:
 python -m packsense.web_server --batch-report path/to/batch-report.json
 ```
 
+To inspect real manufacturer-listed package uses **without making up a
+scenario**, configure only the reviewed research catalogue:
+
+```powershell
+python -m packsense.web_server --port 4182 --public-candidates data/public_catalogue_candidates.v1.json
+```
+
+The introduction then offers **View published package uses**. The Overview
+shows the six standalone food/pack-size/temperature applications in the
+current catalogue with product codes and direct manufacturer source links.
+The box inner liner is omitted because it is not a standalone package. This
+view does not run the suitability model, predict a material, or approve a
+package. All six applications are source claims with rights review pending.
+The local API is `GET /api/published-applications`; its response carries the
+catalogue SHA-256 and explicit false prediction/approval flags. A real
+scenario batch is still needed to compare an actual food and journey with a
+published use.
+
 To run a real scenario batch from operator-selected source files:
 
 ```powershell

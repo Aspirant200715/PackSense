@@ -1065,6 +1065,26 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Browser smoke checks that the lower connector has no generated square
   while playback runs. No data, backend logic or recommendation gate changed.
 
+### 2026-09-28 — show real supplier-published package uses without a fabricated scenario
+
+- Continued on `feat/supplier-leads-frontend`. The local backend can start
+  with only `--public-candidates` and expose six standalone manufacturer-listed
+  food/pack-size/temperature applications from the existing validated
+  `data/public_catalogue_candidates.v1.json`. Inner liners are excluded from
+  the standalone view. The response includes the catalogue SHA-256 and false
+  model-prediction and package-approval flags.
+- The introduction links to a compact published-use view; the scenario Results
+  inspector highlights exact-condition supplier matches while keeping all
+  independent evidence blockers. Source links and use conditions are validated
+  before rendering. No food scenario, suitability label, complete-structure
+  approval, training artifact or material prediction was created or released.
+  The catalogue and its pending rights statuses are unchanged.
+- Local verification: 238 Python tests, 19 Node tests, headless browser smoke
+  at 390 px, and a real-catalogue browser check at 390/1440 px passed. The
+  browser check confirmed six cards, the published broccoli VY7K9 row, a
+  working source URL and no horizontal overflow. The current two reference
+  workbooks still cannot train or release a trustworthy material predictor.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

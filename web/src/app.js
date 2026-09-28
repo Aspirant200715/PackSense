@@ -1,5 +1,6 @@
 import { parseDecisionReport, readableCode, summarizeReport } from "./report.js";
 import { actualContext, actualPipeline, STAGES, walkthroughStage } from "./pipeline.js";
+import { validatePublishedApplications } from "./catalogue.js";
 
 const VIEWS = new Set(["overview", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
@@ -20,6 +21,7 @@ const state = {
   report: null,
   fileName: null,
   reportOrigin: null,
+  publishedApplications: null,
   view: "overview",
   search: "",
   filter: "all",
@@ -164,9 +166,29 @@ function goTo(view) {
   window.scrollTo(0, 0);
 }
 
+function enterPublishedApplications() {
+  $("#welcome-screen").hidden = true;
+  $(".app-shell").hidden = false;
+  goTo("overview");
+}
+
 function renderOverview() {
   $("#overview-results").hidden = !state.report;
-  $("#overview-empty").hidden = Boolean(state.report);
+  const showPublished = Boolean(state.publishedApplications) && !state.report;
+  $("#overview-empty").hidden = Boolean(state.report) || showPublished;
+  $("#published-applications").hidden = !showPublished;
+  if (showPublished) {
+    const applications = state.publishedApplications.applications;
+    $("#published-applications-count").textContent = `${applications.length} source-listed uses`;
+    $("#published-applications-list").innerHTML = applications.map((item) => `
+      <article class="published-application-card">
+        <div class="published-application-top"><span>MANUFACTURER-LISTED USE</span><span>${escapeHtml(item.source_publisher)}</span></div>
+        <h3>${escapeHtml(item.food)}</h3>
+        <div class="published-application-product"><strong>${escapeHtml(item.product_code)}</strong><span>${escapeHtml(item.pack_format)}</span></div>
+        <dl><div><dt>Published fill</dt><dd>${formatNumber(item.quantity, ` ${escapeHtml(item.quantity_unit)}`)}</dd></div><div><dt>Storage</dt><dd>${formatNumber(item.storage_temperature_min_c, " °C")} to ${formatNumber(item.storage_temperature_max_c, " °C")}</dd></div>${item.excursion_max_c === null ? "" : `<div><dt>Listed excursion</dt><dd>Up to ${formatNumber(item.excursion_max_c, " °C")} for ${formatNumber(item.excursion_max_hours, " h")}</dd></div>`}</dl>
+        <div class="published-application-source"><span>${escapeHtml(item.source_locator)}</span><a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">View manufacturer source ↗</a></div>
+      </article>`).join("");
+  }
   if (!state.report) return;
   const counts = summarizeReport(state.report);
   $("#metric-total").textContent = counts.total.toLocaleString();
@@ -236,8 +258,12 @@ function renderInspector(row) {
     return;
   }
   const preferred = row.preliminary_preferred_structure_id;
+  const publishedMatches = row.supplier_application_lookup?.leads.filter(
+    (lead) => lead.application_status === "published_food_quantity_temperature_match_unverified"
+  ) ?? [];
   root.innerHTML = `<div class="inspector-header"><div class="section-kicker">SOURCE ROW ${row.source_row_number}</div><h2>${escapeHtml(row.scenario?.commodity_type || row.record_id || `Row ${row.source_row_number}`)}</h2>${row.scenario ? `<div class="inspector-record-id">Record ${escapeHtml(row.record_id)}</div>` : ""}${statusBadge(row.status)}<p>${row.status === "exception" ? "This scenario needs an input correction before screening." : row.status === "not_ready" ? "The scenario is understood, but the evidence is not sufficient for a package result." : "These structures passed a narrow protection screen. This is not a released recommendation."}</p></div>
     <div class="inspector-facts"><div><span>FOOD REFERENCE</span><strong>${displayValue(row.food_reference_id, "Not matched")}</strong></div><div><span>REQUESTED LIFE</span><strong>${row.target_shelf_life_days == null ? "Not available" : formatNumber(row.target_shelf_life_days, " days")}</strong></div></div>
+    ${publishedMatches.length ? `<section class="published-match-callout"><span>MANUFACTURER-LISTED OPTION · UNVERIFIED</span><div>${publishedMatches.map((lead) => `<strong>${escapeHtml(lead.product_code)} <small>${escapeHtml(lead.pack_format)}</small></strong>`).join("")}</div><p>The published food, fill and temperature conditions match this row. PackSense has not approved these packages or made a model prediction. <a href="${escapeHtml(publishedMatches[0].source_url)}" target="_blank" rel="noopener noreferrer">View manufacturer source ↗</a></p></section>` : ""}
     ${row.scenario ? `<section class="inspector-section"><div class="inspector-section-title"><h3>Submitted scenario values</h3></div><div class="scenario-facts"><div><span>MOISTURE</span><strong>${formatNumber(row.scenario.moisture_content_pct, "%")}</strong></div><div><span>OIL / FAT</span><strong>${formatNumber(row.scenario.oil_fat_content_pct, "%")}</strong></div><div><span>pH</span><strong>${formatNumber(row.scenario.pH)}</strong></div><div><span>NET PACK</span><strong>${formatNumber(row.scenario.net_pack_quantity, ` ${escapeHtml(row.scenario.net_pack_quantity_unit ?? "")}`)}</strong></div><div><span>STORAGE</span><strong>${escapeHtml(readableCode(row.scenario.storage_type))}</strong></div><div><span>TRANSPORT</span><strong>${escapeHtml(readableCode(row.scenario.transport_mode))}</strong></div><div><span>HANDLING</span><strong>${escapeHtml(readableCode(row.scenario.transport_handling_severity))}</strong></div></div>${row.scenario.respiration_rate != null ? `<div class="respiration-note">Respiration: ${formatNumber(row.scenario.respiration_rate)} ${displayValue(row.scenario.respiration_rate_unit, "")} at ${formatNumber(row.scenario.respiration_reference_temperature_c, " °C")}</div>` : ""}</section>` : ""}
     ${preferred ? `<div class="preliminary-callout"><span>PRELIMINARY PROTECTION PREFERENCE</span><strong>${escapeHtml(preferred)}</strong><p>Not a validated material prediction or package approval.</p></div>` : ""}
     ${renderReasonGroup("Input issues", row.input_issues, "red")}
@@ -391,6 +417,7 @@ function renderBackendState() {
     unconfigured: ["Connected", "Local backend connected; no scenario batch is configured."],
     audited_report: ["Connected", "Local backend connected; an audited report is configured."],
     scenario_batch: ["Connected", "Local backend connected; scenario sources are configured."],
+    published_catalogue: ["Connected", "Local backend connected; published supplier applications are available."],
   };
   const [label, detail] = statuses[state.backendMode] || statuses.unavailable;
   $("#backend-indicator-text").textContent = state.backendBusy ? "Running" : label;
@@ -455,11 +482,23 @@ async function connectBackend() {
     const response = await fetch("/api/status", { cache: "no-store" });
     if (!response.ok) throw new Error("Local backend is unavailable.");
     const status = await response.json();
-    if (!["unconfigured", "audited_report", "scenario_batch"].includes(status.mode) || status.model_deployed !== false) {
+    if (!["unconfigured", "audited_report", "scenario_batch", "published_catalogue"].includes(status.mode) || status.model_deployed !== false) {
       throw new Error("Local backend state is unsupported.");
     }
     state.backendMode = status.mode;
     renderBackendState();
+    if (status.has_public_applications === true) {
+      try {
+        const catalogueResponse = await fetch("/api/published-applications", { cache: "no-store" });
+        if (!catalogueResponse.ok) throw new Error(await responseError(catalogueResponse));
+        state.publishedApplications = validatePublishedApplications(await catalogueResponse.json());
+        $("#browse-real-applications").hidden = false;
+        $("#hero-tour-hint").hidden = true;
+        renderOverview();
+      } catch (error) {
+        notify(error instanceof Error ? error.message : "Could not load published applications.", true);
+      }
+    }
     if (status.has_report && status.mode === "audited_report") {
       try {
         const reportResponse = await fetch("/api/report", { cache: "no-store" });
@@ -508,6 +547,7 @@ document.addEventListener("click", (event) => {
   const target = event.target.closest("button");
   if (!target) return;
   if (target.matches("[data-enter-app]")) enterWorkspace();
+  else if (target.matches("[data-enter-published]")) enterPublishedApplications();
   else if (target.matches("[data-enter-stage]")) enterWorkspace(Number(target.dataset.enterStage), false);
   else if (target.matches("[data-welcome]")) returnToWelcome();
   else if (target.matches("[data-nav]")) goTo(target.dataset.nav);
