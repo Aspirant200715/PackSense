@@ -127,7 +127,19 @@ try {
   assert.equal(await evaluate("document.querySelector('#pipeline-empty').hidden"), false);
   await evaluate("document.querySelector('[data-nav=\"overview\"]').click()");
   assert.equal(await evaluate("document.querySelector('#view-overview').hidden"), false);
+  assert.equal(await evaluate("document.querySelectorAll('[data-nav].is-active').length"), 1);
   assert.equal(await evaluate("document.querySelector('#overview-empty').hidden"), false);
+  assert.equal(await evaluate("document.querySelector('#backend-banner').hidden"), true, "empty overview has one integrated status panel");
+  assert.notEqual(await evaluate("document.querySelector('#overview-backend-title').textContent"), "Checking the backend");
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  if (process.env.PACKSENSE_OVERVIEW_SCREENSHOT) {
+    const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+    await writeFile(process.env.PACKSENSE_OVERVIEW_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
+  }
+  await evaluate("document.querySelector('#overview-empty [data-enter-stage=\"4\"]').click()");
+  assert.equal(await evaluate("document.querySelector('#view-pipeline').hidden"), false);
+  assert.equal(await evaluate("document.querySelector('#pipeline-heading-step').textContent"), "05");
+  await evaluate("document.querySelector('[data-nav=\"overview\"]').click()");
   const previousTheme = await evaluate("document.documentElement.dataset.theme");
   await evaluate("document.querySelector('#theme-toggle').click()");
   assert.notEqual(await evaluate("document.documentElement.dataset.theme"), previousTheme);

@@ -7,8 +7,9 @@ open a specific stage. A prominent play/pause control, progress indicator, and
 clickable connected stage track show how the process advances. With reduced
 motion enabled, the tour waits for a manual click instead of auto-playing.
 
-The workspace has an honest empty overview, searchable decision records with
-status filters, expandable evidence details, an actual trace for one audited
+The workspace has a compact empty overview with live local-backend status and
+four clickable checkpoints, searchable decision records with status filters,
+expandable evidence details, an actual trace for one audited
 scenario, and source-hash inspection. Long record details are collapsed until
 requested. The walkthrough explains the logic; it does **not** calculate a
 packaging answer. An actual trace only displays values in a backend report.

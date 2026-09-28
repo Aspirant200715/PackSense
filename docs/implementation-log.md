@@ -911,6 +911,20 @@ PackSense must continue to withhold a real package or shelf-life claim.
   checks, and sequential headless-browser smoke at 390 px and 1440 px passed.
   PR CI and independent review remain separate.
 
+### 2026-09-28 — overview empty-state refinement
+
+- Continued on `feat/frontend-workspace` for PR #36. Replaced the large,
+  repetitive empty Overview with one compact panel: live local-backend status,
+  direct actions, and four labeled, clickable decision checkpoints. The
+  status strip also exposes the existing Run action when a scenario batch is
+  operator-configured. On mobile, the checkpoints form a concise two-column
+  layout that fits without horizontal overflow or an extra long scroll.
+- No report or recommendation is shown until genuine configured sources run
+  or an audited report is opened. No data, backend contracts, prediction
+  logic, suitability labels, or release gates changed. Browser smoke now
+  checks the integrated status and checkpoint navigation; the imported
+  report used by that test remains `TEST_ONLY` UI data.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

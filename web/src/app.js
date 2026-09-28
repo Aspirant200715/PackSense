@@ -174,6 +174,7 @@ function goTo(view) {
 function renderOverview() {
   $("#overview-results").hidden = !state.report;
   $("#overview-empty").hidden = Boolean(state.report);
+  $("#backend-banner").hidden = !state.report;
   if (!state.report) return;
   const counts = summarizeReport(state.report);
   $("#metric-total").textContent = counts.total.toLocaleString();
@@ -384,17 +385,22 @@ function renderBackendState() {
   };
   const [title, detail, indicator] = messages[state.backendMode] || messages.unavailable;
   const localReport = state.report && state.reportOrigin === "local";
-  $("#backend-banner-title").textContent = state.backendBusy ? "Running evidence checks" : localReport ? "Local decision report open" : title;
-  $("#backend-banner-detail").textContent = state.backendBusy
+  const shownTitle = state.backendBusy ? "Running evidence checks" : localReport ? "Local decision report open" : title;
+  const shownDetail = state.backendBusy
     ? "The Python backend is processing the configured source files. This may take a moment."
     : localReport ? "Explore the report's recorded conditions, screening status and source trace." : detail;
+  $("#backend-banner-title").textContent = shownTitle;
+  $("#backend-banner-detail").textContent = shownDetail;
+  $("#overview-backend-title").textContent = shownTitle;
+  $("#overview-backend-detail").textContent = shownDetail;
+  $("#overview-empty-status").dataset.state = state.backendBusy ? "running" : state.backendMode;
   $("#backend-indicator-text").textContent = state.backendBusy ? "Backend running" : indicator;
   $("#backend-indicator").dataset.state = state.backendBusy ? "running" : state.backendMode;
   $("#backend-indicator").title = state.backendBusy ? "Backend running" : indicator;
   $$('[data-run-backend]').forEach((button) => {
     button.hidden = state.backendMode !== "scenario_batch";
     button.disabled = state.backendBusy;
-    button.textContent = state.backendBusy ? "Running…" : button.id === "banner-run-backend" ? "Run configured batch →" : "Run batch";
+    button.textContent = state.backendBusy ? "Running…" : ["banner-run-backend", "overview-run-backend"].includes(button.id) ? "Run configured batch →" : "Run batch";
   });
 }
 
@@ -458,6 +464,8 @@ async function connectBackend() {
       } catch (error) {
         $("#backend-banner-title").textContent = "Report could not be loaded";
         $("#backend-banner-detail").textContent = "The backend is online, but its configured report needs attention.";
+        $("#overview-backend-title").textContent = "Report could not be loaded";
+        $("#overview-backend-detail").textContent = "The backend is online, but its configured report needs attention.";
         notify(error instanceof Error ? error.message : "Could not load the configured report.", true);
       }
     }

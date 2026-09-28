@@ -73,13 +73,35 @@
 
         <main class="main-content">
           <section class="view is-visible" id="view-overview" aria-labelledby="overview-title">
-            <div class="page-heading"><div><div class="page-kicker">DECISION WORKSPACE</div><h1 id="overview-title">Overview</h1><p>Real batches and reports appear here. The walkthrough stays available under Pipeline.</p></div></div>
+            <div class="page-heading overview-heading"><div><div class="page-kicker">DECISION WORKSPACE</div><h1 id="overview-title">Overview</h1><p>Explore the method or inspect the evidence behind a real batch.</p></div></div>
             <div class="backend-banner" id="backend-banner">
               <div class="backend-banner-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/><circle cx="7" cy="7" r="1"/><circle cx="7" cy="12" r="1"/><circle cx="7" cy="17" r="1"/></svg></div>
               <div><strong id="backend-banner-title">Checking the backend</strong><p id="backend-banner-detail">Connecting to the local decision pipeline.</p></div>
               <button type="button" class="button button-primary button-small" id="banner-run-backend" data-run-backend hidden>Run configured batch →</button>
             </div>
-            <div class="overview-empty" id="overview-empty"><div class="overview-empty-art" aria-hidden="true"><span>01</span><i></i><span>02</span><i></i><span>03</span><i></i><span>04</span></div><div><div class="section-kicker">AWAITING A REAL BATCH</div><h2>A clear decision begins with real inputs.</h2><p>No scenario result is shown until a configured batch runs or an audited report is opened. You can explore the process without creating a fictional recommendation.</p><div class="overview-empty-actions"><button type="button" class="button button-primary" data-go="pipeline">Explore pipeline →</button><button type="button" class="button button-secondary" data-import>Open a report</button></div></div></div>
+            <section class="overview-empty" id="overview-empty" aria-labelledby="overview-empty-title">
+              <div class="overview-empty-status" id="overview-empty-status" role="status">
+                <span class="overview-status-light" aria-hidden="true"></span>
+                <div><span>LOCAL PIPELINE</span><strong id="overview-backend-title">Checking the backend</strong><p id="overview-backend-detail">Connecting to the local decision pipeline.</p></div>
+                <button type="button" class="button button-primary button-small" id="overview-run-backend" data-run-backend hidden>Run configured batch →</button>
+              </div>
+              <div class="overview-empty-content">
+                <div class="overview-empty-copy">
+                  <div class="section-kicker">START WITH THE METHOD</div>
+                  <h2 id="overview-empty-title">Explore how PackSense screens a package.</h2>
+                  <p>Follow the food-to-package checks. Real results appear only when you run configured sources or open an audited report.</p>
+                  <div class="overview-empty-actions"><button type="button" class="button button-primary" data-go="pipeline">Explore pipeline <span aria-hidden="true">→</span></button><button type="button" class="button button-secondary" data-import>Open report</button></div>
+                  <small>No example results or predicted answers are shown here.</small>
+                </div>
+                <div class="overview-empty-path" aria-label="Four decision checkpoints">
+                  <div class="overview-path-heading"><span>THE DECISION PATH</span><span>SELECT A CHECKPOINT</span></div>
+                  <button type="button" data-enter-stage="0"><span class="overview-path-index">01</span><span><strong>Food &amp; conditions</strong><small>Composition, storage, and temperature</small></span><span aria-hidden="true">↗</span></button>
+                  <button type="button" data-enter-stage="2"><span class="overview-path-index">02</span><span><strong>Protection needs</strong><small>Moisture, oxygen, and handling</small></span><span aria-hidden="true">↗</span></button>
+                  <button type="button" data-enter-stage="4"><span class="overview-path-index">03</span><span><strong>Structure screening</strong><small>Complete pack and transfer evidence</small></span><span aria-hidden="true">↗</span></button>
+                  <button type="button" data-enter-stage="7"><span class="overview-path-index">04</span><span><strong>Decision trace</strong><small>Shortlist, evidence gap, or exception</small></span><span aria-hidden="true">↗</span></button>
+                </div>
+              </div>
+            </section>
             <div id="overview-results" hidden>
             <div class="metric-grid" aria-label="Report summary">
               <div class="metric-card"><div class="metric-top"><span>SCENARIOS</span><span class="metric-glyph" aria-hidden="true">01</span></div><strong id="metric-total">—</strong><small>Rows in the loaded report</small></div>
