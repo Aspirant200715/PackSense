@@ -888,6 +888,29 @@ PackSense must continue to withhold a real package or shelf-life claim.
   navigation, theme toggle, and absence of JavaScript exceptions. PR CI and
   independent review remain separate.
 
+### 2026-09-28 — focused introduction and guided-flow polish
+
+- Continued on `feat/frontend-workspace` for PR #36. Made the introduction a
+  separate first screen. Its main Explore action enters the pipeline and
+  starts a guided tour; selecting a decision-path stop opens that stage. A
+  visible play/pause control, progress indicator and connected stage track
+  make movement through the eight checks explicit. Reduced-motion settings
+  disable automatic playback.
+- Slimmed the workspace navigation and compacted the walkthrough for desktop
+  and mobile, reducing the need to scroll between steps. The overview now
+  shows a deliberate no-report state instead of empty metrics. Results use
+  count-bearing status filters, and detailed issues, exposures, and structure
+  checks are expandable. The real backend contract and source boundary were
+  not changed; no result is invented for an unconfigured batch.
+- Browser smoke checks the intro-to-tour path, automatic advancement,
+  stage selection, empty states, filters, disclosures, and return to the
+  introduction at desktop and 390 px mobile sizes. Its report object is
+  explicitly `TEST_ONLY` UI test data, never training data. No real source
+  row, suitability label, prediction model or release gate changed. Local
+  verification: 233 Python tests, 14 Node tests, JavaScript syntax and diff
+  checks, and sequential headless-browser smoke at 390 px and 1440 px passed.
+  PR CI and independent review remain separate.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

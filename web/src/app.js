@@ -92,11 +92,55 @@ function setTheme(theme) {
   try { localStorage.setItem("packsense-theme", selected); } catch { /* Private mode may block storage. */ }
 }
 
+function updatePlaybackControls() {
+  const playing = playbackTimer !== null;
+  $(".pipeline-studio").classList.toggle("is-playing", playing);
+  $("#guide-play-label").textContent = playing ? "Pause tour" : state.pipelineStep === STAGES.length - 1 ? "Replay tour" : "Play guided tour";
+  $("#guide-play-icon").textContent = playing ? "Ⅱ" : "▶";
+  $("#pipeline-play").setAttribute("aria-label", playing ? "Pause guided tour" : state.pipelineStep === STAGES.length - 1 ? "Replay guided tour" : "Play guided tour");
+  $("#pipeline-play").setAttribute("aria-pressed", String(playing));
+  $("#guide-playback-status").textContent = playing
+    ? "Playing automatically · select any stage or pause to inspect it."
+    : state.pipelineStep === STAGES.length - 1 ? "Tour complete · replay or explore any stage."
+      : "Press Play to watch the stages advance automatically.";
+}
+
 function stopPlayback() {
   if (playbackTimer !== null) clearInterval(playbackTimer);
   playbackTimer = null;
-  $("#pipeline-play").textContent = "Play walkthrough";
-  $("#pipeline-play").setAttribute("aria-label", "Play walkthrough");
+  updatePlaybackControls();
+}
+
+function startPlayback() {
+  if (state.pipelineMode !== "walkthrough" || playbackTimer !== null) return;
+  if (state.pipelineStep === STAGES.length - 1) state.pipelineStep = 0;
+  playbackTimer = setInterval(() => {
+    if (state.pipelineStep >= STAGES.length - 1) {
+      stopPlayback();
+      return;
+    }
+    state.pipelineStep += 1;
+    renderPipeline();
+    if (state.pipelineStep === STAGES.length - 1) stopPlayback();
+  }, 4000);
+  renderPipeline();
+}
+
+function enterWorkspace(stage = 0, autoplay = true) {
+  $("#welcome-screen").hidden = true;
+  $(".app-shell").hidden = false;
+  state.pipelineMode = "walkthrough";
+  state.pipelineStep = stage;
+  goTo("pipeline");
+  renderPipeline();
+  if (autoplay && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) startPlayback();
+}
+
+function returnToWelcome() {
+  stopPlayback();
+  $(".app-shell").hidden = true;
+  $("#welcome-screen").hidden = false;
+  window.scrollTo(0, 0);
 }
 
 function centerActiveStage() {
@@ -129,6 +173,7 @@ function goTo(view) {
 
 function renderOverview() {
   $("#overview-results").hidden = !state.report;
+  $("#overview-empty").hidden = Boolean(state.report);
   if (!state.report) return;
   const counts = summarizeReport(state.report);
   $("#metric-total").textContent = counts.total.toLocaleString();
@@ -156,25 +201,25 @@ function filteredRows() {
 
 function renderReasonGroup(title, items, kind) {
   if (!items.length) return "";
-  return `<section class="inspector-section"><div class="inspector-section-title"><h3>${escapeHtml(title)}</h3><span>${items.length}</span></div><div class="reason-stack">${items.map((item) => {
+  return `<details class="inspector-disclosure" ${kind === "red" || title === "Evidence gaps" ? "open" : ""}><summary><span>${escapeHtml(title)}</span><small>${items.length} recorded</small></summary><div class="reason-stack">${items.map((item) => {
     const isIssue = typeof item === "object" && item !== null;
     const code = isIssue ? item.code : item;
     const field = isIssue ? item.field : null;
     const message = isIssue ? item.message : null;
     return `<div class="reason-card reason-${kind}"><span class="reason-mark" aria-hidden="true"></span><div><strong>${escapeHtml(field ? `${field}: ${readableCode(code)}` : readableCode(code))}</strong>${message ? `<p>${escapeHtml(message)}</p>` : ""}<code>${escapeHtml(code ?? "unknown")}</code></div></div>`;
-  }).join("")}</div></section>`;
+  }).join("")}</div></details>`;
 }
 
 function renderExposures(exposures) {
   if (!exposures.length) return "";
-  return `<section class="inspector-section"><div class="inspector-section-title"><h3>Temperature exposure</h3><span>${exposures.length} phases</span></div><div class="exposure-list">${exposures.map((item) => `
-    <div class="exposure-row"><div><strong>${escapeHtml(readableCode(item.phase))}</strong>${item.safety_check_only ? `<small>Safety excursion check</small>` : item.duration_hours != null ? `<small>${formatNumber(item.duration_hours, " h")} duration</small>` : `<small>Duration not specified</small>`}</div><div class="exposure-values"><strong>${formatNumber(item.temperature_c, " °C")}</strong><small>RH ${formatNumber(item.relative_humidity_pct, "%")}</small></div></div>`).join("")}</div></section>`;
+  return `<details class="inspector-disclosure"><summary><span>Temperature exposure</span><small>${exposures.length} phases</small></summary><div class="exposure-list">${exposures.map((item) => `
+    <div class="exposure-row"><div><strong>${escapeHtml(readableCode(item.phase))}</strong>${item.safety_check_only ? `<small>Safety excursion check</small>` : item.duration_hours != null ? `<small>${formatNumber(item.duration_hours, " h")} duration</small>` : `<small>Duration not specified</small>`}</div><div class="exposure-values"><strong>${formatNumber(item.temperature_c, " °C")}</strong><small>RH ${formatNumber(item.relative_humidity_pct, "%")}</small></div></div>`).join("")}</div></details>`;
 }
 
 function renderCandidates(row) {
-  if (!row.screened_candidates.length) return `<section class="inspector-section"><div class="inspector-section-title"><h3>Package structures</h3></div><div class="quiet-empty">No complete structure is available for this row in the current report.</div></section>`;
-  return `<section class="inspector-section"><div class="inspector-section-title"><h3>Screened structures</h3><span>${row.screened_candidates.length}</span></div><div class="candidate-list">${row.screened_candidates.map((candidate) => `
-    <details class="candidate-card"><summary><span class="candidate-main"><strong>${escapeHtml(candidate.structure_id)}</strong><small>${displayValue(candidate.pack_format, "Format not reported")}</small></span>${statusBadge(candidate.status)}<span class="candidate-expand" aria-hidden="true">+</span></summary><div class="candidate-body"><div class="candidate-facts"><div><span>PROTECTION RANK</span><strong>${candidate.protection_rank == null ? "Not ranked" : escapeHtml(candidate.protection_rank)}</strong></div><div><span>SERVICE RANGE</span><strong>${formatNumber(candidate.service_temperature_min_c, " °C")} to ${formatNumber(candidate.service_temperature_max_c, " °C")}</strong></div></div><div class="candidate-subhead">Layer structure</div>${candidate.layers.length ? `<div class="layer-list">${candidate.layers.map((layer, index) => `<div class="layer-row"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(layer.grade_id ?? "Unspecified grade")}</strong><small>${formatNumber(layer.thickness_um, " µm")}${layer.role ? ` · ${escapeHtml(layer.role)}` : ""}${layer.is_food_contact ? " · food contact" : ""}</small></div>`).join("")}</div>` : `<p class="candidate-empty">Layer details not supplied.</p>`}${candidate.reason_codes.length ? `<div class="candidate-subhead">Screening reasons</div><div class="candidate-reasons">${candidate.reason_codes.map((reason) => `<span>${escapeHtml(readableCode(reason))}</span>`).join("")}</div>` : ""}</div></details>`).join("")}</div></section>`;
+  if (!row.screened_candidates.length) return `<details class="inspector-disclosure"><summary><span>Package structures</span><small>None recorded</small></summary><div class="quiet-empty">No complete structure is available for this row in the current report.</div></details>`;
+  return `<details class="inspector-disclosure" ${row.status === "preliminary_shortlist" ? "open" : ""}><summary><span>Screened structures</span><small>${row.screened_candidates.length} candidates</small></summary><div class="candidate-list">${row.screened_candidates.map((candidate) => `
+    <details class="candidate-card"><summary><span class="candidate-main"><strong>${escapeHtml(candidate.structure_id)}</strong><small>${displayValue(candidate.pack_format, "Format not reported")}</small></span>${statusBadge(candidate.status)}<span class="candidate-expand" aria-hidden="true">+</span></summary><div class="candidate-body"><div class="candidate-facts"><div><span>PROTECTION RANK</span><strong>${candidate.protection_rank == null ? "Not ranked" : escapeHtml(candidate.protection_rank)}</strong></div><div><span>SERVICE RANGE</span><strong>${formatNumber(candidate.service_temperature_min_c, " °C")} to ${formatNumber(candidate.service_temperature_max_c, " °C")}</strong></div></div><div class="candidate-subhead">Layer structure</div>${candidate.layers.length ? `<div class="layer-list">${candidate.layers.map((layer, index) => `<div class="layer-row"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(layer.grade_id ?? "Unspecified grade")}</strong><small>${formatNumber(layer.thickness_um, " µm")}${layer.role ? ` · ${escapeHtml(layer.role)}` : ""}${layer.is_food_contact ? " · food contact" : ""}</small></div>`).join("")}</div>` : `<p class="candidate-empty">Layer details not supplied.</p>`}${candidate.reason_codes.length ? `<div class="candidate-subhead">Screening reasons</div><div class="candidate-reasons">${candidate.reason_codes.map((reason) => `<span>${escapeHtml(readableCode(reason))}</span>`).join("")}</div>` : ""}</div></details>`).join("")}</div></details>`;
 }
 
 function renderInspector(row) {
@@ -212,6 +257,14 @@ function renderDecisions() {
   if (!rows.some(({ index }) => index === state.selectedIndex)) state.selectedIndex = rows[0]?.index ?? null;
   const offset = (state.page - 1) * PAGE_SIZE;
   $("#record-filter-count").textContent = `${rows.length.toLocaleString()} of ${state.report.rows.length.toLocaleString()} rows`;
+  const counts = summarizeReport(state.report);
+  const filterCounts = { all: counts.total, not_ready: counts.not_ready, preliminary_shortlist: counts.preliminary_shortlist, exception: counts.exception };
+  $$('[data-filter]').forEach((button) => {
+    const active = button.dataset.filter === state.filter;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+    button.querySelector("span").textContent = filterCounts[button.dataset.filter].toLocaleString();
+  });
   $("#record-list").innerHTML = rows.length ? rows.slice(offset, offset + PAGE_SIZE).map(({ row, index }) => `
     <button type="button" class="record-list-row${index === state.selectedIndex ? " is-selected" : ""}" data-select-row="${index}" aria-pressed="${index === state.selectedIndex}"><span class="record-identity"><strong>${escapeHtml(row.scenario?.commodity_type || row.record_id || `Row ${row.source_row_number}`)}</strong><small>#${row.source_row_number} · ${escapeHtml(row.record_id || row.food_reference_id || "Food not matched")}</small></span>${statusBadge(row.status)}</button>`).join("") : `<div class="list-no-match"><strong>No matching records</strong><p>Try another search term or status filter.</p></div>`;
   $("#record-pagination").innerHTML = rows.length > PAGE_SIZE ? `<span>Page ${state.page} of ${pages}</span><div><button type="button" class="page-button" data-page="previous" ${state.page === 1 ? "disabled" : ""} aria-label="Previous page">←</button><button type="button" class="page-button" data-page="next" ${state.page === pages ? "disabled" : ""} aria-label="Next page">→</button></div>` : `<span>${rows.length.toLocaleString()} shown</span>`;
@@ -234,6 +287,11 @@ function renderPipeline() {
   const actualMode = state.pipelineMode === "actual";
   const hasReport = Boolean(state.report);
   $("#pipeline-heading-step").textContent = STAGES[state.pipelineStep].number;
+  $("#pipeline-guide-bar").hidden = actualMode;
+  $("#guide-stage-caption").textContent = `Step ${state.pipelineStep + 1} of ${STAGES.length} · ${STAGES[state.pipelineStep].title}`;
+  $("#guide-progress").setAttribute("aria-valuenow", String(state.pipelineStep + 1));
+  $("#guide-progress-fill").style.width = `${((state.pipelineStep + 1) / STAGES.length) * 100}%`;
+  updatePlaybackControls();
   $$('[data-pipeline-mode]').forEach((button) => {
     const active = button.dataset.pipelineMode === state.pipelineMode;
     button.classList.toggle("is-active", active);
@@ -289,7 +347,6 @@ function renderPipeline() {
     : walkthroughStage(state.pipelineStep, state.pipelineRoute);
   $("#studio-mode-label").textContent = actualMode ? "ACTUAL REPORT TRACE" : "CONCEPTUAL WALKTHROUGH";
   $("#studio-progress").textContent = `${stage.number} / 08`;
-  $("#studio-step-number").textContent = stage.number;
   $("#studio-state-label").textContent = actualMode ? readableCode(stage.state).toUpperCase() : "STEP IN FOCUS";
   $("#studio-title").textContent = stage.title;
   $("#studio-statement").textContent = stage.statement;
@@ -308,7 +365,6 @@ function renderPipeline() {
   $("#studio-step-caption").textContent = `Step ${state.pipelineStep + 1} of 8`;
   $("#pipeline-previous").disabled = state.pipelineStep === 0;
   $("#pipeline-next").disabled = state.pipelineStep === STAGES.length - 1;
-  $("#pipeline-play").hidden = actualMode;
 }
 
 function render() {
@@ -334,6 +390,7 @@ function renderBackendState() {
     : localReport ? "Explore the report's recorded conditions, screening status and source trace." : detail;
   $("#backend-indicator-text").textContent = state.backendBusy ? "Backend running" : indicator;
   $("#backend-indicator").dataset.state = state.backendBusy ? "running" : state.backendMode;
+  $("#backend-indicator").title = state.backendBusy ? "Backend running" : indicator;
   $$('[data-run-backend]').forEach((button) => {
     button.hidden = state.backendMode !== "scenario_batch";
     button.disabled = state.backendBusy;
@@ -353,7 +410,6 @@ function acceptReport(report, label, destination, origin = "local") {
   state.pipelineOptionsFor = null;
   if (destination === "pipeline") state.pipelineMode = "actual";
   $("#record-search").value = "";
-  $("#record-filter").value = "all";
   goTo(destination);
   render();
   renderBackendState();
@@ -440,16 +496,17 @@ async function copyText(value, successMessage) {
 document.addEventListener("click", (event) => {
   const target = event.target.closest("button");
   if (!target) return;
-  if (target.matches("[data-nav]")) goTo(target.dataset.nav);
+  if (target.matches("[data-enter-app]")) enterWorkspace();
+  else if (target.matches("[data-enter-stage]")) enterWorkspace(Number(target.dataset.enterStage), false);
+  else if (target.matches("[data-welcome]")) returnToWelcome();
+  else if (target.matches("[data-nav]")) goTo(target.dataset.nav);
   else if (target.matches("[data-go]")) goTo(target.dataset.go);
   else if (target.matches("[data-import]")) $("#report-input").click();
   else if (target.matches("[data-run-backend]")) runBackend();
-  else if (target.matches("[data-jump-stage]")) {
-    stopPlayback();
-    state.pipelineMode = "walkthrough";
-    state.pipelineStep = Number(target.dataset.jumpStage);
-    goTo("pipeline");
-    renderPipeline();
+  else if (target.matches("[data-filter]")) {
+    state.filter = target.dataset.filter;
+    state.page = 1;
+    renderDecisions();
   }
   else if (target.matches("#theme-toggle")) {
     setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
@@ -472,22 +529,8 @@ document.addEventListener("click", (event) => {
     state.pipelineStep = Math.max(0, Math.min(STAGES.length - 1, state.pipelineStep));
     renderPipeline();
   } else if (target.matches("#pipeline-play")) {
-    if (playbackTimer !== null) {
-      stopPlayback();
-    } else {
-      if (state.pipelineStep === STAGES.length - 1) state.pipelineStep = 0;
-      target.textContent = "Pause walkthrough";
-      target.setAttribute("aria-label", "Pause walkthrough");
-      renderPipeline();
-      playbackTimer = setInterval(() => {
-        if (state.pipelineStep >= STAGES.length - 1) {
-          stopPlayback();
-          return;
-        }
-        state.pipelineStep += 1;
-        renderPipeline();
-      }, 2400);
-    }
+    if (playbackTimer !== null) stopPlayback();
+    else startPlayback();
   } else if (target.matches("[data-trace-row]")) {
     stopPlayback();
     state.pipelineRowIndex = Number(target.dataset.traceRow);
@@ -511,11 +554,6 @@ document.addEventListener("click", (event) => {
 
 $("#record-search").addEventListener("input", (event) => {
   state.search = event.target.value;
-  state.page = 1;
-  renderDecisions();
-});
-$("#record-filter").addEventListener("change", (event) => {
-  state.filter = event.target.value;
   state.page = 1;
   renderDecisions();
 });

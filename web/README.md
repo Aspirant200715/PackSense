@@ -1,9 +1,16 @@
 # PackSense decision workspace
 
 This is the build-free MVP frontend for the existing Python decision pipeline.
-It has an interactive introductory map, an eight-stage walkthrough, searchable
-decision records, an actual trace for one audited scenario, and source-hash
-inspection. The walkthrough explains the logic; it does **not** calculate a
+It opens on a separate introduction. **Explore PackSense** enters the workspace
+and starts the eight-stage guided tour; the four decision-path stops can also
+open a specific stage. A prominent play/pause control, progress indicator, and
+clickable connected stage track show how the process advances. With reduced
+motion enabled, the tour waits for a manual click instead of auto-playing.
+
+The workspace has an honest empty overview, searchable decision records with
+status filters, expandable evidence details, an actual trace for one audited
+scenario, and source-hash inspection. Long record details are collapsed until
+requested. The walkthrough explains the logic; it does **not** calculate a
 packaging answer. An actual trace only displays values in a backend report.
 
 The app defaults to dark mode and has a light-mode toggle. Only the theme is
