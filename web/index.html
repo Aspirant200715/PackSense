@@ -27,7 +27,7 @@
             <div class="hero-eyebrow"><span class="eyebrow-line"></span> FOOD PACKAGING / DECISION INTELLIGENCE</div>
             <h1>Packaging intelligence,<br /><em>with the evidence in view.</em></h1>
             <p>See how a food's properties and journey become protection needs, package checks, and an auditable decision. Every step explains what it knows—and what it still needs.</p>
-            <div class="hero-actions"><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">→</span></button><button type="button" class="button button-secondary" id="browse-real-applications" data-enter-published hidden>View published package uses</button><span id="hero-tour-hint">Watch the 30-second input-to-output tour</span></div>
+            <div class="hero-actions"><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">→</span></button><button type="button" class="button button-secondary" id="start-evaluation" data-enter-evaluate hidden>Evaluate a food</button><button type="button" class="button button-secondary" id="browse-real-applications" data-enter-published hidden>View published package uses</button><span id="hero-tour-hint">Watch the 30-second input-to-output tour</span></div>
             <div class="intro-footnote"><span></span> Engineering screening now. Learned material prediction is not deployed.</div>
           </div>
           <div class="intro-system" aria-label="Decision path preview">
@@ -52,6 +52,7 @@
           </button>
           <nav class="top-nav" aria-label="Explore PackSense">
             <button type="button" class="nav-item is-active" data-nav="overview" aria-label="Overview" title="Overview" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7v9H3v-9Z"/><path d="M9 20v-6h6v6"/></svg><span>Overview</span></button>
+            <button type="button" class="nav-item" id="nav-evaluate" data-nav="evaluate" aria-label="Evaluate a food" title="Evaluate a food" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/><path d="m15 3 2 2"/></svg><span>Evaluate</span></button>
             <button type="button" class="nav-item" data-nav="pipeline" aria-label="Explore pipeline" title="Explore pipeline"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="9" width="5" height="5" rx="1"/><rect x="9.5" y="9" width="5" height="5" rx="1"/><rect x="16.5" y="9" width="5" height="5" rx="1"/><path d="M7.5 11.5h2M14.5 11.5h2"/></svg><span>Pipeline</span></button>
             <button type="button" class="nav-item" data-nav="decisions" aria-label="Decision records" title="Decision records"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h8l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M15 3v5h4M9 13h6M9 17h6"/></svg><span>Results</span><span class="nav-count" id="nav-record-count" hidden></span></button>
             <button type="button" class="nav-item" data-nav="evidence" aria-label="Evidence and sources" title="Evidence and sources"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg><span>Evidence</span></button>
@@ -137,6 +138,50 @@
 
           </section>
 
+          <section class="view" id="view-evaluate" aria-labelledby="evaluate-title" hidden>
+            <div class="page-heading"><div><div class="page-kicker">ONE FOOD / ONE REAL SCENARIO</div><h1 id="evaluate-title">Evaluate a food</h1><p>Select a sourced food profile, then enter your actual packaging and journey conditions. No spreadsheet is needed.</p></div></div>
+            <div class="intake-layout">
+              <form id="scenario-form" class="panel intake-form">
+                <section class="intake-section" aria-labelledby="intake-food-title">
+                  <div class="intake-section-heading"><span>01</span><div><h2 id="intake-food-title">Choose the food</h2><p>Search the reference database. The selected row supplies composition and any reported respiration value.</p></div></div>
+                  <label class="intake-field"><span>Food name or reference ID</span><input id="food-search" type="search" placeholder="Search a food" autocomplete="off" aria-controls="food-search-results" /></label>
+                  <div id="food-search-status" class="intake-search-status" role="status">Enter at least two characters to search the configured food reference.</div>
+                  <div id="food-search-results" class="intake-search-results" aria-label="Food reference matches"></div>
+                  <div id="selected-food" class="selected-food" hidden></div>
+                </section>
+                <section class="intake-section" aria-labelledby="intake-storage-title">
+                  <div class="intake-section-heading"><span>02</span><div><h2 id="intake-storage-title">Set the storage target</h2><p>Use the planned conditions for this product, not values copied from a generic food reference.</p></div></div>
+                  <div class="intake-fields-grid">
+                    <label class="intake-field"><span>Desired shelf life <small>days · target only</small></span><input name="desired_shelf_life_days" type="number" min="0.01" step="any" required /></label>
+                    <label class="intake-field"><span>Storage type</span><select name="storage_type" required><option value="">Select storage</option><option value="ambient">Ambient</option><option value="chilled">Chilled</option><option value="frozen">Frozen</option></select></label>
+                    <label class="intake-field"><span>Storage temperature <small>°C</small></span><input name="storage_temperature_c" type="number" min="-273.15" step="any" required /></label>
+                    <label class="intake-field"><span>Storage relative humidity <small>% RH</small></span><input name="storage_relative_humidity_pct" type="number" min="0" max="100" step="any" required /></label>
+                  </div>
+                </section>
+                <section class="intake-section" aria-labelledby="intake-journey-title">
+                  <div class="intake-section-heading"><span>03</span><div><h2 id="intake-journey-title">Describe the journey</h2><p>The transport temperature maximum is an expected exposure, not a measured shelf-life outcome.</p></div></div>
+                  <div class="intake-fields-grid">
+                    <label class="intake-field"><span>Transport mode</span><select name="transport_mode" required><option value="">Select mode</option><option value="road">Road</option><option value="rail">Rail</option><option value="air">Air</option><option value="sea">Sea</option></select></label>
+                    <label class="intake-field"><span>Transport duration <small>hours</small></span><input name="transport_duration_hours" type="number" min="0" step="any" required /></label>
+                    <label class="intake-field"><span>Usual transport temperature <small>°C</small></span><input name="transport_temperature_c" type="number" min="-273.15" step="any" required /></label>
+                    <label class="intake-field"><span>Highest transport temperature <small>°C</small></span><input name="transport_max_temperature_c" type="number" min="-273.15" step="any" required /></label>
+                    <label class="intake-field"><span>Handling severity</span><select name="transport_handling_severity" required><option value="">Select severity</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
+                  </div>
+                </section>
+                <section class="intake-section" aria-labelledby="intake-pack-title">
+                  <div class="intake-section-heading"><span>04</span><div><h2 id="intake-pack-title">Set the pack size</h2><p>Enter the net food quantity in one package.</p></div></div>
+                  <div class="intake-fields-grid">
+                    <label class="intake-field"><span>Net quantity</span><input name="net_pack_quantity" type="number" min="0.01" step="any" required /></label>
+                    <label class="intake-field"><span>Unit</span><select name="net_pack_quantity_unit" required><option value="">Select unit</option><option value="g">g</option><option value="kg">kg</option><option value="mL">mL</option><option value="L">L</option></select></label>
+                  </div>
+                </section>
+                <div id="evaluation-error" class="intake-error" role="alert" hidden></div>
+                <div class="intake-submit"><button type="submit" class="button button-primary" id="evaluate-submit" disabled>Evaluate this scenario <span aria-hidden="true">→</span></button><span id="intake-submit-note">Select a complete food reference to continue.</span></div>
+              </form>
+              <aside class="panel intake-aside" aria-label="How this result is produced"><div class="section-kicker">WHAT THE RESULT MEANS</div><h2>Your conditions, checked against evidence.</h2><p>PackSense combines the selected food reference with the conditions you enter, then runs the same validation and package-screening backend used for scenario batches.</p><div><strong>From the reference</strong><span>Food identity, moisture, oil/fat, pH and any reported respiration value. Their source and evidence basis stay visible.</span></div><div><strong>From you</strong><span>Target life, storage, journey, handling and pack quantity. These are submitted conditions, not independently measured facts.</span></div><div><strong>Possible outcome</strong><span>An input exception, a needs-evidence result or a preliminary shortlist. No trained material or shelf-life prediction is deployed.</span></div></aside>
+            </div>
+          </section>
+
           <section class="view" id="view-decisions" aria-labelledby="decisions-title" hidden>
             <div class="page-heading"><div><div class="page-kicker">WORKSPACE / DECISION RECORDS</div><h1 id="decisions-title">Decision records</h1><p>Inspect each scenario and the evidence behind its current status.</p></div><div class="report-file" id="report-file-label">No report loaded</div></div>
             <div id="decisions-empty" class="full-empty" hidden>
@@ -171,14 +216,14 @@
                   <div class="studio-context-action" id="studio-intake-action"><span>Have a real scenario ready?</span><button type="button" class="text-button" data-show-setup>See how to add it →</button></div>
                   <div class="studio-boundary"><span id="studio-boundary-label">EVIDENCE BOUNDARY</span><p id="studio-boundary-text"></p></div>
                   <div class="studio-evidence" id="studio-evidence" hidden></div>
-                  <div class="studio-finish" id="studio-finish" hidden><strong>Ready to use your own data?</strong><p>Prepare one genuine scenario batch, run the backend, then inspect its reported status and sources. The walkthrough did not invent a package result.</p><div><button type="button" class="button button-primary button-small" data-show-setup>See setup steps</button><button type="button" class="button button-secondary button-small" data-import>Open existing report</button></div></div>
+                  <div class="studio-finish" id="studio-finish" hidden><strong>Ready to use your own data?</strong><p id="studio-finish-copy">Prepare one genuine scenario batch, run the backend, then inspect its reported status and sources. The walkthrough did not invent a package result.</p><div><button type="button" class="button button-primary button-small" id="studio-setup-button" data-show-setup>See setup steps</button><button type="button" class="button button-primary button-small" id="studio-form-button" data-go="evaluate" hidden>Evaluate a food</button><button type="button" class="button button-secondary button-small" data-import>Open existing report</button></div></div>
                   <div class="studio-finish" id="studio-actual-finish" hidden><strong>Trace complete. Inspect the reported outcome.</strong><p>This row's status and source trail are recorded. Any unresolved evidence remains visible; no trained material prediction was made.</p><div><button type="button" class="button button-primary button-small" data-go="decisions">View this result</button><button type="button" class="button button-secondary button-small" data-go="evidence">Inspect sources</button></div></div>
                   <div class="studio-controls"><button type="button" class="button button-secondary" data-pipeline-step="previous" id="pipeline-previous">← Previous</button><button type="button" class="button button-primary" data-pipeline-step="next" id="pipeline-next">Next step →</button></div>
                 </div>
               </div>
             </div>
-            <details class="run-path" id="run-path"><summary><span class="run-path-kicker">FROM INPUT TO OUTPUT</span><strong>How to run a real scenario batch</strong><span class="run-path-toggle-text">Show the three steps ↓</span></summary>
-              <div class="run-path-content"><div class="run-path-steps">
+            <details class="run-path" id="run-path"><summary><span class="run-path-kicker">FROM INPUT TO OUTPUT</span><strong>How to add real data</strong><span class="run-path-toggle-text">Show the options ↓</span></summary>
+              <div class="run-path-content"><div class="run-path-form-note" id="run-path-form-note" hidden><div><strong>Evaluating one food?</strong><p>Use the form. The reference workbooks stay on the backend; you enter only this product's conditions.</p></div><button type="button" class="button button-primary button-small" data-go="evaluate">Open food form</button></div><div class="run-path-steps">
                 <div class="run-path-step"><span>01 / ADD</span><strong>Fill the scenario CSV</strong><p>One row per real food-and-storage case. Include actual food properties, target life, pack quantity, temperature, humidity and transport conditions. Produce also needs sourced respiration data where required.</p><a class="button button-secondary button-small" href="/api/scenario-template" download="packsense-scenarios-template.csv">Download blank CSV header</a></div>
                 <div class="run-path-step"><span>02 / RUN</span><strong>Connect the reference files</strong><p>Start the local backend with the scenario CSV and food/material workbooks. Replace the example paths below, then use Run batch in the top bar.</p><button type="button" class="button button-primary button-small" id="setup-run-batch" data-run-backend hidden>Run configured batch</button></div>
                 <div class="run-path-step"><span>03 / READ</span><strong>Inspect the decision record</strong><p>Results shows each row's status and blockers; Pipeline traces each check; Evidence shows the exact input fingerprints. A supplier lead is not an approved package.</p><button type="button" class="button button-secondary button-small" id="setup-open-results" data-go="decisions" hidden>View results</button></div>

@@ -12,6 +12,7 @@ it only plays back the report and performs no new inference. With reduced
 motion enabled, the tour waits for a manual click instead of auto-playing.
 
 The workspace has a compact empty overview with four clickable checkpoints,
+an **Evaluate a food** form when the two reference masters are configured,
 searchable decision records with status filters, expandable evidence details,
 an actual trace for one audited
 scenario, and source-hash inspection. Long record details are collapsed until
@@ -68,6 +69,34 @@ catalogue SHA-256 and explicit false prediction/approval flags. A real
 scenario batch is still needed to compare an actual food and journey with a
 published use.
 
+To evaluate **one food without preparing a spreadsheet**, configure the food
+and material reference workbooks when starting the local server:
+
+```powershell
+python -m packsense.web_server --port 4173 --food-master "path/to/food-master.xlsx" --material-master "path/to/material-master.xlsx" --public-candidates "data/public_catalogue_candidates.v1.json"
+```
+
+`--public-candidates` is optional. The introduction and top navigation then
+show **Evaluate a food**. Search the exact food-reference name or ID, select
+a complete row, and enter your own target shelf life, storage temperature and
+humidity, transport conditions, handling severity, and net quantity. No
+browser Excel upload is needed. The food's moisture, fat, pH, and available
+reference respiration come from the configured source workbook; the form
+shows the pH evidence basis and citations. A row with missing basic source
+properties is visible in search but cannot be submitted. A source-reference
+property is not a measurement of the user's batch; the submitted operating
+conditions are not independently verified measurements either.
+
+The form sends one bounded JSON scenario to `POST /api/evaluate`. The backend
+validates the selected food ID and reference hash, rejects extra fields,
+creates a temporary one-row scenario, and runs the existing audited batch
+pipeline. The temporary file is removed after the run. The result appears in
+Results and the recorded Pipeline trace; it may be an input exception,
+**Needs evidence**, or a preliminary shortlist. Entering a desired shelf
+life supplies a target, not a predicted shelf life. There is no deployed
+material-prediction model or released package recommendation. Only the
+backend operator configures reference files and optional evidence registers.
+
 To run a real scenario batch from operator-selected source files:
 
 ```powershell
@@ -109,11 +138,13 @@ them at package screening. These are **research leads only**. Even a matching
 supplier use retains pending rights and independent food-contact, complete-
 package transfer, sealing, handling and suitability blockers. It never
 populates the material-prediction field or changes a row's recommendation
-status. The browser still receives no source paths or editable scenario rows.
+status. The browser still receives no source paths; the one-scenario form
+submits only the selected food-reference ID and user-entered conditions.
 
 The local service binds only to `127.0.0.1`, checks the request host and
-origin, accepts no browser-supplied source paths or row data, and runs one
-batch at a time. It is a local development MVP, not a public deployment.
+origin, accepts no browser-supplied source paths or master data, limits a
+form submission to 8 KB, and runs one backend evaluation at a time. It is a
+local development MVP, not a public deployment.
 
 Alternatively, project a batch report yourself and open that JSON through
 the **Open report** button:
@@ -128,4 +159,8 @@ package feasibility, or predicted shelf life. A preliminary shortlist is a
 screened engineering candidate, not a validated ML recommendation.
 
 Run the UI tests with `npm test` inside `web/` (Node 18 or newer; no install
-step). Run the local API tests with `python -m pytest tests/test_web_server.py`.
+step). Run the local API tests with
+`python -m pytest tests/test_interactive.py tests/test_web_server.py`.
+The optional headless browser test `node web/tests/browser-intake-smoke.mjs`
+requires a locally running master-configured service and Chrome DevTools;
+its entered conditions are explicitly test-only and are never training data.

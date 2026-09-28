@@ -23,6 +23,7 @@ from packsense.web_server import (
     scenario_template_csv,
 )
 from tests.test_frontend_contract import _report
+from tests.test_interactive import FOOD_HASH, food_audit, submission
 
 
 @contextmanager
@@ -38,8 +39,8 @@ def running(sources):
         thread.join(timeout=2)
 
 
-def request_json(url, *, method="GET", headers=None):
-    request = Request(url, method=method, headers=headers or {})
+def request_json(url, *, method="GET", headers=None, body=None):
+    request = Request(url, method=method, headers=headers or {}, data=body)
     with urlopen(request, timeout=5) as response:
         return response.status, json.load(response)
 
@@ -160,6 +161,71 @@ class WebServerTests(unittest.TestCase):
                 report = run_configured_batch(sources)
             self.assertEqual(3, report["total_rows"])
             self.assertEqual("exception", report["rows"][0]["status"])
+
+    def test_reference_pair_enables_one_scenario_form_without_scenario_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            food_path = root / "TEST_ONLY_food.xlsx"
+            material_path = root / "TEST_ONLY_material.xlsx"
+            food_path.touch()
+            material_path.touch()
+            with patch("sys.argv", ["packsense.web_server", "--food-master", str(food_path),
+                                    "--material-master", str(material_path)]):
+                _, sources = _arguments()
+            self.assertEqual("interactive_scenario", sources.mode)
+            with patch.object(PackSenseHTTPServer, "food_audit", return_value=food_audit()):
+                with running(sources) as base:
+                    _, status = request_json(f"{base}/api/status")
+                    self.assertTrue(status["can_evaluate"])
+                    self.assertFalse(status["can_run"])
+                    _, search = request_json(f"{base}/api/foods?q=asparagus")
+                    self.assertEqual(1, search["form_ready_matches"])
+                    self.assertEqual("TEST_ONLY_READY", search["foods"][0]["food_reference_id"])
+
+                    report = {"trace": {"food_master_sha256": FOOD_HASH},
+                              "rows": [{"status": "not_ready"}]}
+                    with patch("packsense.web_server.run_configured_batch", return_value=report):
+                        code, result = request_json(
+                            f"{base}/api/evaluate", method="POST",
+                            headers={"Content-Type": "application/json"},
+                            body=json.dumps(submission()).encode("utf-8"),
+                        )
+                    self.assertEqual(200, code)
+                    self.assertEqual("interactive-evaluation-v1", result["contract_version"])
+                    self.assertEqual("browser_submitted", result["input_origin"])
+                    self.assertEqual("not_ready", result["report"]["rows"][0]["status"])
+
+    def test_form_rejects_cross_origin_unconfigured_and_unsupported_body(self):
+        with running(AppSources()) as base:
+            with self.assertRaises(HTTPError) as error:
+                request_json(f"{base}/api/evaluate", method="POST",
+                             headers={"Content-Type": "application/json"}, body=b"{}")
+            self.assertEqual(409, error.exception.code)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sources = AppSources(food_master=root / "TEST_ONLY_food.xlsx",
+                                 material_master=root / "TEST_ONLY_material.xlsx")
+            with running(sources) as base:
+                with self.assertRaises(HTTPError) as error:
+                    request_json(f"{base}/api/evaluate", method="POST",
+                                 headers={"Origin": "https://unrelated.example",
+                                          "Content-Type": "application/json"},
+                                 body=json.dumps(submission()).encode("utf-8"))
+                self.assertEqual(403, error.exception.code)
+                with self.assertRaises(HTTPError) as error:
+                    request_json(f"{base}/api/evaluate", method="POST",
+                                 headers={"Content-Type": "text/plain"}, body=b"{}")
+                self.assertEqual(400, error.exception.code)
+                with self.assertRaises(HTTPError) as error:
+                    request_json(f"{base}/api/evaluate", method="POST",
+                                 headers={"Content-Type": "application/json"},
+                                 body=b'{"food_reference_id":"one","food_reference_id":"two"}')
+                self.assertEqual(400, error.exception.code)
+                with self.assertRaises(HTTPError) as error:
+                    request_json(f"{base}/api/evaluate", method="POST",
+                                 headers={"Content-Type": "application/json"},
+                                 body=b" " * 8193)
+                self.assertEqual(400, error.exception.code)
 
     def test_cross_origin_and_browser_body_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

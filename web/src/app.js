@@ -2,8 +2,9 @@ import { parseDecisionReport, readableCode, summarizeReport } from "./report.js"
 import { actualContext, actualPipeline, STAGES, walkthroughStage } from "./pipeline.js";
 import { filterPublishedApplications, validatePublishedApplications } from "./catalogue.js";
 import { deriveReviewItems } from "./review.js";
+import { scenarioPayload, validateFoodLookup } from "./interactive.js";
 
-const VIEWS = new Set(["overview", "decisions", "pipeline", "evidence"]);
+const VIEWS = new Set(["overview", "evaluate", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
 const TRACE_LABELS = {
@@ -25,6 +26,12 @@ const state = {
   publishedApplications: null,
   publishedSearch: "",
   publishedCompareIndices: [],
+  foodSearchResults: [],
+  foodMasterSha256: null,
+  selectedFood: null,
+  submittedFoodProfile: null,
+  canEvaluate: false,
+  evaluationBusy: false,
   view: "overview",
   search: "",
   filter: "all",
@@ -39,6 +46,8 @@ const state = {
   backendBusy: false,
 };
 let playbackTimer = null;
+let foodSearchTimer = null;
+let foodSearchAbort = null;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -175,6 +184,111 @@ function enterPublishedApplications() {
   goTo("overview");
 }
 
+function enterEvaluation() {
+  $("#welcome-screen").hidden = true;
+  $(".app-shell").hidden = false;
+  goTo("evaluate");
+  $("#food-search").focus();
+}
+
+function renderSelectedFood() {
+  const food = state.selectedFood;
+  const root = $("#selected-food");
+  root.hidden = !food;
+  $("#evaluate-submit").disabled = !food?.form_ready || state.evaluationBusy;
+  $("#evaluate-submit").textContent = state.evaluationBusy ? "Evaluating…" : "Evaluate this scenario →";
+  $("#intake-submit-note").textContent = !food
+    ? "Select a complete food reference to continue."
+    : !food.form_ready ? `Missing reference values: ${food.missing_reference_properties.join(", ")}.`
+      : "The decision will show any unresolved evidence; it will not claim a trained prediction.";
+  if (!food) { root.innerHTML = ""; return; }
+  const sourceLines = food.source_citations.split(" | ").map((line) => `<span>${escapeHtml(line)}</span>`).join("");
+  root.innerHTML = `<div class="selected-food-top"><span>SELECTED REFERENCE · ${escapeHtml(food.food_reference_id)}</span><button type="button" class="text-button" data-clear-food>Change food</button></div><h3>${escapeHtml(food.commodity_type)}</h3><p>${food.form_ready ? "These are source-reference properties, not measurements of your batch." : `This reference cannot run yet: ${food.missing_reference_properties.map(readableCode).join(", ")} is missing.`}</p><dl><div><dt>Moisture</dt><dd>${formatNumber(food.moisture_content_pct, "%")}</dd></div><div><dt>Oil / fat</dt><dd>${formatNumber(food.oil_fat_content_pct, "%")}</dd></div><div><dt>pH</dt><dd>${formatNumber(food.pH)}</dd></div>${food.respiration_rate === null ? "" : `<div><dt>Reference respiration</dt><dd>${formatNumber(food.respiration_rate)} ${escapeHtml(food.respiration_rate_unit)} at ${formatNumber(food.respiration_reference_temperature_c, " °C")}</dd></div>`}</dl><div class="selected-food-basis"><strong>pH evidence: ${escapeHtml(readableCode(food.pH_evidence))}</strong><span>${displayValue(food.pH_basis, "No pH basis reported")}</span></div><details><summary>Reference citations</summary><div class="selected-food-sources">${sourceLines}</div></details>`;
+}
+
+function renderFoodSearch() {
+  const results = state.foodSearchResults;
+  $("#food-search-results").innerHTML = results.map((food) => `
+    <button type="button" class="food-search-option" data-food-id="${escapeHtml(food.food_reference_id)}"><span><strong>${escapeHtml(food.commodity_type)}</strong><small>${escapeHtml(food.food_reference_id)}${food.food_group ? ` · ${escapeHtml(food.food_group)}` : ""}</small></span><span class="food-search-state ${food.form_ready ? "is-ready" : ""}">${food.form_ready ? "Properties available" : "Missing source values"}</span></button>`).join("");
+  renderSelectedFood();
+}
+
+async function searchFoods(query) {
+  if (foodSearchAbort) foodSearchAbort.abort();
+  foodSearchAbort = new AbortController();
+  $("#food-search-status").textContent = "Searching the configured food reference…";
+  try {
+    const response = await fetch(`/api/foods?q=${encodeURIComponent(query)}`, {
+      cache: "no-store", signal: foodSearchAbort.signal,
+    });
+    if (!response.ok) throw new Error(await responseError(response));
+    const result = validateFoodLookup(await response.json());
+    if ($("#food-search").value.trim() !== query) return;
+    state.foodSearchResults = result.foods;
+    state.foodMasterSha256 = result.food_master_sha256;
+    $("#food-search-status").textContent = result.total_matches
+      ? `${result.form_ready_matches.toLocaleString()} of ${result.total_matches.toLocaleString()} matching references have complete basic properties. Showing ${result.foods.length}.`
+      : "No exact source food matches this search. Try a different name or reference ID.";
+    renderFoodSearch();
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    state.foodSearchResults = [];
+    state.foodMasterSha256 = null;
+    $("#food-search-status").textContent = error instanceof Error ? error.message : "Food search failed.";
+    renderFoodSearch();
+  }
+}
+
+async function submitEvaluation(event) {
+  event.preventDefault();
+  const form = $("#scenario-form");
+  if (!form.reportValidity()) return;
+  $("#evaluation-error").hidden = true;
+  let payload;
+  try {
+    payload = scenarioPayload(Object.fromEntries(new FormData(form)), state.selectedFood, state.foodMasterSha256);
+  } catch (error) {
+    $("#evaluation-error").textContent = error.message;
+    $("#evaluation-error").hidden = false;
+    return;
+  }
+  state.evaluationBusy = true;
+  renderSelectedFood();
+  try {
+    const response = await fetch("/api/evaluate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload), cache: "no-store",
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      const failure = new Error(typeof result.error === "string" ? result.error : `Backend returned ${response.status}.`);
+      failure.field = result.field;
+      throw failure;
+    }
+    if (result.contract_version !== "interactive-evaluation-v1"
+        || result.input_origin !== "browser_submitted"
+        || result.food_profile?.food_reference_id !== payload.food_reference_id) {
+      throw new Error("The evaluation response is invalid.");
+    }
+    const report = parseDecisionReport(JSON.stringify(result.report));
+    if (report.rows.length !== 1 || report.rows[0].food_reference_id !== payload.food_reference_id
+        || report.trace.food_master_sha256 !== payload.food_master_sha256) {
+      throw new Error("The result does not match the submitted food reference.");
+    }
+    acceptReport(report, "Your submitted scenario", "decisions", "browser", result.food_profile);
+  } catch (error) {
+    const errorBox = $("#evaluation-error");
+    errorBox.textContent = error instanceof Error ? error.message : "The evaluation did not complete.";
+    errorBox.hidden = false;
+    const field = error.field ? form.elements.namedItem(error.field) : null;
+    if (field?.focus) field.focus();
+    else errorBox.scrollIntoView({ block: "center" });
+  } finally {
+    state.evaluationBusy = false;
+    renderSelectedFood();
+  }
+}
+
 function renderPublishedApplications() {
   const applications = state.publishedApplications.applications;
   const visible = filterPublishedApplications(applications, state.publishedSearch);
@@ -283,8 +397,12 @@ function renderInspector(row) {
   const publishedMatches = row.supplier_application_lookup?.leads.filter(
     (lead) => lead.application_status === "published_food_quantity_temperature_match_unverified"
   ) ?? [];
+  const submittedProfile = state.reportOrigin === "browser"
+    && state.submittedFoodProfile?.food_reference_id === row.food_reference_id
+    ? state.submittedFoodProfile : null;
   root.innerHTML = `<div class="inspector-header"><div class="section-kicker">SOURCE ROW ${row.source_row_number}</div><h2>${escapeHtml(row.scenario?.commodity_type || row.record_id || `Row ${row.source_row_number}`)}</h2>${row.scenario ? `<div class="inspector-record-id">Record ${escapeHtml(row.record_id)}</div>` : ""}${statusBadge(row.status)}<p>${row.status === "exception" ? "This scenario needs an input correction before screening." : row.status === "not_ready" ? "The scenario is understood, but the evidence is not sufficient for a package result." : "These structures passed a narrow protection screen. This is not a released recommendation."}</p></div>
     <div class="inspector-facts"><div><span>FOOD REFERENCE</span><strong>${displayValue(row.food_reference_id, "Not matched")}</strong></div><div><span>REQUESTED LIFE</span><strong>${row.target_shelf_life_days == null ? "Not available" : formatNumber(row.target_shelf_life_days, " days")}</strong></div></div>
+    ${submittedProfile ? `<section class="submitted-profile-callout"><span>FOOD PROPERTIES FROM REFERENCE · CONDITIONS SUBMITTED BY USER</span><p>Moisture, oil/fat, pH and any respiration value came from ${escapeHtml(submittedProfile.food_reference_id)}. pH basis: ${displayValue(submittedProfile.pH_basis)}. These are not measurements of the submitted batch.</p></section>` : ""}
     ${publishedMatches.length ? `<section class="published-match-callout"><span>MANUFACTURER-LISTED OPTION · UNVERIFIED</span><div>${publishedMatches.map((lead) => `<strong>${escapeHtml(lead.product_code)} <small>${escapeHtml(lead.pack_format)}</small></strong>`).join("")}</div><p>The published food, fill and temperature conditions match this row. PackSense has not approved these packages or made a model prediction. <a href="${escapeHtml(publishedMatches[0].source_url)}" target="_blank" rel="noopener noreferrer">View manufacturer source ↗</a></p></section>` : ""}
     ${row.scenario ? `<section class="inspector-section"><div class="inspector-section-title"><h3>Submitted scenario values</h3></div><div class="scenario-facts"><div><span>MOISTURE</span><strong>${formatNumber(row.scenario.moisture_content_pct, "%")}</strong></div><div><span>OIL / FAT</span><strong>${formatNumber(row.scenario.oil_fat_content_pct, "%")}</strong></div><div><span>pH</span><strong>${formatNumber(row.scenario.pH)}</strong></div><div><span>NET PACK</span><strong>${formatNumber(row.scenario.net_pack_quantity, ` ${escapeHtml(row.scenario.net_pack_quantity_unit ?? "")}`)}</strong></div><div><span>STORAGE</span><strong>${escapeHtml(readableCode(row.scenario.storage_type))}</strong></div><div><span>TRANSPORT</span><strong>${escapeHtml(readableCode(row.scenario.transport_mode))}</strong></div><div><span>HANDLING</span><strong>${escapeHtml(readableCode(row.scenario.transport_handling_severity))}</strong></div></div>${row.scenario.respiration_rate != null ? `<div class="respiration-note">Respiration: ${formatNumber(row.scenario.respiration_rate)} ${displayValue(row.scenario.respiration_rate_unit, "")} at ${formatNumber(row.scenario.respiration_reference_temperature_c, " °C")}</div>` : ""}</section>` : ""}
     ${preferred ? `<div class="preliminary-callout"><span>PRELIMINARY PROTECTION PREFERENCE</span><strong>${escapeHtml(preferred)}</strong><p>Not a validated material prediction or package approval.</p></div>` : ""}
@@ -459,6 +577,8 @@ function followReviewAction(action) {
     goTo("decisions");
   } else if (action === "published" && state.publishedApplications) {
     enterPublishedApplications();
+  } else if (action === "evaluate" && state.canEvaluate) {
+    enterEvaluation();
   } else if (action === "run") {
     runBackend();
   } else if (action === "setup") {
@@ -478,6 +598,7 @@ function renderBackendState() {
     audited_report: ["Connected", "Local backend connected; an audited report is configured."],
     scenario_batch: ["Connected", "Local backend connected; scenario sources are configured."],
     published_catalogue: ["Connected", "Local backend connected; published supplier applications are available."],
+    interactive_scenario: ["Connected", "Local backend connected; food and material references are configured for a single scenario."],
     report_error: ["Report error", "The local backend is connected, but its configured report could not be loaded."],
   };
   const [label, detail] = statuses[state.backendMode] || statuses.unavailable;
@@ -494,13 +615,22 @@ function renderBackendState() {
   setupRunButton.disabled = state.backendBusy;
   setupRunButton.textContent = state.backendBusy ? "Running…" : "Run configured batch";
   $("#setup-open-results").hidden = !state.report;
+  $("#nav-evaluate").hidden = !state.canEvaluate;
+  $("#start-evaluation").hidden = !state.canEvaluate;
+  $("#run-path-form-note").hidden = !state.canEvaluate;
+  $("#studio-form-button").hidden = !state.canEvaluate;
+  $("#studio-setup-button").hidden = state.canEvaluate;
+  $("#studio-finish-copy").textContent = state.canEvaluate
+    ? "Select a sourced food and enter your conditions in the form. The walkthrough did not invent a package result."
+    : "Prepare one genuine scenario batch, run the backend, then inspect its reported status and sources. The walkthrough did not invent a package result.";
   renderReviewItems();
 }
 
-function acceptReport(report, label, destination, origin = "local") {
+function acceptReport(report, label, destination, origin = "local", submittedFoodProfile = null) {
   state.report = report;
   state.fileName = label;
   state.reportOrigin = origin;
+  state.submittedFoodProfile = submittedFoodProfile;
   state.search = "";
   state.filter = "all";
   state.page = 1;
@@ -514,7 +644,7 @@ function acceptReport(report, label, destination, origin = "local") {
   goTo(destination);
   render();
   renderBackendState();
-  notify(`${report.rows.length.toLocaleString()} decision rows ready.`);
+  notify(`${report.rows.length.toLocaleString()} decision ${report.rows.length === 1 ? "row" : "rows"} ready.`);
 }
 
 async function loadFile(file) {
@@ -546,18 +676,19 @@ async function connectBackend() {
     const response = await fetch("/api/status", { cache: "no-store" });
     if (!response.ok) throw new Error("Local backend is unavailable.");
     const status = await response.json();
-    if (!["unconfigured", "audited_report", "scenario_batch", "published_catalogue"].includes(status.mode) || status.model_deployed !== false) {
+    if (!["unconfigured", "audited_report", "scenario_batch", "published_catalogue", "interactive_scenario"].includes(status.mode) || status.model_deployed !== false) {
       throw new Error("Local backend state is unsupported.");
     }
     state.backendMode = status.mode;
+    state.canEvaluate = status.can_evaluate === true;
     renderBackendState();
     if (status.has_public_applications === true) {
       try {
         const catalogueResponse = await fetch("/api/published-applications", { cache: "no-store" });
         if (!catalogueResponse.ok) throw new Error(await responseError(catalogueResponse));
         state.publishedApplications = validatePublishedApplications(await catalogueResponse.json());
-        $("#browse-real-applications").hidden = false;
-        $("#hero-tour-hint").hidden = true;
+        $("#browse-real-applications").hidden = state.canEvaluate;
+        $("#hero-tour-hint").hidden = !state.canEvaluate;
         renderOverview();
         renderReviewItems();
       } catch (error) {
@@ -577,6 +708,7 @@ async function connectBackend() {
     }
   } catch (error) {
     state.backendMode = "unavailable";
+    state.canEvaluate = false;
     renderBackendState();
     if (error.message !== "Local backend is unavailable.") notify(error.message, true);
   }
@@ -614,7 +746,26 @@ document.addEventListener("click", (event) => {
   if (target.matches("#review-toggle")) setReviewOpen($("#review-panel").hidden);
   else if (target.matches("[data-review-action]")) followReviewAction(target.dataset.reviewAction);
   else if (target.matches("[data-enter-app]")) enterWorkspace();
+  else if (target.matches("[data-enter-evaluate]")) enterEvaluation();
   else if (target.matches("[data-enter-published]")) enterPublishedApplications();
+  else if (target.matches("[data-food-id]")) {
+    const food = state.foodSearchResults.find((item) => item.food_reference_id === target.dataset.foodId);
+    if (!food) return;
+    state.selectedFood = food;
+    $("#food-search").value = food.commodity_type;
+    $("#food-search-results").innerHTML = "";
+    $("#food-search-status").textContent = food.form_ready
+      ? "Reference selected. Enter the conditions for your product below."
+      : "This reference is incomplete. Choose a food with all basic properties.";
+    renderSelectedFood();
+  }
+  else if (target.matches("[data-clear-food]")) {
+    state.selectedFood = null;
+    $("#food-search").value = "";
+    $("#food-search-status").textContent = "Enter at least two characters to search the configured food reference.";
+    renderFoodSearch();
+    $("#food-search").focus();
+  }
   else if (target.matches("[data-enter-stage]")) enterWorkspace(Number(target.dataset.enterStage), false);
   else if (target.matches("[data-welcome]")) returnToWelcome();
   else if (target.matches("[data-nav]")) goTo(target.dataset.nav);
@@ -702,6 +853,21 @@ $("#published-search").addEventListener("input", (event) => {
   state.publishedSearch = event.target.value;
   if (state.publishedApplications && !state.report) renderPublishedApplications();
 });
+$("#food-search").addEventListener("input", (event) => {
+  clearTimeout(foodSearchTimer);
+  if (foodSearchAbort) foodSearchAbort.abort();
+  state.selectedFood = null;
+  state.foodSearchResults = [];
+  state.foodMasterSha256 = null;
+  renderFoodSearch();
+  const query = event.target.value.trim();
+  if (query.length < 2) {
+    $("#food-search-status").textContent = "Enter at least two characters to search the configured food reference.";
+    return;
+  }
+  foodSearchTimer = setTimeout(() => searchFoods(query), 250);
+});
+$("#scenario-form").addEventListener("submit", submitEvaluation);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !$("#review-panel").hidden) {
     setReviewOpen(false);

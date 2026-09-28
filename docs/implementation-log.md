@@ -1107,6 +1107,35 @@ PackSense must continue to withhold a real package or shelf-life claim.
   fails on that duplicate package; `pytest tests -q` is the intended scoped
   suite and passes. CI on this change is not yet verified.
 
+### 2026-09-28 — submit one real scenario through the browser
+
+- `feat/single-scenario-intake` builds on `feat/supplier-leads-frontend` and
+  adds an **Evaluate a food** form, an exact-source food lookup, and a
+  `POST /api/evaluate` adapter to the existing audited batch pipeline. A user
+  selects a complete food reference and enters target life, storage, journey,
+  handling, and pack quantity. The two workbooks and any evidence registers
+  remain backend-configured; no Excel file is required from the user.
+- The food reference supplies moisture, fat, pH, and available respiration;
+  the UI shows citations and whether pH is reported, proxy, or unverified.
+  Missing basic properties block submission. The API checks the source hash,
+  exact food ID, numeric/category fields, cross-field temperatures, request
+  origin, body size, and a strict field allowlist. A single temporary scenario
+  CSV is audited, run through the same CLI, projected for Results, and removed.
+  No workbook, catalogue, training rows, outcome labels, or release gates were
+  changed. User-entered conditions are not silently promoted to measurements.
+- Inspection of the current 5,000-row food master found 705 references with
+  complete moisture, fat, and pH; many pH values remain flagged as proxies.
+  The 81-row material master still does not supply complete-package outcome
+  labels. An isolated test-only browser case using a sourced asparagus row
+  returned **Needs evidence**, not a fabricated material recommendation or
+  shelf-life prediction. The test inputs were never saved as source data.
+- Local verification: 244 Python tests, 26 Node tests, and headless browser
+  intake checks at 320, 390, and 1440 px passed. The browser checks cover
+  missing-pH blocking, sourced selection, form submission, one returned
+  decision, and no horizontal overflow. CI and independent PR review remain
+  separate. The model is still not deployed; recommendations require the
+  outstanding reviewed package evidence and outcome labels.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

@@ -22,6 +22,11 @@ export function deriveReviewItems({ backendMode, backendBusy, report, publishedA
     });
     return items;
   }
+  if (backendMode === "interactive_scenario") return [{
+    id: "evaluate", tone: "blue", action: "evaluate",
+    title: "Food scenario form ready",
+    detail: "Choose a sourced food and enter this product's actual storage and transport conditions.",
+  }];
   if (publishedApplications?.applications.length) return [{
     id: "published", tone: "blue", action: "published",
     title: `${publishedApplications.applications.length.toLocaleString()} published package ${publishedApplications.applications.length === 1 ? "use" : "uses"}`,
