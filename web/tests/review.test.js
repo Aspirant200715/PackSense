@@ -23,6 +23,7 @@ test("a source catalogue is a research update, not a prediction", () => {
 });
 
 test("unconfigured, offline and running states are described without invented results", () => {
+  assert.equal(deriveReviewItems({ backendMode: "interactive_scenario" })[0].action, "evaluate");
   assert.equal(deriveReviewItems({ backendMode: "unconfigured" })[0].action, "setup");
   assert.equal(deriveReviewItems({ backendMode: "unavailable" })[0].action, "import");
   assert.equal(deriveReviewItems({ backendMode: "report_error" })[0].title, "Configured report could not load");

@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/report.test.js tests/pipeline.test.js tests/catalogue.test.js tests/review.test.js"
+    "test": "node --test tests/report.test.js tests/pipeline.test.js tests/catalogue.test.js tests/review.test.js tests/interactive.test.js"
   }
 }

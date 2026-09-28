@@ -242,6 +242,58 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .published-comparison-card dd { margin: 0; color: var(--strong); font-size: 10px; text-align: right; }
 .published-applications-footnote { margin: 15px 0 0; color: var(--quiet); font-size: 10px; line-height: 1.5; }
 
+.intake-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(270px, .65fr); align-items: start; gap: 17px; }
+.intake-form { padding: 0 27px 25px; }
+.intake-section { padding: 25px 0 28px; border-bottom: 1px solid var(--line); }
+.intake-section-heading { display: flex; align-items: start; gap: 14px; margin-bottom: 18px; }
+.intake-section-heading > span { display: grid; place-items: center; width: 29px; height: 29px; flex: 0 0 29px; border: 1px solid var(--line-strong); border-radius: 5px; color: var(--accent); font: 600 10px "IBM Plex Mono", monospace; }
+.intake-section-heading h2 { margin: 0 0 3px; font-size: 17px; font-weight: 600; }
+.intake-section-heading p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.intake-fields-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.intake-field { min-width: 0; display: flex; flex-direction: column; gap: 7px; color: var(--strong); font-size: 11px; font-weight: 600; }
+.intake-field span { display: flex; justify-content: space-between; align-items: baseline; gap: 5px; }
+.intake-field small { color: var(--quiet); font-size: 9px; font-weight: 500; white-space: nowrap; }
+.intake-field input, .intake-field select { width: 100%; min-width: 0; height: 42px; padding: 8px 11px; border: 1px solid var(--line-strong); border-radius: 6px; outline: 0; color: var(--ink); background: var(--input); font-size: 12px; }
+.intake-field input:focus, .intake-field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.intake-field input::placeholder { color: var(--quiet); }
+.intake-search-status { margin: 9px 0; color: var(--quiet); font-size: 10px; line-height: 1.5; }
+.intake-search-results { display: grid; max-height: 298px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; }
+.intake-search-results:empty { display: none; }
+.food-search-option { width: 100%; min-width: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 13px; border: 0; border-bottom: 1px solid var(--line); background: var(--input); color: var(--ink); text-align: left; }
+.food-search-option:last-child { border-bottom: 0; }
+.food-search-option:hover, .food-search-option:focus-visible { background: var(--accent-soft); }
+.food-search-option strong, .food-search-option small { display: block; }
+.food-search-option strong { color: var(--strong); font-size: 11px; font-weight: 600; line-height: 1.35; }
+.food-search-option small { margin-top: 4px; color: var(--quiet); font: 500 9px/1.4 "IBM Plex Mono", monospace; }
+.food-search-state { flex: 0 0 auto; color: var(--amber); font-size: 9px; text-align: right; }
+.food-search-state.is-ready { color: var(--accent); }
+.selected-food { margin-top: 15px; padding: 16px; border: 1px solid var(--line-strong); border-left: 3px solid var(--accent); border-radius: 6px; background: var(--input); }
+.selected-food-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--quiet); font: 600 9px "IBM Plex Mono", monospace; }
+.selected-food h3 { margin: 11px 0 5px; font-size: 17px; font-weight: 600; }
+.selected-food > p { margin: 0 0 13px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.selected-food dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.selected-food dl > div { min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 4px; }
+.selected-food dt { color: var(--quiet); font-size: 9px; }
+.selected-food dd { margin: 4px 0 0; color: var(--strong); font-size: 10px; overflow-wrap: anywhere; }
+.selected-food-basis { display: flex; flex-direction: column; gap: 3px; margin: 13px 0 0; padding-top: 11px; border-top: 1px solid var(--line); }
+.selected-food-basis strong { color: var(--amber); font-size: 10px; }
+.selected-food-basis span { color: var(--muted); font-size: 10px; }
+.selected-food details { margin-top: 10px; color: var(--accent); font-size: 10px; }
+.selected-food summary { cursor: pointer; }
+.selected-food-sources { display: grid; gap: 6px; margin-top: 8px; color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
+.intake-error { margin-top: 18px; padding: 12px 14px; border: 1px solid var(--rose); border-radius: 6px; background: var(--rose-soft); color: var(--rose); font-size: 11px; line-height: 1.5; }
+.intake-submit { display: flex; align-items: center; gap: 14px; padding-top: 23px; }
+.intake-submit > span { color: var(--quiet); font-size: 10px; line-height: 1.5; }
+.intake-aside { position: sticky; top: 87px; padding: 24px; }
+.intake-aside h2 { margin: 12px 0; font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: -.5px; }
+.intake-aside > p { color: var(--muted); font-size: 11px; line-height: 1.6; }
+.intake-aside > div:not(.section-kicker) { display: flex; flex-direction: column; gap: 5px; padding: 13px 0; border-top: 1px solid var(--line); }
+.intake-aside strong { color: var(--strong); font-size: 11px; }
+.intake-aside span { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.submitted-profile-callout { margin: 14px 0; padding: 12px 14px; border: 1px solid var(--line-strong); border-left: 3px solid var(--accent); border-radius: 5px; background: var(--accent-soft); }
+.submitted-profile-callout span { color: var(--accent); font: 600 9px "IBM Plex Mono", monospace; }
+.submitted-profile-callout p { margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 20px 0 25px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); backdrop-filter: blur(18px); box-shadow: var(--shadow); }
 .metric-card { min-width: 0; padding: 19px 22px 20px; border-left: 1px solid var(--line); }
 .metric-card:first-child { border-left: 0; }
@@ -569,6 +621,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .intro-system { width: 100%; }
   .pipeline-heading { align-items: flex-start; flex-direction: column; }
   .overview-grid { grid-template-columns: 1fr; }
+  .intake-layout { grid-template-columns: 1fr; }
+  .intake-aside { position: static; }
   .overview-empty-content { grid-template-columns: 1fr; }
   .overview-empty-path { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; border-left: 0; border-top: 1px solid var(--line); }
   .overview-path-heading { grid-column: 1 / -1; }
@@ -645,6 +699,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .published-comparison-heading { flex-direction: column; gap: 0; }
   .published-comparison-heading .text-button { margin-bottom: 12px; }
   .published-comparison-grid { grid-template-columns: 1fr; }
+  .intake-form { padding: 0 17px 20px; }
+  .intake-section { padding: 20px 0 23px; }
+  .intake-section-heading { gap: 10px; }
+  .intake-fields-grid { gap: 11px; }
+  .selected-food dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .food-search-option { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .food-search-state { text-align: left; }
+  .intake-submit { flex-direction: column; align-items: stretch; gap: 7px; }
   .overview-empty-copy { padding: 24px 22px 21px; }
   .overview-empty-copy h2 { font-size: 25px; }
   .overview-empty-copy p { margin-bottom: 18px; }
