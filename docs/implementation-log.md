@@ -810,6 +810,135 @@ PackSense must continue to withhold a real package or shelf-life claim.
 - Local verification: 226 Python tests, compileall, and diff check passed.
   PR CI and review are separate.
 
+### 2026-09-27 — static frontend decision workspace
+
+- PR #35 merged at `5e30498`. Branch `feat/frontend-workspace` adds a
+  dependency-free, responsive browser UI for the existing
+  `frontend-decision-v1` contract: overview, searchable/paginated records,
+  eight-stop pipeline explanation, and source-hash inspection. The report is
+  imported from a local JSON file into browser memory; there is no live API,
+  bundled example dataset, or generated packaging claim.
+- The audited batch now includes a compact `scenario` summary of validated
+  input values for each interpretable row. The frontend projection carries
+  this summary and leaves it `null` for exceptions or legacy reports. It lets
+  the UI show the actual commodity, food properties, pack quantity, and route
+  context without repeating the source workbook or inferring a value.
+- The UI rejects files that claim a deployed model, released recommendation,
+  package feasibility, material prediction, or shelf-life prediction under
+  this preliminary contract. It displays a shortlist only as preliminary.
+  No real data, suitability labels, estimator, or training result changed;
+  material-model release remains `not_ready`.
+- Local verification: 226 Python tests, seven Node contract tests, Python
+  compilation, JavaScript syntax checks, a Python-to-JavaScript contract
+  round-trip, and local HTTP responses passed. Visual browser QA could not
+  be completed because no browser surface was available to the UI-check tool.
+  PR CI and independent review remain separate.
+
+### 2026-09-27 — frontend process studio and theme revision
+
+- Continued on `feat/frontend-workspace` (PR #36). Replaced the repeated
+  pipeline cards with an eight-stage interactive walkthrough, including
+  separate non-respiring and fresh-produce explanations, step controls and
+  playback. An actual-report mode traces one imported decision row through
+  the existing evidence gates without performing a new screen. The backend
+  projection now includes the requirement card's route status and candidate-
+  screening permission so that trace does not infer either from composition.
+- Restyled the workspace in dark navy/cobalt glass surfaces with a reversible
+  light theme, clearer IBM Plex typography and responsive process rail. The
+  browser stores only the theme choice; report import remains local and in
+  memory. Online fonts have system fallbacks. No real food data, packaging
+  outcomes, suitability labels, estimator or model artifact were changed.
+- A follow-up frontend pass puts recorded food, pack quantity, requested life
+  and the full temperature-phase summary above the actual trace, with
+  composition, respiration and candidate-state counts at the relevant stages.
+  Missing facts remain explicitly unreported, and importing from the trace
+  returns to that view. The stage counter follows navigation, and the active
+  stage centers in the mobile rail. No values are estimated in the browser.
+- Local verification: 227 scoped Python tests and 14 Node tests passed, along
+  with JavaScript syntax and diff checks. A local headless browser rendered
+  dark, light and mobile views; route switching, the actual-mode empty state,
+  and a `TEST_ONLY` report import/trace produced no browser exceptions. The
+  real package recommendation and material prediction gates remain withheld.
+
+### 2026-09-28 — connected decision workspace and introductory map
+
+- Continued on `feat/frontend-workspace` for PR #36. Replaced the global left
+  sidebar with an accessible top icon navigation, added an introductory
+  four-stop decision map, and made the eight-stage pipeline a horizontal,
+  clickable process track. The layout uses restrained navy/cobalt glass
+  surfaces, DM Sans for readable headings, and dark/light themes. Mobile
+  navigation and stage centering were checked at a true 390 px viewport.
+- Added a localhost-only Python web service. `GET /api/status` exposes whether
+  a source batch or audited report is configured. `GET /api/report` projects
+  an operator-selected audited batch, and `POST /api/run` invokes the existing
+  recommendation-batch CLI for operator-selected scenario and reference
+  files. Browser requests cannot choose source paths or submit scenario rows.
+  The existing projection and evidence gates remain authoritative; no model
+  prediction or package release is introduced.
+- No new food/package data, suitability labels, measured outcomes, estimates,
+  or model artifacts were added. The supplied food and material masters are
+  still reference inputs, not a scenario batch or supervised labels. A real
+  scenario batch must be configured to run the pipeline from the UI. Reviewed
+  complete-package outcomes are still required for a trustworthy trained
+  material predictor.
+- Local verification: 233 Python tests, 14 Node contract tests, compilation,
+  JavaScript syntax, diff check, local API checks, and a headless-browser
+  mobile interaction check passed. The browser check covers the intro map,
+  selected-stage visibility, route switching, empty actual-trace state, top
+  navigation, theme toggle, and absence of JavaScript exceptions. PR CI and
+  independent review remain separate.
+
+### 2026-09-28 — focused introduction and guided-flow polish
+
+- Continued on `feat/frontend-workspace` for PR #36. Made the introduction a
+  separate first screen. Its main Explore action enters the pipeline and
+  starts a guided tour; selecting a decision-path stop opens that stage. A
+  visible play/pause control, progress indicator and connected stage track
+  make movement through the eight checks explicit. Reduced-motion settings
+  disable automatic playback.
+- Slimmed the workspace navigation and compacted the walkthrough for desktop
+  and mobile, reducing the need to scroll between steps. The overview now
+  shows a deliberate no-report state instead of empty metrics. Results use
+  count-bearing status filters, and detailed issues, exposures, and structure
+  checks are expandable. The real backend contract and source boundary were
+  not changed; no result is invented for an unconfigured batch.
+- Browser smoke checks the intro-to-tour path, automatic advancement,
+  stage selection, empty states, filters, disclosures, and return to the
+  introduction at desktop and 390 px mobile sizes. Its report object is
+  explicitly `TEST_ONLY` UI test data, never training data. No real source
+  row, suitability label, prediction model or release gate changed. Local
+  verification: 233 Python tests, 14 Node tests, JavaScript syntax and diff
+  checks, and sequential headless-browser smoke at 390 px and 1440 px passed.
+  PR CI and independent review remain separate.
+
+### 2026-09-28 — overview empty-state refinement
+
+- Continued on `feat/frontend-workspace` for PR #36. Replaced the large,
+  repetitive empty Overview with one compact panel: live local-backend status,
+  direct actions, and four labeled, clickable decision checkpoints. The
+  status strip also exposes the existing Run action when a scenario batch is
+  operator-configured. On mobile, the checkpoints form a concise two-column
+  layout that fits without horizontal overflow or an extra long scroll.
+- No report or recommendation is shown until genuine configured sources run
+  or an audited report is opened. No data, backend contracts, prediction
+  logic, suitability labels, or release gates changed. Browser smoke now
+  checks the integrated status and checkpoint navigation; the imported
+  report used by that test remains `TEST_ONLY` UI data.
+
+### 2026-09-28 — one connection-status source
+
+- Continued on `feat/frontend-workspace` for PR #36. Removed the redundant
+  backend banner and empty-Overview status strip. The top bar is now the one
+  visible connection-status location across workspace views, including on
+  mobile; it distinguishes connected, offline, running, and report-load error
+  states. Its tooltip retains the configuration detail without repeating it
+  in the page body. The existing top-bar Run action remains visible only for
+  an operator-configured scenario batch.
+- The Overview keeps its compact method actions and clickable checkpoints.
+  No backend API, source data, report projection, training artifact, or
+  release gate changed. Browser smoke now verifies that the single indicator
+  is visible and that neither Overview state duplicates the status message.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

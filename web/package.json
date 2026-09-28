@@ -1,0 +1,8 @@
+{
+  "name": "packsense-decision-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/report.test.js tests/pipeline.test.js"
+  }
+}

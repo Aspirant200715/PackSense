@@ -16,11 +16,21 @@ from packsense.recommendation_output import EXPECTED_BATCH_VERSION
 CONTRACT_VERSION = "frontend-decision-v1"
 ROW_STATUSES = frozenset({"exception", "not_ready", "preliminary_shortlist"})
 CANDIDATE_STATUSES = frozenset({"excluded", "unresolved", "eligible_for_shortlist"})
+PRODUCE_ROUTE_STATUSES = frozenset({
+    "unclassified", "confirmed_non_respiring", "confirmed_respiring",
+    "respiration_evidence_present",
+})
 TRACE_FIELDS = (
     "scenario_sha256", "food_master_sha256", "material_master_sha256",
     "route_register_sha256", "assessment_register_sha256",
     "structure_catalogue_sha256", "structure_review_register_sha256",
     "transfer_register_sha256", "public_candidate_catalogue_sha256",
+)
+SCENARIO_FIELDS = (
+    "commodity_type", "moisture_content_pct", "oil_fat_content_pct", "pH",
+    "net_pack_quantity", "net_pack_quantity_unit", "storage_type",
+    "transport_mode", "transport_handling_severity", "respiration_rate",
+    "respiration_rate_unit", "respiration_reference_temperature_c",
 )
 
 
@@ -54,6 +64,17 @@ def _candidate_view(raw: Any) -> dict[str, Any]:
     }
 
 
+def _scenario_view(raw: Any) -> dict[str, Any] | None:
+    """Keep validated scenario facts only; legacy batch reports may omit them."""
+    if raw is None:
+        return None
+    scenario = _object(raw, "scenario summary")
+    if (not isinstance(scenario.get("commodity_type"), str)
+            or not scenario["commodity_type"].strip()):
+        raise ValueError("scenario summary has no commodity")
+    return {name: scenario.get(name) for name in SCENARIO_FIELDS}
+
+
 def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
     """Expose actionable states while withholding unvalidated predictions."""
     batch = _object(report, "batch report")
@@ -75,8 +96,9 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
             raise ValueError("batch row has no valid source row number")
         issues = _list(row.get("issues"), "input issues")
         card, recommendation = row.get("requirement_card"), row.get("recommendation")
+        scenario = _scenario_view(row.get("scenario"))
         if status == "exception":
-            if card is not None or recommendation is not None:
+            if card is not None or recommendation is not None or scenario is not None:
                 raise ValueError("input exception cannot carry a recommendation")
             if not issues:
                 raise ValueError("input exception must explain its issue")
@@ -88,6 +110,8 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
             preferred = None
             food_reference_id = None
             target_days = None
+            produce_route_status = None
+            candidate_screening_allowed = None
         else:
             if issues:
                 raise ValueError("screened row cannot carry input issues")
@@ -117,17 +141,28 @@ def project_frontend_decisions(report: Mapping[str, Any]) -> dict[str, Any]:
                 raise ValueError("preliminary preference is not eligible")
             food_reference_id = recommendation.get("food_reference_id")
             target_days = card.get("target_shelf_life_days")
+            produce_route_status = card.get("produce_route_status")
+            candidate_screening_allowed = card.get("candidate_screening_allowed")
+            if (produce_route_status is not None
+                    and produce_route_status not in PRODUCE_ROUTE_STATUSES):
+                raise ValueError("requirement card has an unsupported produce route")
+            if (candidate_screening_allowed is not None
+                    and type(candidate_screening_allowed) is not bool):
+                raise ValueError("requirement card has an invalid screening permission")
 
         projected.append({
             "source_row_number": row["row_number"],
             "record_id": row.get("record_id"),
             "food_reference_id": food_reference_id,
+            "scenario": scenario,
             "status": status,
             "input_issues": issues,
             "requirement_gaps": requirement_gaps,
             "screening_reason_codes": screening_reasons,
             "warnings": warnings,
             "target_shelf_life_days": target_days,
+            "produce_route_status": produce_route_status,
+            "candidate_screening_allowed": candidate_screening_allowed,
             "temperature_exposures": exposure,
             "screened_candidates": candidates,
             "preliminary_preferred_structure_id": preferred,

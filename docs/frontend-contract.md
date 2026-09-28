@@ -1,10 +1,10 @@
 # Frontend decision JSON contract
 
-The frontend can be designed against `frontend-decision-v1` while the material
-model and package-release gates remain unfulfilled. This is a versioned
-projection of the existing batch report, **not** an HTTP API or a new
-prediction engine. It does not expose the source workbook paths or raw food
-rows. Generate it from a completed batch audit:
+The frontend uses `frontend-decision-v1` while the material model and
+package-release gates remain unfulfilled. This is a versioned projection of
+the existing batch report, **not** a new prediction engine. It does not expose
+the source workbook paths or raw food rows. Generate it from a completed batch
+audit:
 
 ```powershell
 python -m packsense.frontend_contract batch-report.json --output new-frontend-decisions.json
@@ -48,6 +48,17 @@ Every row also carries `source_row_number`, `record_id`, `food_reference_id`
 where matched, the requested shelf-life target, distinct temperature exposure
 segments, and the screened candidate's pack format, layer gauges, service-
 temperature bounds, protection rank, and reason codes when available.
+Newly generated batch reports also project a `scenario` summary from the
+validated input: commodity name, moisture, fat, pH, pack quantity, storage
+type, handling severity, transport mode, and any supplied respiration values.
+It is `null` for input exceptions and may be `null` when opening a report
+generated before this additive field existed. These are input facts, not
+measured packaging outcomes or inferred missing properties.
+Newly projected rows also carry `produce_route_status` and
+`candidate_screening_allowed` from the requirement card. Both are `null` for
+input exceptions; older projections may omit them. The frontend's actual
+pipeline trace treats an absent route as unresolved and never infers screening
+permission from food composition.
 
 In **all** three states of this contract, `recommended_structure_id`,
 `material_prediction`, and `predicted_shelf_life_days` are `null`, and
@@ -62,3 +73,9 @@ before fitting or releasing a material predictor. The 5,000-food and 81-grade
 workbooks remain reference features, not package-choice labels. See
 [material-suitability intake](material-suitability.md) and
 [preliminary recommendation](basic-recommendation.md).
+
+The [decision workspace](../web/README.md) can display this contract from a
+local file or fetch it from the localhost-only `packsense.web_server` API. The
+service can also run an operator-configured scenario batch through the existing
+backend and project its output; it does not change the evidence gates or add a
+material predictor.

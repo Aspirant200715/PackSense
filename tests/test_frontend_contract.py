@@ -75,6 +75,10 @@ class FrontendContractTests(unittest.TestCase):
         batch = build_batch_recommendations(*_sources(_scenario()))
         result = project_frontend_decisions(batch)
         self.assertEqual("not_ready", result["rows"][0]["status"])
+        self.assertEqual("TEST_ONLY_FOOD", result["rows"][0]["scenario"]["commodity_type"])
+        self.assertEqual(100.0, result["rows"][0]["scenario"]["net_pack_quantity"])
+        self.assertEqual("unclassified", result["rows"][0]["produce_route_status"])
+        self.assertFalse(result["rows"][0]["candidate_screening_allowed"])
         self.assertEqual(batch["scenario_sha256"], result["trace"]["scenario_sha256"])
         self.assertIsNone(result["rows"][0]["material_prediction"])
 
@@ -87,6 +91,8 @@ class FrontendContractTests(unittest.TestCase):
         self.assertEqual("withheld", result["recommendation_release_status"])
         invalid, gap, shortlist = result["rows"]
         self.assertEqual("exception", invalid["status"])
+        self.assertIsNone(invalid["scenario"])
+        self.assertIsNone(invalid["produce_route_status"])
         self.assertEqual("pH", invalid["input_issues"][0]["field"])
         self.assertEqual([], invalid["screened_candidates"])
         self.assertEqual("not_ready", gap["status"])
@@ -133,6 +139,16 @@ class FrontendContractTests(unittest.TestCase):
         report["rows"][0]["recommendation"] = copy.deepcopy(
             report["rows"][1]["recommendation"])
         with self.assertRaisesRegex(ValueError, "input exception cannot carry"):
+            project_frontend_decisions(report)
+
+    def test_rejects_invalid_route_projection_fields(self):
+        report = _report()
+        report["rows"][1]["requirement_card"]["produce_route_status"] = "approved_produce"
+        with self.assertRaisesRegex(ValueError, "unsupported produce route"):
+            project_frontend_decisions(report)
+        report = _report()
+        report["rows"][1]["requirement_card"]["candidate_screening_allowed"] = "yes"
+        with self.assertRaisesRegex(ValueError, "invalid screening permission"):
             project_frontend_decisions(report)
 
 
