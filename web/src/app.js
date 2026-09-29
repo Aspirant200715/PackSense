@@ -8,6 +8,7 @@ import { groupSourceOptions } from "./options.js";
 const VIEWS = new Set(["overview", "evaluate", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
+const STATUS_RETRY_LIMIT = 6;
 const TRACE_LABELS = {
   scenario_sha256: "Scenario batch",
   food_master_sha256: "Food reference master",
@@ -49,6 +50,7 @@ const state = {
 let playbackTimer = null;
 let foodSearchTimer = null;
 let foodSearchAbort = null;
+let statusRetries = 0;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -601,7 +603,7 @@ function followReviewAction(action) {
 
 function renderBackendState() {
   const statuses = {
-    checking: ["Checking", "Checking the backend connection."],
+    checking: ["Connecting", "Starting the evaluation service. This may take about a minute after inactivity."],
     unavailable: ["Offline", "Backend unavailable; report import still works."],
     unconfigured: ["Connected", "Backend connected; no scenario batch is configured."],
     audited_report: ["Connected", "Backend connected; an audited report is configured."],
@@ -628,9 +630,10 @@ function renderBackendState() {
   $("#start-evaluation").hidden = !state.canEvaluate;
   $(".welcome-enter").classList.toggle("button-light", !state.canEvaluate);
   $(".welcome-enter").classList.toggle("button-secondary", state.canEvaluate);
-  $("#hero-tour-hint").textContent = state.canEvaluate
-    ? "Or explore the method through a short, interactive tour."
-    : "Start with a short, interactive tour of the decision path.";
+  $("#hero-tour-hint").textContent = state.backendMode === "checking"
+    ? "Connecting to the evaluation service. This may take about a minute after inactivity."
+    : state.canEvaluate ? "Or explore the method through a short, interactive tour."
+      : "Start with a short, interactive tour of the decision path.";
   $("#run-path-form-note").hidden = !state.canEvaluate;
   $("#studio-form-button").hidden = !state.canEvaluate;
   $("#studio-setup-button").hidden = state.canEvaluate;
@@ -686,15 +689,20 @@ async function responseError(response) {
 }
 
 async function connectBackend() {
+  let retryable = false;
   try {
     const response = await fetch("/api/status", { cache: "no-store" });
-    if (!response.ok) throw new Error("Local backend is unavailable.");
+    if (!response.ok) {
+      retryable = response.status >= 500;
+      throw new Error("Local backend is unavailable.");
+    }
     const status = await response.json();
     if (!["unconfigured", "audited_report", "scenario_batch", "published_catalogue", "interactive_scenario"].includes(status.mode) || status.model_deployed !== false) {
       throw new Error("Local backend state is unsupported.");
     }
     state.backendMode = status.mode;
     state.canEvaluate = status.can_evaluate === true;
+    statusRetries = 0;
     renderBackendState();
     if (status.has_public_applications === true) {
       try {
@@ -721,6 +729,14 @@ async function connectBackend() {
       }
     }
   } catch (error) {
+    if ((retryable || error instanceof TypeError) && statusRetries < STATUS_RETRY_LIMIT) {
+      statusRetries += 1;
+      state.backendMode = "checking";
+      state.canEvaluate = false;
+      renderBackendState();
+      setTimeout(connectBackend, 5000);
+      return;
+    }
     state.backendMode = "unavailable";
     state.canEvaluate = false;
     renderBackendState();

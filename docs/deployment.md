@@ -86,8 +86,12 @@ On the Render URL, verify `/healthz`, `/api/status` (`mode` must be
 `interactive_scenario`, `can_evaluate` true, and `model_deployed` false),
 `/api/foods?q=apple`, and one actual form submission. Check that the response
 identifies evidence gaps and does not claim a predicted shelf life. The
-Blueprint uses Render's free plan for an initial trial; use a suitable paid
-plan and operational monitoring before relying on its availability.
+Blueprint uses Render's free plan for an initial trial. A free service can
+sleep after inactivity and take about a minute to restart; during that time,
+Vercel may receive a temporary gateway error. The frontend keeps the
+evaluation in a connecting state and retries `/api/status` automatically.
+Use a suitable paid plan and operational monitoring before relying on its
+availability.
 
 ## 3. Connect the Vercel frontend
 
