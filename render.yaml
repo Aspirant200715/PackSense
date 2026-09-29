@@ -15,5 +15,7 @@ services:
         value: "1"
       - key: PACKSENSE_PUBLIC_EVALUATION
         value: "1"
+      - key: PACKSENSE_PUBLIC_HOSTNAMES
+        value: packsense-web.vercel.app
       - key: PACKSENSE_DATABASE_URL
         sync: false
