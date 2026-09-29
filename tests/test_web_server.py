@@ -81,6 +81,25 @@ class WebServerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "public hostname"):
             PackSenseHTTPServer(0, AppSources(public_candidates=catalogue), bind_host="0.0.0.0")
 
+    def test_public_evaluation_requires_opt_in_and_audited_masters(self):
+        sources = AppSources(food_master=Path("TEST_ONLY_food.xlsx"),
+                             material_master=Path("TEST_ONLY_material.xlsx"))
+        with self.assertRaisesRegex(ValueError, "approved interactive evaluation"):
+            PackSenseHTTPServer(0, sources, bind_host="0.0.0.0",
+                                public_hostnames=("packsense.example",))
+        accepted = SimpleNamespace(entries=(object(),), issues=())
+        with (patch("packsense.web_server.load_food_references", return_value=accepted),
+              patch("packsense.web_server.load_material_grades", return_value=accepted)):
+            server = PackSenseHTTPServer(0, sources, bind_host="0.0.0.0",
+                                         public_hostnames=("packsense.example",), public_evaluation=True)
+            server.server_close()
+        rejected = SimpleNamespace(entries=(), issues=("TEST_ONLY_issue",))
+        with (patch("packsense.web_server.load_food_references", return_value=rejected),
+              patch("packsense.web_server.load_material_grades", return_value=accepted)):
+            with self.assertRaisesRegex(ValueError, "audited reference"):
+                PackSenseHTTPServer(0, sources, bind_host="0.0.0.0",
+                                    public_hostnames=("packsense.example",), public_evaluation=True)
+
     def test_template_download_uses_contract_headers_and_no_fake_rows(self):
         expected = (*SCENARIO_REQUIRED_COLUMNS, *SCENARIO_RESPIRATION_COLUMNS,
                     *SCENARIO_REFERENCE_COLUMNS)

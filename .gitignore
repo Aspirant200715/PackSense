@@ -16,3 +16,5 @@ dist/
 /outputs/
 *.joblib
 *.pkl
+.vercel
+.env*

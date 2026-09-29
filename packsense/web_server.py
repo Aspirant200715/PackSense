@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from contextlib import ExitStack
 from dataclasses import dataclass, replace
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -26,7 +27,8 @@ from packsense.catalogue_candidates import load_candidate_catalogue
 from packsense.frontend_contract import project_frontend_decisions
 from packsense.ingestion import audit_scenarios
 from packsense.interactive import IntakeError, scenario_row_from_submission, search_foods
-from packsense.masters import load_food_references
+from packsense.masters import load_food_references, load_material_grades
+from packsense.reference_store import load_active_bundle
 from packsense.units import (
     SCENARIO_REFERENCE_COLUMNS, SCENARIO_REQUIRED_COLUMNS,
     SCENARIO_RESPIRATION_COLUMNS,
@@ -203,17 +205,28 @@ class PackSenseHTTPServer(ThreadingHTTPServer):
 
     def __init__(
         self, port: int, sources: AppSources, *, bind_host: str = "127.0.0.1",
-        public_hostnames: tuple[str, ...] = (),
+        public_hostnames: tuple[str, ...] = (), public_evaluation: bool = False,
     ):
         if bind_host not in ("127.0.0.1", "0.0.0.0"):
             raise ValueError("bind host must be 127.0.0.1 or 0.0.0.0")
         hostnames = tuple(host.strip().lower() for host in public_hostnames if host.strip())
         if any("/" in host or ":" in host or " " in host for host in hostnames):
             raise ValueError("public hostnames must not include a scheme, port, or path")
-        if bind_host == "0.0.0.0" and (sources.mode != "published_catalogue" or not hostnames):
-            raise ValueError("public binding requires a catalogue-only source and public hostname")
+        if bind_host == "0.0.0.0" and not hostnames:
+            raise ValueError("public binding requires a public hostname")
+        if bind_host == "0.0.0.0" and not (
+            sources.mode == "published_catalogue"
+            or (sources.mode == "interactive_scenario" and public_evaluation)
+        ):
+            raise ValueError("public binding requires a catalogue-only source or approved interactive evaluation")
         # Reject an invalid catalogue before a hosting platform marks the service healthy.
-        public_payload = published_applications_payload(sources.public_candidates) if bind_host == "0.0.0.0" else None
+        public_payload = (published_applications_payload(sources.public_candidates)
+                          if bind_host == "0.0.0.0" and sources.public_candidates else None)
+        if bind_host == "0.0.0.0" and public_evaluation:
+            food = load_food_references(sources.food_master)
+            material = load_material_grades(sources.material_master)
+            if food.issues or material.issues or not food.entries or not material.entries:
+                raise ValueError("public evaluation requires audited reference workbooks")
         super().__init__((bind_host, port), PackSenseHandler)
         self.sources = sources
         self.public_hostnames = hostnames
@@ -472,14 +485,34 @@ def main() -> None:
         *os.environ.get("PACKSENSE_PUBLIC_HOSTNAMES", "").split(","),
     )))
     bind_host = os.environ.get("PACKSENSE_BIND_HOST", "127.0.0.1")
-    server = PackSenseHTTPServer(port, sources, bind_host=bind_host, public_hostnames=public_hostnames)
-    print(f"PackSense at http://{bind_host}:{server.server_port}/ ({sources.mode})", flush=True)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
+    database_url = os.environ.get("PACKSENSE_DATABASE_URL", "")
+    if os.environ.get("PACKSENSE_REQUIRE_DATABASE") == "1" and not database_url:
+        raise ValueError("PACKSENSE_DATABASE_URL is required for this deployment")
+    public_evaluation = os.environ.get("PACKSENSE_PUBLIC_EVALUATION") == "1"
+    if public_evaluation and not database_url:
+        raise ValueError("public evaluation requires a reference database")
+    with ExitStack() as stack:
+        if database_url:
+            if sources.mode not in ("unconfigured", "published_catalogue"):
+                raise ValueError("database references cannot be combined with local scenario or master files")
+            food_data, material_data, _ = load_active_bundle(database_url)
+            directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="packsense-references-")))
+            food_path = directory / "food.xlsx"
+            material_path = directory / "materials.xlsx"
+            food_path.write_bytes(food_data)
+            material_path.write_bytes(material_data)
+            sources = replace(sources, food_master=food_path, material_master=material_path)
+        server = PackSenseHTTPServer(
+            port, sources, bind_host=bind_host, public_hostnames=public_hostnames,
+            public_evaluation=public_evaluation,
+        )
+        print(f"PackSense at http://{bind_host}:{server.server_port}/ ({sources.mode})", flush=True)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.server_close()
 
 
 if __name__ == "__main__":
