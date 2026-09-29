@@ -1,4 +1,4 @@
-import { parseDecisionReport, readableCode, summarizeReport } from "./report.js";
+import { parseDecisionReport, readableCode, summarizeReport, validateDecisionReport } from "./report.js";
 import { actualContext, actualPipeline, STAGES, walkthroughStage } from "./pipeline.js";
 import { filterPublishedApplications, validatePublishedApplications } from "./catalogue.js";
 import { deriveReviewItems } from "./review.js";
@@ -90,7 +90,7 @@ function persistWorkspace() {
 
 function restoreWorkspace() {
   const saved = readWorkspace(browserStorage());
-  if (!saved) return;
+  if (!saved) return false;
   const form = $("#scenario-form");
   if (saved.form && typeof saved.form === "object") {
     for (const [name, value] of Object.entries(saved.form)) {
@@ -117,7 +117,7 @@ function restoreWorkspace() {
   const storedReport = readReport(browserStorage());
   if (storedReport) {
     try {
-      state.report = parseDecisionReport(JSON.stringify(storedReport.report));
+      state.report = validateDecisionReport(storedReport.report);
       state.reportOrigin = storedReport.origin;
       state.fileName = typeof storedReport.label === "string" ? storedReport.label.slice(0, 200) : "Saved report";
       state.submittedFoodProfile = storedReport.origin === "browser" ? storedReport.submittedFoodProfile ?? null : null;
@@ -144,7 +144,7 @@ function restoreWorkspace() {
     $(".app-shell").hidden = false;
     goTo(state.view);
   }
-  renderSelectedFood();
+  return true;
 }
 
 async function checkSavedFoodReference() {
@@ -764,7 +764,7 @@ function renderBackendState() {
   setupRunButton.disabled = state.backendBusy;
   setupRunButton.textContent = state.backendBusy ? "Running…" : "Run configured batch";
   $("#setup-open-results").hidden = !state.report;
-  $("#nav-evaluate").hidden = !state.canEvaluate;
+  $("#nav-evaluate").hidden = !state.canEvaluate && state.view !== "evaluate";
   $("#start-evaluation").hidden = !state.canEvaluate;
   $(".welcome-enter").classList.toggle("button-light", !state.canEvaluate);
   $(".welcome-enter").classList.toggle("button-secondary", state.canEvaluate);
@@ -1101,7 +1101,10 @@ document.addEventListener("drop", (event) => {
   }
 });
 
-render();
-renderBackendState();
-restoreWorkspace();
+try {
+  if (!restoreWorkspace()) render();
+  renderBackendState();
+} finally {
+  delete document.documentElement.dataset.workspaceRestore;
+}
 connectBackend();

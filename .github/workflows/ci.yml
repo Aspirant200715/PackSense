@@ -44,6 +44,7 @@ jobs:
       - name: Check frontend JavaScript syntax
         run: |
           node --check src/app.js
+          node --check src/boot.js
           node --check src/demo.js
           node --check src/report.js
           node --check src/pipeline.js

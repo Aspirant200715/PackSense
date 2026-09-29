@@ -8,12 +8,14 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
     <meta name="description" content="PackSense decision workspace for auditable food packaging screening." />
     <title>PackSense — Decision workspace</title>
+    <script src="./src/boot.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <div class="restore-screen" role="status" aria-live="polite"><span class="restore-brand">Pack<span>Sense</span></span><span>Restoring your workspace…</span></div>
     <div class="welcome-screen" id="welcome-screen">
       <header class="welcome-top">
         <span class="brand" aria-label="PackSense">

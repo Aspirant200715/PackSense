@@ -37,6 +37,11 @@ h1, h2, h3, p { margin-top: 0; }
 h1, h2, h3 { color: var(--strong); }
 button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 [hidden] { display: none !important; }
+.restore-screen { display: none; }
+html[data-workspace-restore="pending"] .restore-screen { min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted); font-size: 12px; }
+html[data-workspace-restore="pending"] .restore-brand { color: var(--strong); font-size: 26px; font-weight: 700; letter-spacing: -.8px; }
+html[data-workspace-restore="pending"] .restore-brand span { color: var(--accent); }
+html[data-workspace-restore="pending"] .welcome-screen { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .section-kicker, .page-kicker { color: var(--quiet); font: 600 10px/1.4 "IBM Plex Mono", monospace; letter-spacing: 1.25px; }
 
