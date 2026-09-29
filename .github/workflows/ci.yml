@@ -44,9 +44,12 @@ jobs:
       - name: Check frontend JavaScript syntax
         run: |
           node --check src/app.js
+          node --check src/demo.js
           node --check src/report.js
           node --check src/pipeline.js
           node --check tests/browser-smoke.mjs
           node --check tests/browser-reconnect-smoke.mjs
       - name: Run frontend contract tests
         run: npm test
+      - name: Build deployable frontend
+        run: npm run build

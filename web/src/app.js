@@ -4,6 +4,7 @@ import { filterPublishedApplications, validatePublishedApplications } from "./ca
 import { deriveReviewItems } from "./review.js";
 import { scenarioPayload, validateFoodLookup } from "./interactive.js";
 import { groupSourceOptions } from "./options.js";
+import { validateDemoEvidence } from "./demo.js";
 
 const VIEWS = new Set(["overview", "evaluate", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
@@ -32,6 +33,7 @@ const state = {
   foodMasterSha256: null,
   selectedFood: null,
   submittedFoodProfile: null,
+  demoEvidence: null,
   canEvaluate: false,
   evaluationBusy: false,
   view: "overview",
@@ -51,6 +53,7 @@ let playbackTimer = null;
 let foodSearchTimer = null;
 let foodSearchAbort = null;
 let statusRetries = 0;
+let demoReportLoading = false;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -169,6 +172,7 @@ function goTo(view) {
     else button.removeAttribute("aria-current");
   });
   window.scrollTo(0, 0);
+  if (view === "decisions" && !state.report) loadDemoReport();
 }
 
 function enterPublishedApplications() {
@@ -310,11 +314,12 @@ function renderPublishedApplications() {
 
 function renderOverview() {
   $("#overview-results").hidden = !state.report;
-  const showPublished = Boolean(state.publishedApplications) && !state.report;
-  $("#overview-title").textContent = showPublished ? "Explore package uses" : "Overview";
-  $("#overview-description").textContent = showPublished
+  const showPublished = Boolean(state.publishedApplications) && (!state.report || state.reportOrigin === "demo");
+  $("#overview-title").textContent = showPublished && !state.report ? "Explore package uses" : "Overview";
+  $("#overview-description").textContent = showPublished && !state.report
     ? "Search manufacturer-listed food applications and compare the published conditions."
-    : "Explore the method or inspect the evidence behind a real batch.";
+    : state.reportOrigin === "demo" ? "Inspect the demo decisions and the source-listed package uses."
+      : "Explore the method or inspect the evidence behind a real batch.";
   $("#overview-empty").hidden = Boolean(state.report) || showPublished;
   $("#published-applications").hidden = !showPublished;
   if (showPublished) renderPublishedApplications();
@@ -413,9 +418,12 @@ function renderInspector(row) {
   const submittedProfile = state.reportOrigin === "browser"
     && state.submittedFoodProfile?.food_reference_id === row.food_reference_id
     ? state.submittedFoodProfile : null;
+  const demoSource = state.reportOrigin === "demo"
+    ? state.demoEvidence?.scenarios.find((item) => item.record_id === row.record_id) : null;
   root.innerHTML = `<div class="inspector-header"><div class="section-kicker">SOURCE ROW ${row.source_row_number}</div><h2>${escapeHtml(row.scenario?.commodity_type || row.record_id || `Row ${row.source_row_number}`)}</h2>${row.scenario ? `<div class="inspector-record-id">Record ${escapeHtml(row.record_id)}</div>` : ""}${statusBadge(row.status)}<p>${row.status === "exception" ? "This scenario needs an input correction before screening." : row.status === "not_ready" ? "The scenario is understood, but the evidence is not sufficient for a package result." : "These structures passed a narrow protection screen. This is not a released recommendation."}</p></div>
     <div class="inspector-facts"><div><span>FOOD REFERENCE</span><strong>${displayValue(row.food_reference_id, "Not matched")}</strong></div><div><span>REQUESTED LIFE</span><strong>${row.target_shelf_life_days == null ? "Not available" : formatNumber(row.target_shelf_life_days, " days")}</strong></div></div>
     ${submittedProfile ? `<section class="submitted-profile-callout"><span>FOOD PROPERTIES FROM REFERENCE · CONDITIONS SUBMITTED BY USER</span><p>Moisture, oil/fat, pH and any respiration value came from ${escapeHtml(submittedProfile.food_reference_id)}. pH basis: ${displayValue(submittedProfile.pH_basis)}. These are not measurements of the submitted batch.</p></section>` : ""}
+    ${demoSource ? `<section class="submitted-profile-callout demo-source-callout"><span>DEMO · FOOD REFERENCE EVIDENCE</span><p>Food properties came from ${escapeHtml(demoSource.food_reference_id)}. pH basis: ${escapeHtml(demoSource.pH_basis)} (${escapeHtml(readableCode(demoSource.pH_evidence))}). These are reference values, not measurements of this sample. Journey and target values are illustrative.</p><div class="demo-source-links">${demoSource.food_source_links.map((link) => `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)} source ↗</a>`).join("")}</div><p>Supplier use ${escapeHtml(demoSource.supplier_product_code)} is shown below as an unapproved lead. The source-listed food name still requires identity review.</p></section>` : ""}
     ${row.status !== "exception" ? renderPackagePathway(row) : ""}
     ${row.scenario ? `<section class="inspector-section"><div class="inspector-section-title"><h3>Submitted scenario values</h3></div><div class="scenario-facts"><div><span>MOISTURE</span><strong>${formatNumber(row.scenario.moisture_content_pct, "%")}</strong></div><div><span>OIL / FAT</span><strong>${formatNumber(row.scenario.oil_fat_content_pct, "%")}</strong></div><div><span>pH</span><strong>${formatNumber(row.scenario.pH)}</strong></div><div><span>NET PACK</span><strong>${formatNumber(row.scenario.net_pack_quantity, ` ${escapeHtml(row.scenario.net_pack_quantity_unit ?? "")}`)}</strong></div><div><span>STORAGE</span><strong>${escapeHtml(readableCode(row.scenario.storage_type))}</strong></div><div><span>TRANSPORT</span><strong>${escapeHtml(readableCode(row.scenario.transport_mode))}</strong></div><div><span>HANDLING</span><strong>${escapeHtml(readableCode(row.scenario.transport_handling_severity))}</strong></div></div>${row.scenario.respiration_rate != null ? `<div class="respiration-note">Respiration: ${formatNumber(row.scenario.respiration_rate)} ${displayValue(row.scenario.respiration_rate_unit, "")} at ${formatNumber(row.scenario.respiration_reference_temperature_c, " °C")}</div>` : ""}</section>` : ""}
     ${renderReasonGroup("Input issues", row.input_issues, "red")}
@@ -431,6 +439,16 @@ function renderInspector(row) {
 function renderDecisions() {
   $("#decisions-empty").hidden = Boolean(state.report);
   $("#decisions-loaded").hidden = !state.report;
+  $("#decisions-empty h2").textContent = demoReportLoading ? "Loading saved demo report" : "No decision records yet";
+  $("#decisions-empty p").textContent = demoReportLoading
+    ? "Fetching the source-backed demonstration decisions."
+    : "Run a configured batch or open a PackSense decision report to explore real scenario results.";
+  const demoDisclosure = $("#demo-disclosure");
+  if (demoDisclosure) demoDisclosure.hidden = state.reportOrigin !== "demo";
+  if (demoDisclosure && state.reportOrigin === "demo" && state.demoEvidence) {
+    $("#demo-input-note").textContent = state.demoEvidence.input_note;
+    $("#demo-supplier-source").href = state.demoEvidence.scenarios[0].supplier_source_url;
+  }
   $("#report-file-label").textContent = state.fileName || "No report loaded";
   const navCount = $("#nav-record-count");
   navCount.hidden = !state.report;
@@ -648,6 +666,7 @@ function acceptReport(report, label, destination, origin = "local", submittedFoo
   state.fileName = label;
   state.reportOrigin = origin;
   state.submittedFoodProfile = submittedFoodProfile;
+  if (origin !== "demo") state.demoEvidence = null;
   state.search = "";
   state.filter = "all";
   state.page = 1;
@@ -658,10 +677,10 @@ function acceptReport(report, label, destination, origin = "local", submittedFoo
   $("#browse-real-applications").hidden = true;
   if (destination === "pipeline") state.pipelineMode = "actual";
   $("#record-search").value = "";
-  goTo(destination);
+  if (destination) goTo(destination);
   render();
   renderBackendState();
-  notify(`${report.rows.length.toLocaleString()} decision ${report.rows.length === 1 ? "row" : "rows"} ready.`);
+  if (origin !== "demo") notify(`${report.rows.length.toLocaleString()} decision ${report.rows.length === 1 ? "row" : "rows"} ready.`);
 }
 
 async function loadFile(file) {
@@ -676,6 +695,28 @@ async function loadFile(file) {
     acceptReport(report, file.name, returnToTrace ? "pipeline" : "decisions");
   } catch (error) {
     notify(error instanceof Error ? error.message : "Could not read the report.", true);
+  }
+}
+
+async function loadDemoReport() {
+  if (state.report || demoReportLoading) return;
+  demoReportLoading = true;
+  renderDecisions();
+  try {
+    const [reportResponse, evidenceResponse] = await Promise.all([
+      fetch("/demo/report.json"), fetch("/demo/evidence.json"),
+    ]);
+    if (!reportResponse.ok || !evidenceResponse.ok) throw new Error("The demo report is unavailable.");
+    const report = parseDecisionReport(await reportResponse.text());
+    const evidence = validateDemoEvidence(await evidenceResponse.json(), report);
+    if (state.report) return;
+    state.demoEvidence = evidence;
+    acceptReport(report, "DEMO · 2 source-backed scenarios", null, "demo");
+  } catch (error) {
+    notify(error instanceof Error ? error.message : "The demo report could not be loaded.", true);
+  } finally {
+    demoReportLoading = false;
+    if (!state.report) renderDecisions();
   }
 }
 
@@ -879,7 +920,7 @@ $("#record-search").addEventListener("input", (event) => {
 });
 $("#published-search").addEventListener("input", (event) => {
   state.publishedSearch = event.target.value;
-  if (state.publishedApplications && !state.report) renderPublishedApplications();
+  if (state.publishedApplications && (!state.report || state.reportOrigin === "demo")) renderPublishedApplications();
 });
 $("#food-search").addEventListener("input", (event) => {
   clearTimeout(foodSearchTimer);

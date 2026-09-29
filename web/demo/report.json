@@ -1,0 +1,270 @@
+{
+  "contract_version": "frontend-decision-v1",
+  "source_batch_version": "basic-recommendation-batch-v1",
+  "model": {
+    "task": "material_suitability_ranking",
+    "status": "not_deployed",
+    "prediction_available": false,
+    "model_version": null
+  },
+  "recommendation_release_status": "withheld",
+  "trace": {
+    "scenario_sha256": "ad4ab770a48422153aafa3d2e8ff02e3421f8c8c9d04f7a77544b693a24ceca5",
+    "food_master_sha256": "a79069a9bc293753eb610b47979d9eff8df2cb9a776387114eccf60a919efafc",
+    "material_master_sha256": "17e2791aacee70a1e30f6b73624c5ac2745e5feed36672a9c980499d77fd2564",
+    "route_register_sha256": null,
+    "assessment_register_sha256": null,
+    "structure_catalogue_sha256": null,
+    "structure_review_register_sha256": null,
+    "transfer_register_sha256": null,
+    "public_candidate_catalogue_sha256": "f9f6b8b34ecf0bb4526464f9daede7524ac3306c4c0e88632c7122265005a775"
+  },
+  "total_rows": 2,
+  "rows": [
+    {
+      "source_row_number": 2,
+      "record_id": "DEMO-ASPARAGUS-150G",
+      "food_reference_id": "FND-2710823",
+      "scenario": {
+        "commodity_type": "Asparagus, green, raw",
+        "moisture_content_pct": 92.57,
+        "oil_fat_content_pct": 0.2163,
+        "pH": 5.8,
+        "net_pack_quantity": 150.0,
+        "net_pack_quantity_unit": "g",
+        "storage_type": "chilled",
+        "transport_mode": "road",
+        "transport_handling_severity": "low",
+        "respiration_rate": 270.0,
+        "respiration_rate_unit": "mg CO2/kg/h",
+        "respiration_reference_temperature_c": 20.0
+      },
+      "status": "not_ready",
+      "input_issues": [],
+      "requirement_gaps": [
+        "oxygen_ingress_unassessed",
+        "moisture_gain_unassessed",
+        "moisture_loss_unassessed",
+        "produce_gas_balance_pending_stop_4",
+        "light_sensitivity_unassessed",
+        "seal_integrity_pending_structure",
+        "mechanical_verification_pending_structure",
+        "food_contact_pending_structure"
+      ],
+      "screening_reason_codes": [
+        "food_requirements_or_produce_route_incomplete"
+      ],
+      "warnings": [
+        "light_sensitivity_unassessed",
+        "cost_and_sustainability_not_ranked"
+      ],
+      "target_shelf_life_days": 5.0,
+      "produce_route_status": "respiration_evidence_present",
+      "candidate_screening_allowed": false,
+      "temperature_exposures": [
+        {
+          "phase": "storage",
+          "temperature_c": 4.0,
+          "relative_humidity_pct": 90.0,
+          "duration_hours": null,
+          "safety_check_only": false
+        },
+        {
+          "phase": "transport",
+          "temperature_c": 4.0,
+          "relative_humidity_pct": null,
+          "duration_hours": 6.0,
+          "safety_check_only": false
+        },
+        {
+          "phase": "transport_max_excursion",
+          "temperature_c": 8.0,
+          "relative_humidity_pct": null,
+          "duration_hours": null,
+          "safety_check_only": true
+        }
+      ],
+      "screened_candidates": [],
+      "supplier_application_lookup": {
+        "lookup_version": "supplier-application-lookup-v1",
+        "catalogue_id": "packsense-public-candidates-2026-09-28",
+        "status": "published_food_application_found",
+        "leads": [
+          {
+            "candidate_id": "SUMITOMO-PPLUS-AY8K7",
+            "product_code": "AY8K7",
+            "pack_format": "heat-seal bag",
+            "supplier_application_food": "asparagus",
+            "food_name_match": "raw_name_variant_unreviewed",
+            "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+            "source_url": "https://www.sumibe.co.jp/product/p-plus/business/standard/index.html",
+            "source_locator": "heat-seal table, AY8K7 row",
+            "source_rights_review_status": "pending",
+            "published_quantity": 150,
+            "published_quantity_unit": "g",
+            "published_storage_temperature_min_c": 1,
+            "published_storage_temperature_max_c": 10,
+            "published_excursion_max_c": 25,
+            "published_excursion_max_hours": 8,
+            "application_status": "unresolved_or_outside_published_use",
+            "reason_codes": [
+              "food_identity_requires_review"
+            ],
+            "approval_blockers": [
+              "source_rights_review_pending",
+              "exact_material_grade_join_missing",
+              "food_contact_and_service_limit_unverified",
+              "complete_package_transfer_and_seal_unverified",
+              "food_package_suitability_unverified"
+            ]
+          }
+        ],
+        "approved_structure_count": 0,
+        "recommended_structure_id": null,
+        "model_prediction_available": false
+      },
+      "preliminary_preferred_structure_id": null,
+      "recommended_structure_id": null,
+      "material_prediction": null,
+      "predicted_shelf_life_days": null,
+      "package_feasible": false
+    },
+    {
+      "source_row_number": 3,
+      "record_id": "DEMO-BROCCOLI-400G",
+      "food_reference_id": "FND-747447",
+      "scenario": {
+        "commodity_type": "Broccoli, raw",
+        "moisture_content_pct": 90.0,
+        "oil_fat_content_pct": 0.34,
+        "pH": 6.575,
+        "net_pack_quantity": 400.0,
+        "net_pack_quantity_unit": "g",
+        "storage_type": "chilled",
+        "transport_mode": "road",
+        "transport_handling_severity": "low",
+        "respiration_rate": 300.0,
+        "respiration_rate_unit": "mg CO2/kg/h",
+        "respiration_reference_temperature_c": 20.0
+      },
+      "status": "not_ready",
+      "input_issues": [],
+      "requirement_gaps": [
+        "oxygen_ingress_unassessed",
+        "moisture_gain_unassessed",
+        "moisture_loss_unassessed",
+        "produce_gas_balance_pending_stop_4",
+        "light_sensitivity_unassessed",
+        "seal_integrity_pending_structure",
+        "mechanical_verification_pending_structure",
+        "food_contact_pending_structure"
+      ],
+      "screening_reason_codes": [
+        "food_requirements_or_produce_route_incomplete"
+      ],
+      "warnings": [
+        "light_sensitivity_unassessed",
+        "cost_and_sustainability_not_ranked"
+      ],
+      "target_shelf_life_days": 5.0,
+      "produce_route_status": "respiration_evidence_present",
+      "candidate_screening_allowed": false,
+      "temperature_exposures": [
+        {
+          "phase": "storage",
+          "temperature_c": 4.0,
+          "relative_humidity_pct": 90.0,
+          "duration_hours": null,
+          "safety_check_only": false
+        },
+        {
+          "phase": "transport",
+          "temperature_c": 4.0,
+          "relative_humidity_pct": null,
+          "duration_hours": 6.0,
+          "safety_check_only": false
+        },
+        {
+          "phase": "transport_max_excursion",
+          "temperature_c": 8.0,
+          "relative_humidity_pct": null,
+          "duration_hours": null,
+          "safety_check_only": true
+        }
+      ],
+      "screened_candidates": [],
+      "supplier_application_lookup": {
+        "lookup_version": "supplier-application-lookup-v1",
+        "catalogue_id": "packsense-public-candidates-2026-09-28",
+        "status": "published_food_application_found",
+        "leads": [
+          {
+            "candidate_id": "SUMITOMO-PPLUS-VY7K4",
+            "product_code": "VY7K4",
+            "pack_format": "heat-seal U-shaped bag",
+            "supplier_application_food": "broccoli",
+            "food_name_match": "raw_name_variant_unreviewed",
+            "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+            "source_url": "https://www.sumibe.co.jp/product/p-plus/business/standard/index.html",
+            "source_locator": "heat-seal table, broccoli U-shaped bag VY7K4 row",
+            "source_rights_review_status": "pending",
+            "published_quantity": 500,
+            "published_quantity_unit": "g",
+            "published_storage_temperature_min_c": 1,
+            "published_storage_temperature_max_c": 10,
+            "published_excursion_max_c": 25,
+            "published_excursion_max_hours": 8,
+            "application_status": "unresolved_or_outside_published_use",
+            "reason_codes": [
+              "food_identity_requires_review",
+              "pack_quantity_outside_published_use"
+            ],
+            "approval_blockers": [
+              "source_rights_review_pending",
+              "exact_material_grade_join_missing",
+              "food_contact_and_service_limit_unverified",
+              "complete_package_transfer_and_seal_unverified",
+              "food_package_suitability_unverified"
+            ]
+          },
+          {
+            "candidate_id": "SUMITOMO-PPLUS-VY7K9",
+            "product_code": "VY7K9",
+            "pack_format": "heat-seal square bag",
+            "supplier_application_food": "broccoli",
+            "food_name_match": "raw_name_variant_unreviewed",
+            "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+            "source_url": "https://www.sumibe.co.jp/product/p-plus/business/standard/index.html",
+            "source_locator": "heat-seal table, broccoli square bag VY7K9 row",
+            "source_rights_review_status": "pending",
+            "published_quantity": 400,
+            "published_quantity_unit": "g",
+            "published_storage_temperature_min_c": 1,
+            "published_storage_temperature_max_c": 10,
+            "published_excursion_max_c": 25,
+            "published_excursion_max_hours": 8,
+            "application_status": "unresolved_or_outside_published_use",
+            "reason_codes": [
+              "food_identity_requires_review"
+            ],
+            "approval_blockers": [
+              "source_rights_review_pending",
+              "exact_material_grade_join_missing",
+              "food_contact_and_service_limit_unverified",
+              "complete_package_transfer_and_seal_unverified",
+              "food_package_suitability_unverified"
+            ]
+          }
+        ],
+        "approved_structure_count": 0,
+        "recommended_structure_id": null,
+        "model_prediction_available": false
+      },
+      "preliminary_preferred_structure_id": null,
+      "recommended_structure_id": null,
+      "material_prediction": null,
+      "predicted_shelf_life_days": null,
+      "package_feasible": false
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "contract_version": "packsense-demo-scenarios-v1",
+  "food_master_sha256": "a79069a9bc293753eb610b47979d9eff8df2cb9a776387114eccf60a919efafc",
+  "material_master_sha256": "17e2791aacee70a1e30f6b73624c5ac2745e5feed36672a9c980499d77fd2564",
+  "public_candidate_catalogue_sha256": "f9f6b8b34ecf0bb4526464f9daede7524ac3306c4c0e88632c7122265005a775",
+  "input_note": "Illustrative demo conditions, not measured product or journey data. The desired life is a target, never a predicted outcome. Food composition comes from the cited reference master. Pack quantities and the 1-10 C listed storage range come from the cited manufacturer catalogue; the exact 4 C choice, humidity, road journey, handling and 8 C maximum are demo assumptions.",
+  "scenarios": [
+    {
+      "record_id": "DEMO-ASPARAGUS-150G",
+      "food_reference_id": "FND-2710823",
+      "supplier_candidate_id": "SUMITOMO-PPLUS-AY8K7",
+      "conditions": {
+        "desired_shelf_life_days": 5,
+        "storage_type": "chilled",
+        "storage_temperature_c": 4,
+        "storage_relative_humidity_pct": 90,
+        "transport_mode": "road",
+        "transport_duration_hours": 6,
+        "transport_temperature_c": 4,
+        "transport_max_temperature_c": 8,
+        "transport_handling_severity": "low",
+        "net_pack_quantity": 150,
+        "net_pack_quantity_unit": "g"
+      }
+    },
+    {
+      "record_id": "DEMO-BROCCOLI-400G",
+      "food_reference_id": "FND-747447",
+      "supplier_candidate_id": "SUMITOMO-PPLUS-VY7K9",
+      "conditions": {
+        "desired_shelf_life_days": 5,
+        "storage_type": "chilled",
+        "storage_temperature_c": 4,
+        "storage_relative_humidity_pct": 90,
+        "transport_mode": "road",
+        "transport_duration_hours": 6,
+        "transport_temperature_c": 4,
+        "transport_max_temperature_c": 8,
+        "transport_handling_severity": "low",
+        "net_pack_quantity": 400,
+        "net_pack_quantity_unit": "g"
+      }
+    }
+  ]
+}

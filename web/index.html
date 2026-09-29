@@ -110,7 +110,7 @@
                   <h2 id="overview-empty-title">Explore how PackSense screens a package.</h2>
                   <p>Follow the food-to-package checks. Real results appear only when you run configured sources or open an audited report.</p>
                   <div class="overview-empty-actions"><button type="button" class="button button-primary" data-go="pipeline">Explore pipeline <span aria-hidden="true">→</span></button><button type="button" class="button button-secondary" data-import>Open report</button></div>
-                  <small>No example results or predicted answers are shown here.</small>
+                  <small>The guided tour does not invent a package result.</small>
                 </div>
                 <div class="overview-empty-path" aria-label="Four decision checkpoints">
                   <div class="overview-path-heading"><span>THE DECISION PATH</span><span>SELECT A CHECKPOINT</span></div>
@@ -201,6 +201,7 @@
 
           <section class="view" id="view-decisions" aria-labelledby="decisions-title" hidden>
             <div class="page-heading"><div><div class="page-kicker">WORKSPACE / DECISION RECORDS</div><h1 id="decisions-title">Decision records</h1><p>Inspect each scenario and the evidence behind its current status.</p></div><div class="report-file" id="report-file-label">No report loaded</div></div>
+            <section class="demo-disclosure" id="demo-disclosure" aria-label="Illustrative demo evidence" hidden><div><span class="section-kicker">SAVED DEMO REPORT · SOURCE-BACKED CHECKS</span><strong>Two scenarios, both awaiting package evidence</strong></div><p>This saved report was run through the Python batch engine. Food properties come from the approved reference workbook; pack sizes and listed storage ranges come from manufacturer uses. Open Evaluate to run a fresh scenario. No package or shelf-life result is approved.</p><details><summary>Input provenance and assumptions</summary><p id="demo-input-note"></p><a id="demo-supplier-source" href="https://www.sumibe.co.jp/product/p-plus/business/standard/index.html" target="_blank" rel="noopener noreferrer">Check the manufacturer list ↗</a></details></section>
             <div id="decisions-empty" class="full-empty" hidden>
               <div class="empty-art" aria-hidden="true"><svg viewBox="0 0 80 80" fill="none"><rect x="15" y="11" width="42" height="54" rx="3"/><path d="M26 27h20M26 37h20M26 47h13"/><path d="M57 47h11v23H31v-5"/></svg></div>
               <div class="section-kicker">START WITH A REPORT</div><h2>No decision records yet</h2><p>Run a configured batch or open a PackSense decision report to explore real scenario results.</p><button type="button" class="button button-primary" data-import>Open decision report</button>

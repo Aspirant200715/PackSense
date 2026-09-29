@@ -24,8 +24,11 @@ packaging answer. An actual trace only displays values in a backend report.
 The top bar is the single connection-status display; it shows Connected,
 Offline, Running, or a report-loading error as appropriate.
 
-The app uses a light color scheme throughout. No demonstration rows or predictions are
-bundled. DM Sans and IBM Plex Mono are fetched from Google Fonts when online;
+The app uses a light color scheme throughout. The Results tab loads two saved,
+source-backed demo decisions when no user report is open. They are actual
+batch-engine `not_ready` results with illustrative operating inputs, not
+predictions or package approvals. A user submission or imported report replaces
+the demo. DM Sans and IBM Plex Mono are fetched from Google Fonts when online;
 system fonts are used offline. Report contents are not sent to the font host.
 
 For the hosted evaluation form backed by the supplied reference workbooks, see
@@ -116,7 +119,9 @@ arguments (for example `--route-register`, `--structures`, and
 `--structure-reviews`) are also accepted by the web server and forwarded to
 the same CLI. Run `python -m packsense.web_server --help` for the full list.
 The supplied food and material masters are reference data; they are **not** a
-scenario batch. No scenario file is bundled or inferred from them.
+scenario batch. The saved demo has two explicitly specified scenarios in
+[`data/demo_scenarios.v1.json`](../data/demo_scenarios.v1.json); the app never
+infers a scenario from a food-reference row.
 
 The Pipeline page plays a conceptual input-to-output tour or a trace of a
 loaded report. A square moves between stops on a single eight-step timeline

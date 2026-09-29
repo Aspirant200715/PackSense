@@ -12,12 +12,25 @@
 | --- | --- |
 | Food and material references | The hosted database contains the supplied 5,000-food and 81-material workbooks as one versioned, hash-checked bundle. Raw workbooks are not in Git. |
 | Single-scenario evaluation | Search a source food, enter pack size and operating conditions, and run the Python audit through the browser. |
+| Saved demonstration results | The Results tab opens two batch-engine decisions for raw asparagus and broccoli, with source links, input provenance, and explicit evidence gaps. The saved examples are illustrative, not live user evaluations. |
 | Batch evaluation | Audit an operator-supplied scenario CSV against configured references and export a traceable JSON report. |
 | Published-use catalogue | Explore nine manufacturer-listed food and package applications with source links. These are research leads, not approvals. |
 | Engineering checks | Validate input, enrich exact references, build requirement cards, and run bounded produce or transfer checks when their evidence is present. |
 | Ranking and shelf-life prediction | Withheld. No real suitability-label set, approved finished-package catalogue, or measured trial-outcome set is supplied. |
 
 The [Kaggle notebook](notebooks/packsense-ai.ipynb) audits reference data and contains guarded exploratory training code. It has **not** produced a validated or deployed model. See [material training readiness](docs/material-training-readiness.md) and [shelf-life training](docs/shelf-life-training.md) for the evidence gates.
+
+## Show the evidence-backed demo
+
+Open the [live app](https://packsense-web.vercel.app), choose **Explore PackSense**, then **Results**. The saved batch report contains two actual PackSense audit rows: 150 g raw asparagus and 400 g raw broccoli. It records the exact food and material source hashes used to generate it. The inspector links the food-reference citations and manufacturer-listed uses. Both rows are **Needs evidence** because the available workbooks and supplier list do not establish complete-package performance or a validated shelf-life outcome.
+
+The five-day target, 90% humidity, road journey, handling, and exact temperatures are illustrative inputs, not measurements or predictions. The manufacturer lists those pack sizes and a 1–10 °C storage range; its source-rights and food-identity review remain pending. Use **Evaluate** for a new live scenario. The saved demo can be rebuilt from the reviewed files with:
+
+```sh
+python -m packsense.demo_report "path/to/food-reference.xlsx" "path/to/material-reference.xlsx"
+```
+
+The command checks the [demo manifest](data/demo_scenarios.v1.json) against the source hashes before publishing [the decision report](web/demo/report.json) and [its citation context](web/demo/evidence.json). It will fail when the reviewed inputs change.
 
 ## Hosted architecture
 

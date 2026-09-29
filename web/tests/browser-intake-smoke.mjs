@@ -74,7 +74,13 @@ try {
   assert.equal(await evaluate("document.querySelector('#start-evaluation').classList.contains('button-light')"), true, "evaluation is the primary entry when real reference masters are configured");
   assert.equal(await evaluate("document.querySelector('.welcome-enter').classList.contains('button-secondary')"), true);
   await screenshot(process.env.PACKSENSE_INTRO_SCREENSHOT);
-  await evaluate("document.querySelector('#start-evaluation').click()");
+  await evaluate("document.querySelector('.welcome-enter').click()");
+  await evaluate("document.querySelector('[data-nav=decisions]').click()");
+  await until("document.querySelector('#decisions-loaded').hidden === false", "saved demo decisions did not load");
+  assert.equal(await evaluate("document.querySelector('#record-filter-count').textContent"), "2 of 2 rows");
+  assert.equal(await evaluate("document.querySelector('#demo-disclosure').hidden"), false);
+  assert.match(await evaluate("document.querySelector('#record-inspector .demo-source-links').textContent"), /FDC source/);
+  await evaluate("document.querySelector('[data-nav=evaluate]').click()");
   assert.equal(await evaluate("document.querySelector('#view-evaluate').hidden"), false);
   assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "form overflows viewport");
 
@@ -108,11 +114,12 @@ try {
     }
     form.requestSubmit();
   })()`);
-  await until("document.querySelector('#decisions-loaded').hidden === false || document.querySelector('#evaluation-error').hidden === false", "scenario evaluation did not finish", 180);
+  await until("(!document.querySelector('#view-decisions').hidden && document.querySelector('#demo-disclosure').hidden && document.querySelector('#record-filter-count').textContent === '1 of 1 rows') || document.querySelector('#evaluation-error').hidden === false", "scenario evaluation did not finish", 180);
   const error = await evaluate("document.querySelector('#evaluation-error').hidden ? null : document.querySelector('#evaluation-error').textContent");
   assert.equal(error, null, `scenario evaluation failed: ${error}`);
   assert.equal(await evaluate("document.querySelector('#view-decisions').hidden"), false);
   assert.equal(await evaluate("document.querySelector('#record-filter-count').textContent"), "1 of 1 rows");
+  assert.equal(await evaluate("document.querySelector('#demo-disclosure').hidden"), true, "live evaluation replaces the saved demo");
   assert.equal(await evaluate("document.querySelector('[data-filter=not_ready] span').textContent"), "1", "the test-only scenario remains evidence-gated");
   assert.equal(await evaluate("document.querySelector('#record-inspector .source-option-card[data-source-option-state=related] .supplier-lead-heading strong')?.textContent"), "AY8K7", "a supplier-listed asparagus use remains identity-unverified");
   assert.match(await evaluate("document.querySelector('#record-inspector .package-tier-engineering').textContent"), /Not ready to shortlist/);

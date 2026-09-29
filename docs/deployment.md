@@ -20,7 +20,10 @@ not approved finished packages or suitability labels.
   frontend. `web/vercel.json` proxies `/api/` to the fixed Render service URL,
   keeping browser requests on
   the frontend origin. Vercel never receives the database password or raw
-  workbooks.
+  workbooks. Results can load a saved two-row demonstration report generated
+  by the same Python batch engine from the reviewed source hashes. The saved
+  report is visibly marked as illustrative and is replaced by a live browser
+  submission or an imported report.
 
 The checked food file is the earlier online-enriched 5,000-food reference:
 5,000 rows import, with 84 sourced respiration values. The checked material
