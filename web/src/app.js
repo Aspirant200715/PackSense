@@ -3,6 +3,7 @@ import { actualContext, actualPipeline, STAGES, walkthroughStage } from "./pipel
 import { filterPublishedApplications, validatePublishedApplications } from "./catalogue.js";
 import { deriveReviewItems } from "./review.js";
 import { scenarioPayload, validateFoodLookup } from "./interactive.js";
+import { groupSourceOptions } from "./options.js";
 
 const VIEWS = new Set(["overview", "evaluate", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
@@ -373,18 +374,42 @@ function renderCandidates(row) {
     <details class="candidate-card"><summary><span class="candidate-main"><strong>${escapeHtml(candidate.structure_id)}</strong><small>${displayValue(candidate.pack_format, "Format not reported")}</small></span>${statusBadge(candidate.status)}<span class="candidate-expand" aria-hidden="true">+</span></summary><div class="candidate-body"><div class="candidate-facts"><div><span>PROTECTION RANK</span><strong>${candidate.protection_rank == null ? "Not ranked" : escapeHtml(candidate.protection_rank)}</strong></div><div><span>SERVICE RANGE</span><strong>${formatNumber(candidate.service_temperature_min_c, " °C")} to ${formatNumber(candidate.service_temperature_max_c, " °C")}</strong></div></div><div class="candidate-subhead">Layer structure</div>${candidate.layers.length ? `<div class="layer-list">${candidate.layers.map((layer, index) => `<div class="layer-row"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(layer.grade_id ?? "Unspecified grade")}</strong><small>${formatNumber(layer.thickness_um, " µm")}${layer.role ? ` · ${escapeHtml(layer.role)}` : ""}${layer.is_food_contact ? " · food contact" : ""}</small></div>`).join("")}</div>` : `<p class="candidate-empty">Layer details not supplied.</p>`}${candidate.reason_codes.length ? `<div class="candidate-subhead">Screening reasons</div><div class="candidate-reasons">${candidate.reason_codes.map((reason) => `<span>${escapeHtml(readableCode(reason))}</span>`).join("")}</div>` : ""}</div></details>`).join("")}</div></details>`;
 }
 
-function renderSupplierLookup(row) {
+function renderSourceOption(lead, state) {
+  const labels = {
+    exact: "Listed conditions align · unverified",
+    related: "Related raw-food name · identity review needed",
+    outside: "Outside listed use or needs review",
+  };
+  return `<article class="supplier-lead source-option-card" data-source-option-state="${state}">
+    <div class="supplier-lead-heading"><div><strong>${escapeHtml(lead.product_code)}</strong><small>${escapeHtml(lead.candidate_id)} · ${escapeHtml(lead.pack_format)}</small></div><span class="supplier-match-state">${labels[state]}</span></div>
+    <div class="supplier-conditions"><span>Supplier lists <strong>${escapeHtml(lead.supplier_application_food)}</strong></span><span>Fill <strong>${formatNumber(lead.published_quantity, ` ${escapeHtml(lead.published_quantity_unit)}`)}</strong></span><span>Storage <strong>${formatNumber(lead.published_storage_temperature_min_c, " °C")} to ${formatNumber(lead.published_storage_temperature_max_c, " °C")}</strong></span>${lead.published_excursion_max_c === null ? "" : `<span>Excursion <strong>up to ${formatNumber(lead.published_excursion_max_c, " °C")} for ${formatNumber(lead.published_excursion_max_hours, " h")}</strong></span>`}</div>
+    ${lead.reason_codes.length ? `<p class="supplier-lead-reasons"><strong>Unresolved comparison:</strong> ${lead.reason_codes.map((code) => escapeHtml(readableCode(code))).join(" · ")}</p>` : ""}
+    <details class="source-option-checks"><summary>Checks still needed (${lead.approval_blockers.length})</summary><ul>${lead.approval_blockers.map((code) => `<li>${escapeHtml(readableCode(code))}</li>`).join("")}</ul></details>
+    <div class="supplier-source"><span>Source rights: ${escapeHtml(readableCode(lead.source_rights_review_status))} · ${escapeHtml(lead.source_id)} · ${escapeHtml(lead.source_locator)}</span><a href="${escapeHtml(lead.source_url)}" target="_blank" rel="noopener noreferrer">Open manufacturer source ↗</a></div>
+  </article>`;
+}
+
+function renderPackagePathway(row) {
   const lookup = row.supplier_application_lookup;
-  if (!lookup) return "";
-  const leads = lookup.leads;
-  return `<details class="inspector-disclosure supplier-disclosure" ${leads.length ? "open" : ""}><summary><span>Supplier applications · research only</span><small>${leads.length} source-listed ${leads.length === 1 ? "lead" : "leads"}</small></summary>
-    <div class="supplier-lookup"><p class="supplier-boundary">These are published product uses compared with this scenario. A match is not a material prediction, approved package, or suitability label.</p>
-    ${leads.length ? `<div class="supplier-leads">${leads.map((lead) => `
-      <article class="supplier-lead"><div class="supplier-lead-heading"><div><strong>${escapeHtml(lead.product_code)}</strong><small>${escapeHtml(lead.candidate_id)} · ${escapeHtml(lead.pack_format)}</small></div><span class="supplier-match-state">${lead.application_status === "published_food_quantity_temperature_match_unverified" ? "Published conditions match · unverified" : "Outside use or needs review"}</span></div>
-      <div class="supplier-conditions"><span>Listed for <strong>${escapeHtml(lead.supplier_application_food)}</strong></span><span>Fill <strong>${formatNumber(lead.published_quantity, ` ${escapeHtml(lead.published_quantity_unit)}`)}</strong></span><span>Storage <strong>${formatNumber(lead.published_storage_temperature_min_c, " °C")} to ${formatNumber(lead.published_storage_temperature_max_c, " °C")}</strong></span>${lead.published_excursion_max_c === null ? "" : `<span>Excursion <strong>up to ${formatNumber(lead.published_excursion_max_c, " °C")} for ${formatNumber(lead.published_excursion_max_hours, " h")}</strong></span>`}</div>
-      ${lead.reason_codes.length ? `<p class="supplier-lead-reasons"><strong>Scenario mismatches:</strong> ${lead.reason_codes.map((code) => escapeHtml(readableCode(code))).join(" · ")}</p>` : ""}
-      <p class="supplier-lead-reasons"><strong>Still unverified:</strong> ${lead.approval_blockers.map((code) => escapeHtml(readableCode(code))).join(" · ")}</p>
-      <div class="supplier-source"><span>Rights review pending · ${escapeHtml(lead.source_id)} · ${escapeHtml(lead.source_locator)}</span><a href="${escapeHtml(lead.source_url)}" target="_blank" rel="noopener noreferrer">Open source ↗</a></div></article>`).join("")}</div>` : `<div class="quiet-empty">No source-listed application matched this food. This does not prove that a suitable package does not exist.</div>`}</div></details>`;
+  const groups = groupSourceOptions(lookup?.leads ?? []);
+  const visible = [
+    ...groups.exactConditions.map((lead) => renderSourceOption(lead, "exact")),
+    ...groups.relatedFoodName.map((lead) => renderSourceOption(lead, "related")),
+  ];
+  const outside = groups.outsidePublishedUse.map((lead) => renderSourceOption(lead, "outside"));
+  const eligible = row.screened_candidates.filter((candidate) => candidate.status === "eligible_for_shortlist");
+  const blockers = [...new Set([...row.screening_reason_codes, ...row.requirement_gaps])].slice(0, 3);
+  const preliminary = row.status === "preliminary_shortlist";
+  return `<section class="package-pathway" aria-label="Package option evidence tiers">
+    <div class="package-pathway-intro"><span>PACKAGE PATHWAY</span><h3>What can we show for this scenario?</h3><p class="supplier-boundary">A supplier-listed use is a research option, not a material prediction, approved package, or suitability label. Only a reviewed complete structure can enter the separate engineering screen.</p></div>
+    <div class="package-tier"><div class="package-tier-heading"><span>01 / SOURCE-LISTED OPTIONS</span><strong>${groups.exactConditions.length} listed-condition ${groups.exactConditions.length === 1 ? "match" : "matches"} · ${groups.relatedFoodName.length} related food ${groups.relatedFoodName.length === 1 ? "name" : "names"}</strong></div>
+      ${lookup ? (visible.length ? `<div class="supplier-leads">${visible.join("")}</div>` : `<p class="package-tier-empty">No source-listed use aligns with this food and scenario in the current catalogue.</p>`) : `<p class="package-tier-empty">No supplier catalogue was attached to this report.</p>`}
+      ${outside.length ? `<details class="outside-source-options"><summary>${outside.length} additional ${outside.length === 1 ? "use differs" : "uses differ"} from this scenario</summary><div class="supplier-leads">${outside.join("")}</div></details>` : ""}
+    </div>
+    <div class="package-tier package-tier-engineering${preliminary ? " is-preliminary" : ""}"><div class="package-tier-heading"><span>02 / ENGINEERING SHORTLIST</span><strong>${preliminary ? `${eligible.length} provisionally eligible ${eligible.length === 1 ? "structure" : "structures"}` : "Not ready to shortlist"}</strong></div>
+      ${preliminary ? `<p>These complete structures passed the current narrow protection screen, not product validation.${row.preliminary_preferred_structure_id ? ` Protection-only preference: <strong>${escapeHtml(row.preliminary_preferred_structure_id)}</strong>.` : " No unique protection preference is established."}</p>` : `<p>Source-listed uses cannot bypass the evidence gate. ${blockers.length ? `Current blockers: ${blockers.map((code) => escapeHtml(readableCode(code))).join(" · ")}.` : "No reviewed complete structure is eligible in this report."} The detailed gaps are recorded below.</p>`}
+    </div>
+  </section>`;
 }
 
 function renderInspector(row) {
@@ -393,25 +418,19 @@ function renderInspector(row) {
     root.innerHTML = `<div class="inspector-placeholder"><strong>Select a scenario</strong><p>Choose a row to inspect its evidence, temperature exposure and package screen.</p></div>`;
     return;
   }
-  const preferred = row.preliminary_preferred_structure_id;
-  const publishedMatches = row.supplier_application_lookup?.leads.filter(
-    (lead) => lead.application_status === "published_food_quantity_temperature_match_unverified"
-  ) ?? [];
   const submittedProfile = state.reportOrigin === "browser"
     && state.submittedFoodProfile?.food_reference_id === row.food_reference_id
     ? state.submittedFoodProfile : null;
   root.innerHTML = `<div class="inspector-header"><div class="section-kicker">SOURCE ROW ${row.source_row_number}</div><h2>${escapeHtml(row.scenario?.commodity_type || row.record_id || `Row ${row.source_row_number}`)}</h2>${row.scenario ? `<div class="inspector-record-id">Record ${escapeHtml(row.record_id)}</div>` : ""}${statusBadge(row.status)}<p>${row.status === "exception" ? "This scenario needs an input correction before screening." : row.status === "not_ready" ? "The scenario is understood, but the evidence is not sufficient for a package result." : "These structures passed a narrow protection screen. This is not a released recommendation."}</p></div>
     <div class="inspector-facts"><div><span>FOOD REFERENCE</span><strong>${displayValue(row.food_reference_id, "Not matched")}</strong></div><div><span>REQUESTED LIFE</span><strong>${row.target_shelf_life_days == null ? "Not available" : formatNumber(row.target_shelf_life_days, " days")}</strong></div></div>
     ${submittedProfile ? `<section class="submitted-profile-callout"><span>FOOD PROPERTIES FROM REFERENCE · CONDITIONS SUBMITTED BY USER</span><p>Moisture, oil/fat, pH and any respiration value came from ${escapeHtml(submittedProfile.food_reference_id)}. pH basis: ${displayValue(submittedProfile.pH_basis)}. These are not measurements of the submitted batch.</p></section>` : ""}
-    ${publishedMatches.length ? `<section class="published-match-callout"><span>MANUFACTURER-LISTED OPTION · UNVERIFIED</span><div>${publishedMatches.map((lead) => `<strong>${escapeHtml(lead.product_code)} <small>${escapeHtml(lead.pack_format)}</small></strong>`).join("")}</div><p>The published food, fill and temperature conditions match this row. PackSense has not approved these packages or made a model prediction. <a href="${escapeHtml(publishedMatches[0].source_url)}" target="_blank" rel="noopener noreferrer">View manufacturer source ↗</a></p></section>` : ""}
+    ${row.status !== "exception" ? renderPackagePathway(row) : ""}
     ${row.scenario ? `<section class="inspector-section"><div class="inspector-section-title"><h3>Submitted scenario values</h3></div><div class="scenario-facts"><div><span>MOISTURE</span><strong>${formatNumber(row.scenario.moisture_content_pct, "%")}</strong></div><div><span>OIL / FAT</span><strong>${formatNumber(row.scenario.oil_fat_content_pct, "%")}</strong></div><div><span>pH</span><strong>${formatNumber(row.scenario.pH)}</strong></div><div><span>NET PACK</span><strong>${formatNumber(row.scenario.net_pack_quantity, ` ${escapeHtml(row.scenario.net_pack_quantity_unit ?? "")}`)}</strong></div><div><span>STORAGE</span><strong>${escapeHtml(readableCode(row.scenario.storage_type))}</strong></div><div><span>TRANSPORT</span><strong>${escapeHtml(readableCode(row.scenario.transport_mode))}</strong></div><div><span>HANDLING</span><strong>${escapeHtml(readableCode(row.scenario.transport_handling_severity))}</strong></div></div>${row.scenario.respiration_rate != null ? `<div class="respiration-note">Respiration: ${formatNumber(row.scenario.respiration_rate)} ${displayValue(row.scenario.respiration_rate_unit, "")} at ${formatNumber(row.scenario.respiration_reference_temperature_c, " °C")}</div>` : ""}</section>` : ""}
-    ${preferred ? `<div class="preliminary-callout"><span>PRELIMINARY PROTECTION PREFERENCE</span><strong>${escapeHtml(preferred)}</strong><p>Not a validated material prediction or package approval.</p></div>` : ""}
     ${renderReasonGroup("Input issues", row.input_issues, "red")}
     ${renderReasonGroup("Evidence gaps", row.requirement_gaps, "amber")}
     ${renderReasonGroup("Screening reasons", row.screening_reason_codes, "amber")}
     ${renderReasonGroup("Warnings", row.warnings, "neutral")}
     ${renderExposures(row.temperature_exposures)}
-    ${row.status !== "exception" ? renderSupplierLookup(row) : ""}
     ${row.status !== "exception" ? renderCandidates(row) : ""}
     <div class="inspector-boundary"><strong>Decision boundary</strong><p>Package feasibility and predicted material are withheld. A requested shelf life is not a predicted shelf life.</p></div>
     <button type="button" class="text-button inspector-trace-link" data-trace-row="${state.selectedIndex}">Follow this row through the pipeline →</button>`;

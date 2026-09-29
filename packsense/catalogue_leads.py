@@ -16,6 +16,7 @@ from packsense.contracts import ScenarioInput
 LOOKUP_VERSION = "supplier-application-lookup-v1"
 PILOT_AUDIT_VERSION = "public-candidate-pilot-audit-v1"
 _MASS_TO_GRAMS = {"g": 1.0, "kg": 1000.0}
+_RAW_COLOUR_QUALIFIERS = frozenset({"green", "white", "red", "yellow", "purple"})
 
 
 def _key(value: str) -> str:
@@ -26,10 +27,16 @@ def _food_match(scenario_food: str, supplier_food: str) -> str | None:
     actual, published = _key(scenario_food), _key(supplier_food)
     if actual == published:
         return "exact_name"
-    # A raw food-reference name is a possible lead, not a verified synonym or
-    # proof that the supplier's pack covers every cultivar, cut, or food form.
+    # A raw food-reference name is a possible lead, not a verified synonym.
+    # Admit only a single colour qualifier; arbitrary middle terms might
+    # describe processing (e.g. frozen) and must not inherit a fresh-food use.
     if actual == f"{published}, raw":
         return "raw_name_variant_unreviewed"
+    prefix, suffix = f"{published}, ", ", raw"
+    if actual.startswith(prefix) and actual.endswith(suffix):
+        qualifier = actual[len(prefix):-len(suffix)]
+        if qualifier in _RAW_COLOUR_QUALIFIERS:
+            return "raw_name_variant_unreviewed"
     return None
 
 
@@ -70,7 +77,8 @@ def find_supplier_application_leads(
     """Compare one actual scenario with published uses, never approve a pack.
 
     ``validated_catalogue`` must come from ``load_candidate_catalogue``. A
-    reference food name ending in `, raw` is exposed as unreviewed identity;
+    reference food name ending in `, raw` is exposed as unreviewed identity,
+    including one intervening colour qualifier;
     no other name parsing, fuzzy search, or family-level extrapolation occurs.
     """
     sources = {source["source_id"]: source for source in validated_catalogue["sources"]}

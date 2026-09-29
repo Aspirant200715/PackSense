@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "catalogue_id": "packsense-public-candidates-2026-09-27",
+  "catalogue_id": "packsense-public-candidates-2026-09-28",
   "sources": [
     {
       "source_id": "PKGLAB-THICK-CLEAR-MATTE-V3.4",
@@ -39,7 +39,7 @@
       "publisher": "Sumitomo Bakelite",
       "title": "P-Plus standard bag list",
       "url": "https://www.sumibe.co.jp/product/p-plus/business/standard/index.html",
-      "accessed_on": "2026-09-27",
+      "accessed_on": "2026-09-28",
       "rights_review_status": "pending"
     }
   ],
@@ -132,6 +132,25 @@
       "source_note": "No public SKU-level O2/CO2 transfer, film construction, seal strength or food-contact certificate on this list."
     },
     {
+      "candidate_id": "SUMITOMO-PPLUS-EY8K3",
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "source_locator": "heat-seal table, EY8K3 row",
+      "product_code": "EY8K3",
+      "record_kind": "produce_bag",
+      "pack_format": "heat-seal bag",
+      "layers": [],
+      "reported_total_gauge": {"value": 0.025, "unit": "mm", "basis": "size_expression_interpretation"},
+      "barrier_observations": [],
+      "seal_observation": null,
+      "food_contact_claim": null,
+      "claimed_food_scope": ["edamame"],
+      "service_temperature_c": null,
+      "applications": [
+        {"commodity": "edamame", "quantity": 500, "quantity_unit": "g", "storage_temperature_min_c": 1, "storage_temperature_max_c": 10, "excursion_max_c": 25, "excursion_max_hours": 8, "bag_width_mm": 200, "bag_length_mm": 230, "use_note": "Manufacturer-listed recommended environment."}
+      ],
+      "source_note": "The source lists this 500 g SKU separately from EY7K7. No public SKU-level gas transfer, complete construction, or food-contact certificate is supplied."
+    },
+    {
       "candidate_id": "SUMITOMO-PPLUS-AY8K7",
       "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
       "source_locator": "heat-seal table, AY8K7 row",
@@ -168,6 +187,44 @@
         {"commodity": "broccoli", "quantity": 400, "quantity_unit": "g", "storage_temperature_min_c": 1, "storage_temperature_max_c": 10, "excursion_max_c": 25, "excursion_max_hours": 8, "bag_width_mm": 240, "bag_length_mm": 290, "use_note": "Manufacturer-listed recommended environment."}
       ],
       "source_note": "The same SKU also appears in the catalogue for apples; this record captures only the explicit 400 g broccoli use condition."
+    },
+    {
+      "candidate_id": "SUMITOMO-PPLUS-VY7K4",
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "source_locator": "heat-seal table, broccoli U-shaped bag VY7K4 row",
+      "product_code": "VY7K4",
+      "record_kind": "produce_bag",
+      "pack_format": "heat-seal U-shaped bag",
+      "layers": [],
+      "reported_total_gauge": {"value": 0.025, "unit": "mm", "basis": "size_expression_interpretation"},
+      "barrier_observations": [],
+      "seal_observation": null,
+      "food_contact_claim": null,
+      "claimed_food_scope": ["broccoli"],
+      "service_temperature_c": null,
+      "applications": [
+        {"commodity": "broccoli", "quantity": 500, "quantity_unit": "g", "storage_temperature_min_c": 1, "storage_temperature_max_c": 10, "excursion_max_c": 25, "excursion_max_hours": 8, "bag_width_mm": 240, "bag_length_mm": 315, "use_note": "Manufacturer-listed recommended environment."}
+      ],
+      "source_note": "The source specifies a U-shaped 500 g broccoli bag. No public SKU-level O2/CO2 transfer, complete construction, or food-contact certificate is supplied."
+    },
+    {
+      "candidate_id": "SUMITOMO-PPLUS-HY8K7",
+      "source_id": "SUMITOMO-PPLUS-STANDARD-BAGS-WEB",
+      "source_locator": "heat-seal table, spinach HY8K7 row",
+      "product_code": "HY8K7",
+      "record_kind": "produce_bag",
+      "pack_format": "heat-seal bag",
+      "layers": [],
+      "reported_total_gauge": {"value": 0.02, "unit": "mm", "basis": "size_expression_interpretation"},
+      "barrier_observations": [],
+      "seal_observation": null,
+      "food_contact_claim": null,
+      "claimed_food_scope": ["spinach"],
+      "service_temperature_c": null,
+      "applications": [
+        {"commodity": "spinach", "quantity": 200, "quantity_unit": "g", "storage_temperature_min_c": 1, "storage_temperature_max_c": 10, "excursion_max_c": 25, "excursion_max_hours": 8, "bag_width_mm": 210, "bag_length_mm": 390, "use_note": "Manufacturer-listed recommended environment."}
+      ],
+      "source_note": "The source lists a 200 g spinach heat-seal bag. No public SKU-level O2/CO2 transfer, complete construction, or food-contact certificate is supplied."
     },
     {
       "candidate_id": "SUMITOMO-PPLUS-PY805",

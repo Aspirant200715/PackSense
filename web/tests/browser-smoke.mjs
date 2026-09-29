@@ -137,7 +137,7 @@ try {
     assert.equal(await evaluate("document.querySelector('#browse-real-applications').hidden"), false, "source-listed catalogue loads");
     await evaluate("document.querySelector('#browse-real-applications').click()");
     assert.equal(await evaluate("document.querySelector('#overview-title').textContent"), "Explore package uses");
-    assert.equal(await evaluate("document.querySelectorAll('.published-application-card').length"), 6, "six real standalone source uses are shown");
+    assert.equal(await evaluate("document.querySelectorAll('.published-application-card').length"), 9, "nine real standalone source uses are shown");
     assert.match(await evaluate("document.querySelector('#published-applications').textContent"), /not PackSense predictions or approved packaging/);
     assert.equal(await evaluate("document.querySelector('#review-count').textContent"), "1", "catalogue creates one real review update");
     await evaluate("document.querySelector('#review-toggle').click()");
@@ -149,8 +149,9 @@ try {
     await evaluate("document.querySelector('#review-items [data-review-action=published]').click()");
     assert.equal(await evaluate("document.querySelector('#review-panel').hidden"), true, "review action closes the panel");
     await evaluate("(() => { const input = document.querySelector('#published-search'); input.value = 'broccoli'; input.dispatchEvent(new Event('input', {bubbles: true})); })()");
-    assert.equal(await evaluate("document.querySelectorAll('.published-application-card').length"), 1, "source uses are searchable by food");
-    assert.match(await evaluate("document.querySelector('.published-application-card').textContent"), /VY7K9/);
+    assert.equal(await evaluate("document.querySelectorAll('.published-application-card').length"), 2, "source uses are searchable by food");
+    assert.match(await evaluate("document.querySelector('#published-applications-list').textContent"), /VY7K9/);
+    assert.match(await evaluate("document.querySelector('#published-applications-list').textContent"), /VY7K4/);
     await evaluate("document.querySelector('.published-application-card [data-compare-index]').click()");
     assert.equal(await evaluate("document.querySelector('#published-comparison').hidden"), false, "comparison explains the second selection");
     await evaluate("(() => { const input = document.querySelector('#published-search'); input.value = ''; input.dispatchEvent(new Event('input', {bubbles: true})); })()");
@@ -298,8 +299,8 @@ try {
   assert.equal(await evaluate("document.querySelector('#studio-actual-finish').hidden"), false);
   assert.match(await evaluate("document.querySelector('#studio-output').textContent"), /not ready/);
   await evaluate("document.querySelector('#studio-actual-finish [data-go=\"decisions\"]').click()");
-  assert.equal(await evaluate("document.querySelector('#record-inspector .published-match-callout strong')?.textContent.trim()"), "TEST_ONLY_CODE TEST_ONLY_BAG");
-  assert.match(await evaluate("document.querySelector('#record-inspector .published-match-callout p')?.textContent"), /not approved these packages or made a model prediction/);
+  assert.equal(await evaluate("document.querySelector('#record-inspector .source-option-card[data-source-option-state=exact] .supplier-lead-heading strong')?.textContent.trim()"), "TEST_ONLY_CODE");
+  assert.match(await evaluate("document.querySelector('#record-inspector .package-pathway')?.textContent"), /not a material prediction, approved package, or suitability label/);
   assert.equal(await evaluate("document.querySelector('#record-inspector .supplier-lead-heading strong')?.textContent"), "TEST_ONLY_CODE");
   assert.equal(await evaluate("document.querySelector('#record-inspector .supplier-source a')?.getAttribute('href')"), "https://example.org/product");
   assert.match(await evaluate("document.querySelector('#record-inspector .supplier-boundary')?.textContent"), /not a material prediction/);

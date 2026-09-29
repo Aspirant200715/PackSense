@@ -251,6 +251,23 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _reject_unread_post(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
+        """Drain a small rejected POST so closing HTTP/1.0 does not reset it."""
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if 0 < length <= MAX_SCENARIO_BYTES + 1:
+            previous_timeout = self.connection.gettimeout()
+            self.connection.settimeout(0.25)
+            try:
+                self.rfile.read(length)
+            except (OSError, TimeoutError):
+                pass
+            finally:
+                self.connection.settimeout(previous_timeout)
+        self._json(status, payload)
+
     def _scenario_template(self) -> None:
         body = scenario_template_csv()
         self.send_response(HTTPStatus.OK)
@@ -312,20 +329,20 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         if not self._same_host() or not self._same_origin():
-            self._json(HTTPStatus.FORBIDDEN, {"error": "cross-origin requests are not allowed"})
+            self._reject_unread_post(HTTPStatus.FORBIDDEN, {"error": "cross-origin requests are not allowed"})
             return
         path = urlsplit(self.path).path
         if path not in ("/api/run", "/api/evaluate"):
-            self._json(HTTPStatus.NOT_FOUND, {"error": "unknown endpoint"})
+            self._reject_unread_post(HTTPStatus.NOT_FOUND, {"error": "unknown endpoint"})
             return
         if path == "/api/evaluate":
             self._evaluate_scenario()
             return
         if self.server.sources.mode != "scenario_batch":
-            self._json(HTTPStatus.CONFLICT, {"error": "scenario sources are not configured"})
+            self._reject_unread_post(HTTPStatus.CONFLICT, {"error": "scenario sources are not configured"})
             return
         if self.headers.get("Content-Length", "0") != "0":
-            self._json(HTTPStatus.BAD_REQUEST, {"error": "this endpoint accepts no browser-supplied data"})
+            self._reject_unread_post(HTTPStatus.BAD_REQUEST, {"error": "this endpoint accepts no browser-supplied data"})
             return
         if not self.server.run_lock.acquire(blocking=False):
             self._json(HTTPStatus.CONFLICT, {"error": "a backend run is already in progress"})
@@ -339,7 +356,7 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
 
     def _evaluate_scenario(self) -> None:
         if self.server.sources.food_master is None or self.server.sources.material_master is None:
-            self._json(HTTPStatus.CONFLICT, {"error": "food and material references are not configured"})
+            self._reject_unread_post(HTTPStatus.CONFLICT, {"error": "food and material references are not configured"})
             return
         try:
             length = int(self.headers.get("Content-Length", ""))
@@ -347,7 +364,7 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
             length = 0
         if (self.headers.get("Content-Type", "").split(";", 1)[0].lower() != "application/json"
                 or length <= 0 or length > MAX_SCENARIO_BYTES):
-            self._json(HTTPStatus.BAD_REQUEST, {"error": "submit one JSON scenario of at most 8 KB"})
+            self._reject_unread_post(HTTPStatus.BAD_REQUEST, {"error": "submit one JSON scenario of at most 8 KB"})
             return
         try:
             payload = json.loads(

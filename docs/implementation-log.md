@@ -1136,6 +1136,41 @@ PackSense must continue to withhold a real package or shelf-life claim.
   separate. The model is still not deployed; recommendations require the
   outstanding reviewed package evidence and outcome labels.
 
+### 2026-09-28 — show source-backed package options in two evidence tiers
+
+- On `feat/source-backed-package-options`, added three independently listed
+  Sumitomo P-Plus uses from the manufacturer's standard-bag table: EY8K3
+  (500 g edamame), VY7K4 (500 g broccoli), and HY8K7 (200 g spinach). The
+  catalogue now contains 13 candidate records and nine standalone produce-bag
+  applications. Source: <https://www.sumibe.co.jp/product/p-plus/business/standard/index.html>.
+  Catalogue SHA-256 after this change:
+  `f9f6b8b34ecf0bb4526464f9daede7524ac3306c4c0e88632c7122265005a775`.
+  Source rights are still pending. No gas-transfer, seal, food-contact,
+  suitability, or training-label values were inferred.
+- Results now separates manufacturer-listed research options from the existing
+  reviewed complete-structure engineering shortlist. Listed-condition matches,
+  qualified raw-food name variants needing identity review, and differing uses
+  are visibly distinct. Each displayed source option links to its manufacturer
+  row and retains approval blockers. This UI grouping does not change the
+  backend recommendation status, release gate, or model availability.
+- A bounded drain for early-rejected local POST bodies prevents intermittent
+  Windows connection resets while returning the intended 403/409/400 status.
+  It does not expand the 8 KB scenario-body limit or accept browser source files.
+- Local checks: `python -m pytest tests -q` passed 246 tests, `npm test`
+  passed 28 tests, the catalogue audit reported zero approved structures and
+  zero suitability training labels, and browser smoke passed at 390 px for the
+  catalogue-only view. A live test-only submission using a real asparagus
+  reference and both real masters passed at 390 and 1440 px; AY8K7 appeared
+  as an identity-unverified research option while the engineering tier remained
+  **Not ready to shortlist**. No test-only operating conditions were stored
+  in either reference workbook. The 10-test local HTTP module passed three
+  consecutive runs after the response fix. CI and PR review remain pending.
+- Remaining work for a released recommendation is unchanged: verify source
+  rights and exact food identity, obtain a reviewed complete construction,
+  appropriate food-contact and service evidence, whole-package transfer and
+  seal/handling evidence, and food-specific performance evidence. This slice
+  does not train a material-prediction model.
+
 ### 2026-09-28 — give the introduction a clearer visual entry point
 
 - On `feat/landing-intro-refresh` from `main`, redesigned only the welcome

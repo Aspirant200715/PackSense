@@ -419,8 +419,12 @@ class BatchRecommendationTests(unittest.TestCase):
             pilot_candidate_id="SUMITOMO-PPLUS-VY7K9",
         )
         self.assertEqual("not_ready", report["rows"][0]["status"])
-        self.assertEqual(1, report["supplier_application_lead_count"])
-        lead = report["rows"][0]["supplier_application_lookup"]["leads"][0]
+        self.assertEqual(2, report["supplier_application_lead_count"])
+        leads = report["rows"][0]["supplier_application_lookup"]["leads"]
+        self.assertEqual({"SUMITOMO-PPLUS-VY7K9", "SUMITOMO-PPLUS-VY7K4"},
+                         {lead["candidate_id"] for lead in leads})
+        lead = next(lead for lead in leads
+                    if lead["candidate_id"] == "SUMITOMO-PPLUS-VY7K9")
         self.assertEqual("SUMITOMO-PPLUS-VY7K9", lead["candidate_id"])
         self.assertIn("food_identity_requires_review", lead["reason_codes"])
         pilot = report["rows"][0]["pilot_candidate_audit"]

@@ -30,10 +30,10 @@ class CandidateCatalogueTests(unittest.TestCase):
         self.assertEqual(64, len(digest))
         self.assertEqual(5, len(data["sources"]))
         report = audit_candidate_catalogue(SOURCE)
-        self.assertEqual(10, report["candidate_count"])
+        self.assertEqual(13, report["candidate_count"])
         self.assertEqual(
             {"finished_pouch": 1, "laminate_film": 2,
-             "produce_bag": 6, "tray_component": 1},
+             "produce_bag": 9, "tray_component": 1},
             report["candidate_kind_counts"],
         )
         self.assertEqual(3, report["coverage"]["declared_layer_stacks"])
@@ -41,8 +41,8 @@ class CandidateCatalogueTests(unittest.TestCase):
         self.assertEqual(4, report["coverage"]["with_otr"])
         self.assertEqual(4, report["coverage"]["with_wvtr"])
         self.assertEqual(0, report["coverage"]["with_co2tr"])
-        self.assertEqual(6, report["coverage"]["with_exact_food_quantity_temperature_use"])
-        self.assertEqual(6, report["coverage"]["gauge_interpretations_needing_confirmation"])
+        self.assertEqual(9, report["coverage"]["with_exact_food_quantity_temperature_use"])
+        self.assertEqual(9, report["coverage"]["gauge_interpretations_needing_confirmation"])
         self.assertEqual(0, report["approved_package_structures"])
         self.assertEqual(0, report["suitability_training_labels"])
         self.assertFalse(report["recommendation_ready"])
