@@ -1,14 +1,16 @@
-"""Local-only web app for the existing, evidence-gated PackSense batch flow.
+"""Web app for the existing, evidence-gated PackSense batch flow.
 
 An operator configures reference files at startup. The browser may submit one
 bounded scenario's operating conditions, but never source paths or reference
-workbooks. No trained material or shelf-life prediction is created here.
+workbooks. Only the read-only published catalogue may bind beyond localhost.
+No trained material or shelf-life prediction is created here.
 """
 
 import argparse
 import csv
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -199,9 +201,23 @@ def run_interactive_scenario(sources: AppSources, food_audit: Any, payload: Any)
 class PackSenseHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, port: int, sources: AppSources):
-        super().__init__(("127.0.0.1", port), PackSenseHandler)
+    def __init__(
+        self, port: int, sources: AppSources, *, bind_host: str = "127.0.0.1",
+        public_hostnames: tuple[str, ...] = (),
+    ):
+        if bind_host not in ("127.0.0.1", "0.0.0.0"):
+            raise ValueError("bind host must be 127.0.0.1 or 0.0.0.0")
+        hostnames = tuple(host.strip().lower() for host in public_hostnames if host.strip())
+        if any("/" in host or ":" in host or " " in host for host in hostnames):
+            raise ValueError("public hostnames must not include a scheme, port, or path")
+        if bind_host == "0.0.0.0" and (sources.mode != "published_catalogue" or not hostnames):
+            raise ValueError("public binding requires a catalogue-only source and public hostname")
+        # Reject an invalid catalogue before a hosting platform marks the service healthy.
+        public_payload = published_applications_payload(sources.public_candidates) if bind_host == "0.0.0.0" else None
+        super().__init__((bind_host, port), PackSenseHandler)
         self.sources = sources
+        self.public_hostnames = hostnames
+        self.public_payload = public_payload
         self.run_lock = threading.Lock()
         self.food_lock = threading.Lock()
         self.food_cache: tuple[tuple[int, int], Any] | None = None
@@ -227,9 +243,10 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(WEB_ROOT), **kwargs)
 
     def _same_host(self) -> bool:
-        return self.headers.get("Host") in {
+        return self.headers.get("Host", "").lower() in {
             f"127.0.0.1:{self.server.server_port}",
             f"localhost:{self.server.server_port}",
+            *self.server.public_hostnames,
         }
 
     def _same_origin(self) -> bool:
@@ -239,6 +256,7 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
         return origin is None or origin in {
             f"http://127.0.0.1:{self.server.server_port}",
             f"http://localhost:{self.server.server_port}",
+            *(f"https://{host}" for host in self.server.public_hostnames),
         }
 
     def _json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
@@ -280,6 +298,9 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:
+        if urlsplit(self.path).path == "/healthz":
+            self._json(HTTPStatus.OK, {"status": "ok"})
+            return
         if not self._same_host():
             self._json(HTTPStatus.FORBIDDEN, {"error": "invalid host"})
             return
@@ -300,7 +321,7 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
                 self._json(HTTPStatus.NOT_FOUND, {"error": "no public catalogue is configured"})
                 return
             try:
-                self._json(HTTPStatus.OK, published_applications_payload(catalogue))
+                self._json(HTTPStatus.OK, self.server.public_payload or published_applications_payload(catalogue))
             except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
                 self._json(HTTPStatus.UNPROCESSABLE_ENTITY, {"error": str(exc)[:800]})
         elif path == "/api/foods":
@@ -390,8 +411,8 @@ class PackSenseHandler(SimpleHTTPRequestHandler):
 
 
 def _arguments() -> tuple[int, AppSources]:
-    parser = argparse.ArgumentParser(description="Serve the PackSense MVP on localhost")
-    parser.add_argument("--port", type=int, default=4173)
+    parser = argparse.ArgumentParser(description="Serve the PackSense MVP")
+    parser.add_argument("--port", type=int, default=os.environ.get("PORT", "4173"))
     parser.add_argument("--batch-report", type=Path)
     parser.add_argument("--scenarios", type=Path)
     parser.add_argument("--food-master", type=Path)
@@ -446,8 +467,13 @@ def _arguments() -> tuple[int, AppSources]:
 
 def main() -> None:
     port, sources = _arguments()
-    server = PackSenseHTTPServer(port, sources)
-    print(f"PackSense at http://127.0.0.1:{server.server_port}/ ({sources.mode})", flush=True)
+    public_hostnames = tuple(filter(None, (
+        os.environ.get("RENDER_EXTERNAL_HOSTNAME", ""),
+        *os.environ.get("PACKSENSE_PUBLIC_HOSTNAMES", "").split(","),
+    )))
+    bind_host = os.environ.get("PACKSENSE_BIND_HOST", "127.0.0.1")
+    server = PackSenseHTTPServer(port, sources, bind_host=bind_host, public_hostnames=public_hostnames)
+    print(f"PackSense at http://{bind_host}:{server.server_port}/ ({sources.mode})", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

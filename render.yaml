@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: packsense-catalogue
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements-web.txt
+    startCommand: python -m packsense.web_server --public-candidates data/public_catalogue_candidates.v1.json
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: PACKSENSE_BIND_HOST
+        value: 0.0.0.0
