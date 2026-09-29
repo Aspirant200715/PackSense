@@ -265,9 +265,8 @@ try {
   assert.equal(await evaluate("document.querySelector('#view-pipeline').hidden"), false);
   assert.equal(await evaluate("document.querySelector('#guide-stage-caption').textContent"), "Step 5 of 8");
   await evaluate("document.querySelector('[data-nav=\"overview\"]').click()");
-  const previousTheme = await evaluate("document.documentElement.dataset.theme");
-  await evaluate("document.querySelector('#theme-toggle').click()");
-  assert.notEqual(await evaluate("document.documentElement.dataset.theme"), previousTheme);
+  assert.equal(await evaluate("getComputedStyle(document.documentElement).colorScheme"), "light");
+  assert.equal(await evaluate("document.querySelector('#theme-toggle')"), null);
   // TEST_ONLY UI fixture exercises filters and disclosure panels; it is never training data.
   const reportText = JSON.stringify(testOnlyReport());
   await evaluate("(() => { const input = document.querySelector('#report-input'); const transfer = new DataTransfer(); transfer.items.add(new File([" + JSON.stringify(reportText) + "], 'TEST_ONLY_frontend.json', {type: 'application/json'})); input.files = transfer.files; input.dispatchEvent(new Event('change', {bubbles: true})); })()");

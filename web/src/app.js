@@ -97,16 +97,6 @@ function notify(message, error = false) {
   notify.timeout = setTimeout(() => { toast.hidden = true; }, 5200);
 }
 
-function setTheme(theme) {
-  const selected = theme === "light" ? "light" : "dark";
-  document.documentElement.dataset.theme = selected;
-  $("#theme-toggle").setAttribute("aria-pressed", String(selected === "dark"));
-  $("#theme-toggle").setAttribute("aria-label", `Switch to ${selected === "dark" ? "light" : "dark"} mode`);
-  $("#theme-toggle-label").textContent = selected === "dark" ? "Light mode" : "Dark mode";
-  $("meta[name='theme-color']").content = selected === "dark" ? "#0a1020" : "#edf1f7";
-  try { localStorage.setItem("packsense-theme", selected); } catch { /* Private mode may block storage. */ }
-}
-
 function updatePlaybackControls() {
   const playing = playbackTimer !== null;
   const actualTrace = state.pipelineMode === "actual";
@@ -824,9 +814,7 @@ document.addEventListener("click", (event) => {
     state.page = 1;
     renderDecisions();
   }
-  else if (target.matches("#theme-toggle")) {
-    setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
-  } else if (target.matches("[data-pipeline-mode]")) {
+  else if (target.matches("[data-pipeline-mode]")) {
     stopPlayback();
     state.pipelineMode = target.dataset.pipelineMode;
     state.pipelineStep = 0;
@@ -918,9 +906,6 @@ document.addEventListener("drop", (event) => {
   }
 });
 
-let storedTheme = "dark";
-try { storedTheme = localStorage.getItem("packsense-theme") || "dark"; } catch { /* Private mode may block storage. */ }
-setTheme(storedTheme);
 render();
 renderBackendState();
 connectBackend();

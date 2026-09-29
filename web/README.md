@@ -24,8 +24,7 @@ packaging answer. An actual trace only displays values in a backend report.
 The top bar is the single connection-status display; it shows Connected,
 Offline, Running, or a report-loading error as appropriate.
 
-The app defaults to dark mode and has a light-mode toggle. Only the theme is
-stored in browser local storage. No demonstration rows or predictions are
+The app uses a light color scheme throughout. No demonstration rows or predictions are
 bundled. DM Sans and IBM Plex Mono are fetched from Google Fonts when online;
 system fonts are used offline. Report contents are not sent to the font host.
 
