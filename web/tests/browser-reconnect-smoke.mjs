@@ -60,10 +60,11 @@ try {
     })();
   ` });
   await command("Page.navigate", { url: appUrl });
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    if (await evaluate("window.__statusAttempts?.() === 1")) break;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (await evaluate("window.__statusAttempts?.() >= 1")) break;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
+  assert.ok(await evaluate("window.__statusAttempts?.() >= 1"), "the page did not request backend status");
   assert.equal(await evaluate("document.querySelector('#backend-indicator')?.dataset.state"), "checking");
   assert.match(await evaluate("document.querySelector('#hero-tour-hint')?.textContent"), /connecting to the evaluation service/i);
   let connected = false;
