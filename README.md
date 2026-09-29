@@ -2,7 +2,7 @@
 
 **Evidence-aware decision support for food packaging.** PackSense connects a food and its real storage and transport conditions to sourced reference data, engineering checks, and an auditable result. It reports missing evidence instead of inventing a suitable package or shelf-life prediction.
 
-[Live app](https://packsense-web.vercel.app) · [API status](https://packsense-evaluation.onrender.com/api/status) · [Deployment guide](docs/deployment.md) · [Workspace guide](web/README.md)
+[Live app](https://packsense-web.vercel.app) · [Product film](video/README.md) · [API status](https://packsense-evaluation.onrender.com/api/status) · [Deployment guide](docs/deployment.md) · [Workspace guide](web/README.md)
 
 > **Current release: evidence audit.** The hosted form evaluates one food scenario and can display source-backed catalogue leads and evidence gaps. It does **not** approve a package, deploy a trained material model, or predict shelf life. A valid submission may return `not_ready` until reviewed complete-package, transfer, and trial evidence is available.
 
@@ -31,6 +31,10 @@ python -m packsense.demo_report "path/to/food-reference.xlsx" "path/to/material-
 ```
 
 The command checks the [demo manifest](data/demo_scenarios.v1.json) against the source hashes before publishing [the decision report](web/demo/report.json) and [its citation context](web/demo/evidence.json). It will fail when the reviewed inputs change.
+
+## Watch the product film
+
+The landing page's **Watch product film** button opens a 61-second narrated walkthrough with live browser footage of food selection, a submitted evaluation, its **Needs evidence** result, and the source trace. The edit also animates the food → protection → package → evidence path. The inputs are illustrative; the result comes from the deployed audit backend and does not approve a package. The [Remotion project](video/README.md) contains the editable scenes, narration, audio, and capture script. The site serves a smaller captioned copy from `web/media/`.
 
 ## Hosted architecture
 

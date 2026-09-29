@@ -18,3 +18,6 @@ dist/
 *.pkl
 .vercel
 .env*
+video/node_modules/
+video/out/
+video/public/voice-test.mp3

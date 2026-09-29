@@ -1,0 +1,29 @@
+{
+  "name": "packsense-product-film",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Editable Remotion product demo for PackSense",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "compositions": "remotion compositions src/index.ts",
+    "render": "remotion render src/index.ts PackSenseProductDemo out/packsense-product-demo-1080p.mp4 --codec h264 --crf 19 --concurrency 4",
+    "still": "remotion still src/index.ts PackSenseProductDemo out/poster.png --frame 160 --scale 0.666667"
+  },
+  "keywords": [],
+  "type": "module",
+  "dependencies": {
+    "@remotion/cli": "4.0.530",
+    "@remotion/media": "4.0.530",
+    "@remotion/transitions": "4.0.530",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.530"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.0",
+    "@types/react-dom": "19.2.0",
+    "playwright-core": "1.55.0",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3"
+  }
+}

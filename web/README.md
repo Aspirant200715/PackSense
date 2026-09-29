@@ -31,6 +31,11 @@ predictions or package approvals. A user submission or imported report replaces
 the demo. DM Sans and IBM Plex Mono are fetched from Google Fonts when online;
 system fonts are used offline. Report contents are not sent to the font host.
 
+The introduction also opens a narrated product film in a native video player.
+It loads the MP4 only after the user opens the dialog, provides English captions,
+and pauses on close. The editable Remotion source and live capture script are in
+[`../video/`](../video/README.md).
+
 The current page, form draft, selected food and latest small user report are
 saved in browser local storage and restored after refresh. A restored food is
 checked against the active food master before another submission. This is

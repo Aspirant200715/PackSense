@@ -10,4 +10,5 @@ for (const name of ["index.html", "styles.css"]) {
 }
 await cp(new URL("src/", root), new URL("src/", output), { recursive: true });
 await cp(new URL("demo/", root), new URL("demo/", output), { recursive: true });
+await cp(new URL("media/", root), new URL("media/", output), { recursive: true });
 console.log(`Built ${fileURLToPath(output)}`);

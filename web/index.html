@@ -30,7 +30,7 @@
             <div class="hero-eyebrow"><span class="eyebrow-line"></span> FOOD PACKAGING / DECISION WORKSPACE</div>
             <h1>Food first.<br /><em>Evidence always.</em></h1>
             <p>Start with the food and the journey it will take. PackSense turns those facts into protection needs, checks package evidence, and makes the gaps visible before a decision.</p>
-            <div class="hero-actions"><button type="button" class="button button-light" id="start-evaluation" data-enter-evaluate hidden>Evaluate a food <span aria-hidden="true">→</span></button><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">↗</span></button><button type="button" class="welcome-source-link" id="browse-real-applications" data-enter-published hidden>View published package uses <span aria-hidden="true">↗</span></button></div>
+            <div class="hero-actions"><button type="button" class="button button-light" id="start-evaluation" data-enter-evaluate hidden>Evaluate a food <span aria-hidden="true">→</span></button><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">↗</span></button><button type="button" class="button button-video" data-watch-demo aria-haspopup="dialog">Watch product film <span aria-hidden="true">▶</span></button><button type="button" class="welcome-source-link" id="browse-real-applications" data-enter-published hidden>View published package uses <span aria-hidden="true">↗</span></button></div>
             <p class="hero-action-caption" id="hero-tour-hint">Start with a short, interactive tour of the decision path.</p>
             <div class="intro-footnote"><span></span> Evidence-gated screening is available; a learned material predictor is not deployed.</div>
             <div class="hero-rail" aria-label="The PackSense method"><span><b>01</b> Food &amp; journey</span><span><b>02</b> Protection checks</span><span><b>03</b> Evidence trace</span></div>
@@ -266,8 +266,14 @@
         <footer class="footer"><span>PackSense <span class="footer-divider">/</span> Food packaging decision support</span><span>Evidence before prediction.</span></footer>
       </div>
     </div>
+    <dialog class="film-dialog" id="product-film-dialog" aria-labelledby="product-film-title">
+      <div class="film-dialog-heading"><div><span class="section-kicker">THE PACKSENSE METHOD / 61 SECONDS</span><h2 id="product-film-title">Food first. Evidence always.</h2></div><button type="button" class="film-dialog-close" id="product-film-close" aria-label="Close product film">✕</button></div>
+      <video id="product-film" controls playsinline preload="none" poster="/media/packsense-product-demo-poster.jpg" aria-label="PackSense product demo with narration and captions"><source src="/media/packsense-product-demo.mp4" type="video/mp4" /><track default kind="captions" srclang="en" label="English" src="/media/packsense-product-demo.vtt" />Your browser does not support this video.</video>
+      <p>Captured from the live workspace. Demo journey values are illustrative; the shown result is <strong>Needs evidence</strong>.</p>
+    </dialog>
     <input id="report-input" type="file" accept=".json,application/json" hidden />
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
     <script type="module" src="./src/app.js"></script>
+    <script type="module" src="./src/demo-video.js"></script>
   </body>
 </html>
