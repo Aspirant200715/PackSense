@@ -29,6 +29,8 @@ stored in browser local storage. No demonstration rows or predictions are
 bundled. DM Sans and IBM Plex Mono are fetched from Google Fonts when online;
 system fonts are used offline. Report contents are not sent to the font host.
 
+For a hosted read-only catalogue, see the [deployment guide](../docs/deployment.md).
+
 ## Run locally
 
 From the repository root, start the connected local app:

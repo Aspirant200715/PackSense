@@ -27,8 +27,8 @@ from tests.test_interactive import FOOD_HASH, food_audit, submission
 
 
 @contextmanager
-def running(sources):
-    server = PackSenseHTTPServer(0, sources)
+def running(sources, **server_options):
+    server = PackSenseHTTPServer(0, sources, **server_options)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -46,6 +46,41 @@ def request_json(url, *, method="GET", headers=None, body=None):
 
 
 class WebServerTests(unittest.TestCase):
+    def test_render_port_environment_is_used_by_default(self):
+        with patch.dict(os.environ, {"PORT": "4179"}), patch("sys.argv", ["packsense.web_server"]):
+            port, _ = _arguments()
+        self.assertEqual(4179, port)
+
+    def test_public_catalogue_host_and_health_check(self):
+        catalogue = Path(__file__).resolve().parents[1] / "data" / "public_catalogue_candidates.v1.json"
+        sources = AppSources(public_candidates=catalogue)
+        with running(sources, public_hostnames=("packsense.example",)) as base:
+            _, health = request_json(f"{base}/healthz", headers={"Host": "other.example"})
+            self.assertEqual({"status": "ok"}, health)
+            _, status = request_json(f"{base}/api/status", headers={"Host": "packsense.example"})
+            self.assertEqual("published_catalogue", status["mode"])
+            self.assertFalse(status["can_evaluate"])
+            _, catalogue_payload = request_json(
+                f"{base}/api/published-applications", headers={"Host": "packsense.example"},
+            )
+            self.assertGreater(len(catalogue_payload["applications"]), 0)
+            with self.assertRaises(HTTPError) as error:
+                request_json(f"{base}/api/status", headers={"Host": "other.example"})
+            self.assertEqual(403, error.exception.code)
+            with self.assertRaises(HTTPError) as error:
+                request_json(f"{base}/api/evaluate", method="POST",
+                             headers={"Host": "packsense.example", "Origin": "https://packsense.example",
+                                      "Content-Type": "application/json"}, body=b"{}")
+            self.assertEqual(409, error.exception.code)
+
+    def test_public_binding_requires_catalogue_and_host(self):
+        catalogue = Path(__file__).resolve().parents[1] / "data" / "public_catalogue_candidates.v1.json"
+        with self.assertRaisesRegex(ValueError, "catalogue-only"):
+            PackSenseHTTPServer(0, AppSources(), bind_host="0.0.0.0",
+                                public_hostnames=("packsense.example",))
+        with self.assertRaisesRegex(ValueError, "public hostname"):
+            PackSenseHTTPServer(0, AppSources(public_candidates=catalogue), bind_host="0.0.0.0")
+
     def test_template_download_uses_contract_headers_and_no_fake_rows(self):
         expected = (*SCENARIO_REQUIRED_COLUMNS, *SCENARIO_RESPIRATION_COLUMNS,
                     *SCENARIO_REFERENCE_COLUMNS)

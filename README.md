@@ -79,6 +79,7 @@ the localhost backend, explains the eight-stop workflow, and displays
 source-derived food properties, status, exposure segments, candidate details,
 and evidence trace. A configured batch can run through the existing Python
 pipeline; the browser never substitutes a model result.
+For a read-only hosted catalogue, see the [Render deployment guide](docs/deployment.md).
 The browser form submits only one scenario's conditions and a selected
 reference ID; missing source properties block submission, and an evidence-
 gated result is not a trained material prediction.
