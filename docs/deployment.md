@@ -17,8 +17,8 @@ not approved finished packages or suitability labels.
   the existing evidence-gated evaluation. It also serves the frontend
   directly, so Render alone is a functional first deployment.
 - **Vercel** at <https://packsense-web.vercel.app> serves the static `web/`
-  frontend. `web/vercel.ts` proxies
-  `/api/` to Render using `PACKSENSE_API_ORIGIN`, keeping browser requests on
+  frontend. `web/vercel.json` proxies `/api/` to the fixed Render service URL,
+  keeping browser requests on
   the frontend origin. Vercel never receives the database password or raw
   workbooks.
 
@@ -93,15 +93,12 @@ plan and operational monitoring before relying on its availability.
 
 The Vercel project `packsense-web` is linked to the same private fork. Its root
 directory is `web/`, Framework Preset **Other**, build command `npm run build`,
-and output directory `dist`. `PACKSENSE_API_ORIGIN` is
-`https://packsense-evaluation.onrender.com` for Production, Preview, and
-Development. The browser uses
+and output directory `dist`. The browser uses
 same-origin `/api/` routes, so it does not need a Supabase key or CORS setup.
 
 To publish after a fork sync, use the Git-linked build or run `vercel deploy
---prod` from the repository root with `PACKSENSE_API_ORIGIN` set in the local
-shell. The project already specifies `web/` as its root. Render also watches
-the fork's `main` branch for changes.
+--prod` from the repository root. The project already specifies `web/` as its
+root. Render also watches the fork's `main` branch for changes.
 
 ## Release boundary
 
