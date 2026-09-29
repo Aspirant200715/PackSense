@@ -89,7 +89,8 @@ identifies evidence gaps and does not claim a predicted shelf life. The
 Blueprint uses Render's free plan for an initial trial. A free service can
 sleep after inactivity and take about a minute to restart; during that time,
 Vercel may receive a temporary gateway error. The frontend keeps the
-evaluation in a connecting state and retries `/api/status` automatically.
+evaluation in a connecting state and retries `/api/status` for about two
+minutes before marking the backend unavailable.
 Use a suitable paid plan and operational monitoring before relying on its
 availability.
 

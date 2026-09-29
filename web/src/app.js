@@ -8,7 +8,7 @@ import { groupSourceOptions } from "./options.js";
 const VIEWS = new Set(["overview", "evaluate", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
-const STATUS_RETRY_LIMIT = 6;
+const STATUS_RETRY_LIMIT = 24;
 const TRACE_LABELS = {
   scenario_sha256: "Scenario batch",
   food_master_sha256: "Food reference master",

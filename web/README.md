@@ -175,5 +175,5 @@ The optional headless browser test `node web/tests/browser-intake-smoke.mjs`
 requires a locally running master-configured service and Chrome DevTools;
 its entered conditions are explicitly test-only and are never training data.
 The optional `node web/tests/browser-reconnect-smoke.mjs` uses a local
-catalogue-configured service and Chrome DevTools to verify recovery after a
-temporary gateway error without reloading the page.
+catalogue-configured service and Chrome DevTools to verify recovery after
+several temporary gateway errors without reloading the page.

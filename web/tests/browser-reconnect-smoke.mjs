@@ -1,9 +1,10 @@
-// Optional browser regression: a temporary API gateway error must recover
-// without asking the visitor to refresh the page.
+// Optional browser regression: a cold-start sequence of gateway errors must
+// recover without asking the visitor to refresh the page.
 import assert from "node:assert/strict";
 
 const cdpUrl = process.env.PACKSENSE_CDP_URL || "http://127.0.0.1:9333";
 const appUrl = process.env.PACKSENSE_WEB_URL || "http://127.0.0.1:4173/";
+const gatewayFailures = 7;
 const tabResponse = await fetch(`${cdpUrl}/json/new?about:blank`, { method: "PUT" });
 assert.equal(tabResponse.status, 200, "Chrome DevTools must be running");
 const tab = await tabResponse.json();
@@ -51,7 +52,7 @@ try {
         const url = new URL(typeof input === "string" ? input : input.url, location.href);
         if (url.pathname === "/api/status") {
           attempts += 1;
-          if (attempts === 1) return Promise.resolve(new Response("temporary gateway failure", { status: 502 }));
+          if (attempts <= ${gatewayFailures}) return Promise.resolve(new Response("temporary gateway failure", { status: 502 }));
         }
         return originalFetch(input, options);
       };
@@ -66,15 +67,15 @@ try {
   assert.equal(await evaluate("document.querySelector('#backend-indicator')?.dataset.state"), "checking");
   assert.match(await evaluate("document.querySelector('#hero-tour-hint')?.textContent"), /connecting to the evaluation service/i);
   let connected = false;
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    connected = await evaluate("document.querySelector('#backend-indicator')?.dataset.state === 'published_catalogue'");
+  for (let attempt = 0; attempt < 500; attempt += 1) {
+    connected = await evaluate("document.querySelector('#backend-indicator-text')?.textContent === 'Connected'");
     if (connected) break;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   const observed = await evaluate("({ mode: document.querySelector('#backend-indicator')?.dataset.state, attempts: window.__statusAttempts?.() })");
-  assert.equal(connected, true, `workspace did not reconnect after a temporary 502: ${JSON.stringify(observed)}`);
-  assert.ok(await evaluate("window.__statusAttempts()") >= 2, "the status request was not retried");
-  console.log("Browser reconnect smoke passed: temporary 502 recovered without a reload.");
+  assert.equal(connected, true, `workspace did not reconnect after cold-start gateway errors: ${JSON.stringify(observed)}`);
+  assert.ok(await evaluate("window.__statusAttempts()") >= gatewayFailures + 1, "the status request did not survive the gateway errors");
+  console.log("Browser reconnect smoke passed: cold-start gateway errors recovered without a reload.");
 } finally {
   await fetch(`${cdpUrl}/json/close/${tab.id}`).catch(() => {});
   socket.close();
