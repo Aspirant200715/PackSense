@@ -5,6 +5,7 @@ import { deriveReviewItems } from "./review.js";
 import { scenarioPayload, validateFoodLookup } from "./interactive.js";
 import { groupSourceOptions } from "./options.js";
 import { validateDemoEvidence } from "./demo.js";
+import { readReport, readWorkspace, writeReport, writeWorkspace } from "./persistence.js";
 
 const VIEWS = new Set(["overview", "evaluate", "decisions", "pipeline", "evidence"]);
 const PAGE_SIZE = 12;
@@ -32,6 +33,7 @@ const state = {
   foodSearchResults: [],
   foodMasterSha256: null,
   selectedFood: null,
+  savedFoodNeedsCheck: false,
   submittedFoodProfile: null,
   demoEvidence: null,
   canEvaluate: false,
@@ -57,6 +59,119 @@ let demoReportLoading = false;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+function browserStorage() {
+  try { return window.localStorage; } catch { return null; }
+}
+
+function persistWorkspace() {
+  const form = $("#scenario-form");
+  const saved = writeWorkspace(browserStorage(), {
+    entered: !$(".app-shell").hidden,
+    view: state.view,
+    form: Object.fromEntries(new FormData(form)),
+    foodSearch: $("#food-search").value,
+    selectedFood: state.selectedFood,
+    foodMasterSha256: state.foodMasterSha256,
+    pipelineMode: state.pipelineMode,
+    pipelineRoute: state.pipelineRoute,
+    pipelineStep: state.pipelineStep,
+    pipelineRowIndex: state.pipelineRowIndex,
+    selectedIndex: state.selectedIndex,
+    page: state.page,
+    search: state.search,
+    filter: state.filter,
+    publishedSearch: state.publishedSearch,
+  });
+  $("#draft-save-note").textContent = saved
+    ? "Your draft is saved in this browser as you type."
+    : "Browser storage is unavailable; keep a copy of your inputs.";
+}
+
+function restoreWorkspace() {
+  const saved = readWorkspace(browserStorage());
+  if (!saved) return;
+  const form = $("#scenario-form");
+  if (saved.form && typeof saved.form === "object") {
+    for (const [name, value] of Object.entries(saved.form)) {
+      const control = form.elements.namedItem(name);
+      if (control && typeof value === "string" && value.length <= 1000) control.value = value;
+    }
+  }
+  if (typeof saved.foodSearch === "string") $("#food-search").value = saved.foodSearch.slice(0, 200);
+  if (saved.selectedFood && saved.foodMasterSha256) {
+    try {
+      const lookup = validateFoodLookup({
+        contract_version: "food-lookup-v1",
+        food_master_sha256: saved.foodMasterSha256,
+        total_matches: 1,
+        form_ready_matches: saved.selectedFood.form_ready ? 1 : 0,
+        foods: [saved.selectedFood],
+      });
+      state.selectedFood = lookup.foods[0];
+      state.foodMasterSha256 = lookup.food_master_sha256;
+      state.savedFoodNeedsCheck = true;
+      $("#food-search-status").textContent = "Checking the saved food reference…";
+    } catch { /* A changed or invalid reference must be selected again. */ }
+  }
+  const storedReport = readReport(browserStorage());
+  if (storedReport) {
+    try {
+      state.report = parseDecisionReport(JSON.stringify(storedReport.report));
+      state.reportOrigin = storedReport.origin;
+      state.fileName = typeof storedReport.label === "string" ? storedReport.label.slice(0, 200) : "Saved report";
+      state.submittedFoodProfile = storedReport.origin === "browser" ? storedReport.submittedFoodProfile ?? null : null;
+      $("#browse-real-applications").hidden = true;
+    } catch { /* Ignore an outdated or corrupt browser copy. */ }
+  }
+  state.view = VIEWS.has(saved.view) ? saved.view : "overview";
+  state.pipelineMode = saved.pipelineMode === "actual" && state.report ? "actual" : "walkthrough";
+  state.pipelineRoute = saved.pipelineRoute === "fresh_produce" ? "fresh_produce" : "non_respiring";
+  state.pipelineStep = Number.isInteger(saved.pipelineStep) ? Math.max(0, Math.min(STAGES.length - 1, saved.pipelineStep)) : 0;
+  state.pipelineRowIndex = state.report && Number.isInteger(saved.pipelineRowIndex)
+    ? Math.max(0, Math.min(state.report.rows.length - 1, saved.pipelineRowIndex)) : 0;
+  state.selectedIndex = state.report && Number.isInteger(saved.selectedIndex)
+    ? Math.max(0, Math.min(state.report.rows.length - 1, saved.selectedIndex)) : null;
+  state.page = Number.isInteger(saved.page) && saved.page > 0 ? saved.page : 1;
+  state.search = typeof saved.search === "string" ? saved.search.slice(0, 200) : "";
+  state.filter = ["all", "not_ready", "preliminary_shortlist", "exception"].includes(saved.filter) ? saved.filter : "all";
+  state.publishedSearch = typeof saved.publishedSearch === "string" ? saved.publishedSearch.slice(0, 200) : "";
+  $("#record-search").value = state.search;
+  $("#published-search").value = state.publishedSearch;
+  render();
+  if (saved.entered) {
+    $("#welcome-screen").hidden = true;
+    $(".app-shell").hidden = false;
+    goTo(state.view);
+  }
+  renderSelectedFood();
+}
+
+async function checkSavedFoodReference() {
+  if (!state.savedFoodNeedsCheck || !state.canEvaluate || !state.selectedFood) return;
+  const savedId = state.selectedFood.food_reference_id;
+  const savedHash = state.foodMasterSha256;
+  try {
+    const response = await fetch(`/api/foods?q=${encodeURIComponent(savedId)}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("Could not check the saved food reference.");
+    const lookup = validateFoodLookup(await response.json());
+    if (!state.savedFoodNeedsCheck || state.selectedFood?.food_reference_id !== savedId) return;
+    const current = lookup.foods.find((food) => food.food_reference_id === savedId);
+    if (!current || lookup.food_master_sha256 !== savedHash) throw new Error("The food reference changed. Search and select it again.");
+    state.selectedFood = current;
+    $("#food-search-status").textContent = "Saved food reference restored.";
+  } catch (error) {
+    if (state.savedFoodNeedsCheck && state.selectedFood?.food_reference_id === savedId) {
+      state.selectedFood = null;
+      state.foodMasterSha256 = null;
+      $("#food-search-status").textContent = error.message;
+    }
+  } finally {
+    state.savedFoodNeedsCheck = false;
+    renderSelectedFood();
+    persistWorkspace();
+  }
+}
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -134,9 +249,11 @@ function startPlayback() {
     }
     state.pipelineStep += 1;
     renderPipeline();
+    persistWorkspace();
     if (state.pipelineStep === STAGES.length - 1) stopPlayback();
   }, 4000);
   renderPipeline();
+  persistWorkspace();
 }
 
 function enterWorkspace(stage = 0, autoplay = true) {
@@ -154,6 +271,7 @@ function returnToWelcome() {
   $(".app-shell").hidden = true;
   $("#welcome-screen").hidden = false;
   window.scrollTo(0, 0);
+  persistWorkspace();
 }
 
 function goTo(view) {
@@ -173,6 +291,7 @@ function goTo(view) {
   });
   window.scrollTo(0, 0);
   if (view === "decisions" && !state.report) loadDemoReport();
+  persistWorkspace();
 }
 
 function enterPublishedApplications() {
@@ -192,7 +311,7 @@ function renderSelectedFood() {
   const food = state.selectedFood;
   const root = $("#selected-food");
   root.hidden = !food;
-  $("#evaluate-submit").disabled = !food?.form_ready || state.evaluationBusy;
+  $("#evaluate-submit").disabled = !food?.form_ready || !state.canEvaluate || state.savedFoodNeedsCheck || state.evaluationBusy;
   $("#evaluate-submit").textContent = state.evaluationBusy ? "Evaluating…" : "Evaluate this scenario →";
   $("#intake-submit-note").textContent = !food
     ? "Select a complete food reference to continue."
@@ -578,6 +697,7 @@ function render() {
   renderEvidence();
   renderPipeline();
   renderReviewItems();
+  renderSelectedFood();
 }
 
 function setReviewOpen(open) {
@@ -659,6 +779,7 @@ function renderBackendState() {
     ? "Select a sourced food and enter your conditions in the form. The walkthrough did not invent a package result."
     : "Prepare one genuine scenario batch, run the backend, then inspect its reported status and sources. The walkthrough did not invent a package result.";
   renderReviewItems();
+  renderSelectedFood();
 }
 
 function acceptReport(report, label, destination, origin = "local", submittedFoodProfile = null) {
@@ -680,7 +801,14 @@ function acceptReport(report, label, destination, origin = "local", submittedFoo
   if (destination) goTo(destination);
   render();
   renderBackendState();
-  if (origin !== "demo") notify(`${report.rows.length.toLocaleString()} decision ${report.rows.length === 1 ? "row" : "rows"} ready.`);
+  if (origin !== "demo") {
+    const saved = writeReport(browserStorage(), { origin, label, report, submittedFoodProfile });
+    notify(saved === "saved"
+      ? `${report.rows.length.toLocaleString()} decision ${report.rows.length === 1 ? "row" : "rows"} ready and saved in this browser.`
+      : saved === "too_large"
+        ? "Report ready, but too large to save in this browser. Keep the original JSON file."
+        : "Report ready, but browser storage is unavailable. Export or keep the original JSON file.", saved !== "saved");
+  }
 }
 
 async function loadFile(file) {
@@ -745,6 +873,7 @@ async function connectBackend() {
     state.canEvaluate = status.can_evaluate === true;
     statusRetries = 0;
     renderBackendState();
+    await checkSavedFoodReference();
     if (status.has_public_applications === true) {
       try {
         const catalogueResponse = await fetch("/api/published-applications", { cache: "no-store" });
@@ -823,6 +952,7 @@ document.addEventListener("click", (event) => {
     const food = state.foodSearchResults.find((item) => item.food_reference_id === target.dataset.foodId);
     if (!food) return;
     state.selectedFood = food;
+    state.savedFoodNeedsCheck = false;
     $("#food-search").value = food.commodity_type;
     $("#food-search-results").innerHTML = "";
     $("#food-search-status").textContent = food.form_ready
@@ -832,6 +962,7 @@ document.addEventListener("click", (event) => {
   }
   else if (target.matches("[data-clear-food]")) {
     state.selectedFood = null;
+    state.savedFoodNeedsCheck = false;
     $("#food-search").value = "";
     $("#food-search-status").textContent = "Enter at least two characters to search the configured food reference.";
     renderFoodSearch();
@@ -911,21 +1042,25 @@ document.addEventListener("click", (event) => {
   } else if (target.matches("[data-copy-hash]")) {
     copyText(target.dataset.copyHash, "Source fingerprint copied.");
   }
+  persistWorkspace();
 });
 
 $("#record-search").addEventListener("input", (event) => {
   state.search = event.target.value;
   state.page = 1;
   renderDecisions();
+  persistWorkspace();
 });
 $("#published-search").addEventListener("input", (event) => {
   state.publishedSearch = event.target.value;
   if (state.publishedApplications && (!state.report || state.reportOrigin === "demo")) renderPublishedApplications();
+  persistWorkspace();
 });
 $("#food-search").addEventListener("input", (event) => {
   clearTimeout(foodSearchTimer);
   if (foodSearchAbort) foodSearchAbort.abort();
   state.selectedFood = null;
+  state.savedFoodNeedsCheck = false;
   state.foodSearchResults = [];
   state.foodMasterSha256 = null;
   renderFoodSearch();
@@ -937,6 +1072,8 @@ $("#food-search").addEventListener("input", (event) => {
   foodSearchTimer = setTimeout(() => searchFoods(query), 250);
 });
 $("#scenario-form").addEventListener("submit", submitEvaluation);
+$("#scenario-form").addEventListener("input", persistWorkspace);
+$("#scenario-form").addEventListener("change", persistWorkspace);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !$("#review-panel").hidden) {
     setReviewOpen(false);
@@ -952,6 +1089,7 @@ $("#pipeline-record-select").addEventListener("change", (event) => {
   state.pipelineRowIndex = Number(event.target.value);
   state.pipelineStep = 0;
   renderPipeline();
+  persistWorkspace();
 });
 document.addEventListener("dragover", (event) => {
   if ([...(event.dataTransfer?.types ?? [])].includes("Files")) event.preventDefault();
@@ -965,4 +1103,5 @@ document.addEventListener("drop", (event) => {
 
 render();
 renderBackendState();
+restoreWorkspace();
 connectBackend();

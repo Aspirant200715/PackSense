@@ -59,6 +59,12 @@ async function screenshot(fileName) {
   await writeFile(fileName, Buffer.from(result.data, "base64"));
 }
 
+async function reloadPage() {
+  await evaluate("window.__beforeRefresh = true");
+  await command("Page.reload", { ignoreCache: true });
+  await until("document.readyState === 'complete' && window.__beforeRefresh !== true", "page did not reload");
+}
+
 try {
   await command("Runtime.enable");
   await command("Page.enable");
@@ -68,6 +74,9 @@ try {
     width, height, deviceScaleFactor: 1, mobile: width < 700,
   });
   await command("Page.navigate", { url: appUrl });
+  await until("document.readyState === 'complete'", "initial page did not load");
+  await evaluate("localStorage.removeItem('packsense.workspace.v1'); localStorage.removeItem('packsense.report.v1')");
+  await reloadPage();
   await until("document.readyState === 'complete' && document.querySelector('#start-evaluation')?.hidden === false", "interactive backend did not connect");
   assert.equal(await evaluate("document.querySelector('#backend-indicator').dataset.state"), "interactive_scenario");
   assert.match(await evaluate("document.querySelector('#welcome-screen h1').textContent"), /Food first\.\s*Evidence always\./);
@@ -110,10 +119,18 @@ try {
     };
     const form = document.querySelector('#scenario-form');
     for (const [name, value] of Object.entries(values)) {
-      form.elements.namedItem(name).value = value;
+      const control = form.elements.namedItem(name);
+      control.value = value;
+      control.dispatchEvent(new Event('input', { bubbles: true }));
+      control.dispatchEvent(new Event('change', { bubbles: true }));
     }
-    form.requestSubmit();
   })()`);
+  await reloadPage();
+  await until("document.querySelector('#view-evaluate').hidden === false && document.querySelector('#evaluate-submit').disabled === false", "saved evaluation draft did not restore", 180);
+  assert.equal(await evaluate("document.querySelector('#scenario-form [name=desired_shelf_life_days]').value"), "5");
+  assert.equal(await evaluate("document.querySelector('#scenario-form [name=net_pack_quantity]').value"), "150");
+  assert.match(await evaluate("document.querySelector('#selected-food').textContent"), /FND-2710823|SELECTED REFERENCE/);
+  await evaluate("document.querySelector('#scenario-form').requestSubmit()");
   await until("(!document.querySelector('#view-decisions').hidden && document.querySelector('#demo-disclosure').hidden && document.querySelector('#record-filter-count').textContent === '1 of 1 rows') || document.querySelector('#evaluation-error').hidden === false", "scenario evaluation did not finish", 180);
   const error = await evaluate("document.querySelector('#evaluation-error').hidden ? null : document.querySelector('#evaluation-error').textContent");
   assert.equal(error, null, `scenario evaluation failed: ${error}`);
@@ -125,13 +142,22 @@ try {
   assert.match(await evaluate("document.querySelector('#record-inspector .package-tier-engineering').textContent"), /Not ready to shortlist/);
   assert.match(await evaluate("document.querySelector('#record-inspector').textContent"), /source|submitted|evidence/i);
   assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "result overflows viewport");
+  await reloadPage();
+  await until("document.querySelector('#view-decisions').hidden === false && document.querySelector('#record-filter-count').textContent === '1 of 1 rows'", "saved result did not restore", 180);
+  assert.equal(await evaluate("document.querySelector('#demo-disclosure').hidden"), true, "refresh must keep the submitted result");
   await screenshot(process.env.PACKSENSE_RESULT_SCREENSHOT);
   if (process.env.PACKSENSE_OPTION_SCREENSHOT) {
     await evaluate("document.querySelector('#record-inspector .package-pathway').scrollIntoView({ block: 'start' })");
     await screenshot(process.env.PACKSENSE_OPTION_SCREENSHOT);
   }
+  await evaluate("document.querySelector('[data-nav=pipeline]').click(); document.querySelector('[data-pipeline-index=\"6\"]').click()");
+  await reloadPage();
+  await until("document.querySelector('#view-pipeline').hidden === false && document.querySelector('#guide-stage-caption').textContent === 'Step 7 of 8'", "pipeline stage did not restore");
+  await evaluate("document.querySelector('[data-nav=evidence]').click()");
+  await reloadPage();
+  await until("document.querySelector('#view-evidence').hidden === false && document.querySelector('#trace-list .trace-row') !== null", "evidence page did not restore");
   assert.deepEqual(exceptions, []);
-  console.log(`Browser intake smoke passed at ${width}px: source ${foodId}, one evidence-gated decision.`);
+  console.log(`Browser intake smoke passed at ${width}px: source ${foodId}, one evidence-gated decision, draft and page refresh.`);
 } finally {
   const closed = new Promise((resolve) => socket.addEventListener("close", resolve, { once: true }));
   await fetch(`${cdpUrl}/json/close/${tab.id}`).catch(() => {});

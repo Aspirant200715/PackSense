@@ -31,6 +31,14 @@ predictions or package approvals. A user submission or imported report replaces
 the demo. DM Sans and IBM Plex Mono are fetched from Google Fonts when online;
 system fonts are used offline. Report contents are not sent to the font host.
 
+The current page, form draft, selected food and latest small user report are
+saved in browser local storage and restored after refresh. A restored food is
+checked against the active food master before another submission. This is
+private to that browser profile and does not sync to the server or other devices.
+Reports over 2 million JSON characters remain open only for the current visit;
+keep the original file for those larger imports. The source-backed demo is
+served as a static asset and loads on Results when no user report is saved.
+
 For the hosted evaluation form backed by the supplied reference workbooks, see
 the [deployment guide](../docs/deployment.md).
 

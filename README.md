@@ -85,6 +85,8 @@ python -m packsense.web_server --port 4173 \
 
 Open the app, choose **Evaluate a food**, select an exact source row, and enter target shelf life, quantity, storage, transport, humidity, and handling conditions. The browser sends a bounded scenario to `POST /api/evaluate`; the backend runs the same audited pipeline used for batches. A target life is an input requirement, **not** a predicted or measured outcome. Missing source properties can block submission, and missing package evidence can leave the result `not_ready`.
 
+The workspace restores the current page, form draft, selected food, and latest small report after a refresh in the same browser. The selected food is checked against the current master before another evaluation. This browser storage is local to the device and browser profile; it does not create a PackSense account or synchronize across devices. Large imported reports over 2 million JSON characters remain open for the current visit and should be kept as files.
+
 ### Audit a scenario batch
 
 ```sh
