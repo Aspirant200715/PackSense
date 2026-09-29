@@ -582,7 +582,7 @@ function renderReviewItems() {
   $("#review-toggle").setAttribute("aria-label", items.length ? `Review updates: ${items.length} ${items.length === 1 ? "item" : "items"}` : "Review updates: no items");
   $("#review-items").innerHTML = items.length ? items.map((item) => `
     <button type="button" class="review-item review-item-${item.tone}" data-review-action="${item.action}"><span class="review-item-mark" aria-hidden="true"></span><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></span><span class="review-item-arrow" aria-hidden="true">↗</span></button>`).join("")
-    : `<div class="review-empty">${state.backendMode === "checking" ? "Checking the local workspace…" : "No review items in the current workspace."}</div>`;
+    : `<div class="review-empty">${state.backendMode === "checking" ? "Checking the workspace…" : "No review items in the current workspace."}</div>`;
 }
 
 function followReviewAction(action) {
@@ -611,14 +611,14 @@ function followReviewAction(action) {
 
 function renderBackendState() {
   const statuses = {
-    checking: ["Checking", "Checking the local backend connection."],
-    unavailable: ["Offline", "Local backend unavailable; report import still works."],
-    unconfigured: ["Connected", "Local backend connected; no scenario batch is configured."],
-    audited_report: ["Connected", "Local backend connected; an audited report is configured."],
-    scenario_batch: ["Connected", "Local backend connected; scenario sources are configured."],
-    published_catalogue: ["Connected", "Local backend connected; published supplier applications are available."],
-    interactive_scenario: ["Connected", "Local backend connected; food and material references are configured for a single scenario."],
-    report_error: ["Report error", "The local backend is connected, but its configured report could not be loaded."],
+    checking: ["Checking", "Checking the backend connection."],
+    unavailable: ["Offline", "Backend unavailable; report import still works."],
+    unconfigured: ["Connected", "Backend connected; no scenario batch is configured."],
+    audited_report: ["Connected", "Backend connected; an audited report is configured."],
+    scenario_batch: ["Connected", "Backend connected; scenario sources are configured."],
+    published_catalogue: ["Connected", "Backend connected; published supplier applications are available."],
+    interactive_scenario: ["Connected", "Backend connected; food and material references are configured for a single scenario."],
+    report_error: ["Report error", "The backend is connected, but its configured report could not be loaded."],
   };
   const [label, detail] = statuses[state.backendMode] || statuses.unavailable;
   $("#backend-indicator-text").textContent = state.backendBusy ? "Running" : label;

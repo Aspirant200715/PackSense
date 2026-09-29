@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: packsense-catalogue
+    name: packsense-evaluation
     runtime: python
     plan: free
     region: singapore
@@ -11,3 +11,9 @@ services:
     envVars:
       - key: PACKSENSE_BIND_HOST
         value: 0.0.0.0
+      - key: PACKSENSE_REQUIRE_DATABASE
+        value: "1"
+      - key: PACKSENSE_PUBLIC_EVALUATION
+        value: "1"
+      - key: PACKSENSE_DATABASE_URL
+        sync: false
