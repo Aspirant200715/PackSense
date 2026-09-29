@@ -19,29 +19,50 @@
           <span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><path d="M8 13.5 20 7l12 6.5v13L20 33 8 26.5v-13Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m8.5 13.5 11.5 6 11.5-6M20 19.5V33" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
           <span>Pack<span class="brand-accent">Sense</span><small>FOOD PACKAGING INTELLIGENCE</small></span>
         </span>
-        <span class="welcome-top-note">Evidence-led decision support</span>
+        <span class="welcome-top-note"><span aria-hidden="true"></span> Evidence-led decision support</span>
       </header>
       <main class="welcome-content">
         <div class="intro-hero">
           <div class="intro-copy">
-            <div class="hero-eyebrow"><span class="eyebrow-line"></span> FOOD PACKAGING / DECISION INTELLIGENCE</div>
-            <h1>Packaging intelligence,<br /><em>with the evidence in view.</em></h1>
-            <p>See how a food's properties and journey become protection needs, package checks, and an auditable decision. Every step explains what it knows—and what it still needs.</p>
-            <div class="hero-actions"><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">→</span></button><button type="button" class="button button-secondary" id="start-evaluation" data-enter-evaluate hidden>Evaluate a food</button><button type="button" class="button button-secondary" id="browse-real-applications" data-enter-published hidden>View published package uses</button><span id="hero-tour-hint">Watch the 30-second input-to-output tour</span></div>
-            <div class="intro-footnote"><span></span> Engineering screening now. Learned material prediction is not deployed.</div>
+            <div class="hero-eyebrow"><span class="eyebrow-line"></span> FOOD PACKAGING / DECISION WORKSPACE</div>
+            <h1>Food first.<br /><em>Evidence always.</em></h1>
+            <p>Start with the food and the journey it will take. PackSense turns those facts into protection needs, checks package evidence, and makes the gaps visible before a decision.</p>
+            <div class="hero-actions"><button type="button" class="button button-light" id="start-evaluation" data-enter-evaluate hidden>Evaluate a food <span aria-hidden="true">→</span></button><button type="button" class="button button-light welcome-enter" data-enter-app>Explore PackSense <span aria-hidden="true">↗</span></button><button type="button" class="welcome-source-link" id="browse-real-applications" data-enter-published hidden>View published package uses <span aria-hidden="true">↗</span></button></div>
+            <p class="hero-action-caption" id="hero-tour-hint">Start with a short, interactive tour of the decision path.</p>
+            <div class="intro-footnote"><span></span> Evidence-gated screening is available; a learned material predictor is not deployed.</div>
+            <div class="hero-rail" aria-label="The PackSense method"><span><b>01</b> Food &amp; journey</span><span><b>02</b> Protection checks</span><span><b>03</b> Evidence trace</span></div>
           </div>
           <div class="intro-system" aria-label="Decision path preview">
-            <div class="intro-system-heading"><span>THE DECISION PATH</span><span>CHOOSE WHERE TO BEGIN ↗</span></div>
-            <button type="button" class="system-node" data-enter-stage="0"><span class="system-node-index">01</span><span><strong>Understand the food</strong><small>Identity · composition · quantity · temperature</small></span><span aria-hidden="true">↗</span></button>
-            <button type="button" class="system-node" data-enter-stage="2"><span class="system-node-index">02</span><span><strong>Derive protection needs</strong><small>Food route · oxygen · moisture · handling</small></span><span aria-hidden="true">↗</span></button>
-            <div class="system-fork"><span>FRESH PRODUCE ROUTE</span><span>NON-RESPIRING ROUTE</span></div>
-            <button type="button" class="system-node" data-enter-stage="4"><span class="system-node-index">03</span><span><strong>Screen package structures</strong><small>Food contact · transfer · service conditions</small></span><span aria-hidden="true">↗</span></button>
-            <button type="button" class="system-node system-node-final" data-enter-stage="7"><span class="system-node-index">04</span><span><strong>Read the decision trace</strong><small>Shortlist, evidence gap or input exception</small></span><span aria-hidden="true">↗</span></button>
-            <div class="system-footer"><span class="system-pulse"></span> Every outcome keeps its source trail.</div>
+            <div class="intro-system-heading"><span>THE PACKSENSE METHOD</span><span>PROCESS VIEW / 01—04</span></div>
+            <div class="hero-schematic" aria-hidden="true">
+              <svg viewBox="0 0 600 270" fill="none" focusable="false">
+                <path class="schema-wire" d="M82 137h135m220 0h82" />
+                <path class="schema-arrow" d="m205 130 12 7-12 7m302-14 12 7-12 7" />
+                <circle class="schema-food-ring" cx="80" cy="137" r="49" />
+                <circle class="schema-food-core" cx="80" cy="137" r="34" />
+                <path class="schema-food-mark" d="M61 153c3-22 18-34 39-34-1 23-16 36-39 34Zm3-2c11-11 22-20 35-30" />
+                <path class="schema-layer schema-layer-back" d="m222 111 110-44 112 46-110 45-112-47Z" />
+                <path class="schema-layer schema-layer-mid" d="m222 137 110-44 112 46-110 45-112-47Z" />
+                <path class="schema-layer schema-layer-front" d="m222 163 110-44 112 46-110 45-112-47Z" />
+                <path class="schema-layer-edge" d="M222 111v52m112-5v52m110-97v52" />
+                <circle class="schema-evidence-ring" cx="519" cy="137" r="44" />
+                <circle class="schema-evidence-mark" cx="513" cy="132" r="13" />
+                <path class="schema-evidence-mark" d="m523 142 13 13" />
+              </svg>
+              <div class="schematic-labels"><span>FOOD + CONDITIONS</span><span>LAYERED STRUCTURE</span><span>EVIDENCE GATE</span></div>
+            </div>
+            <div class="system-map-heading"><strong>Explore the path</strong><span>SELECT A STAGE ↗</span></div>
+            <div class="system-nodes">
+              <button type="button" class="system-node" data-enter-stage="0"><span class="system-node-index">01</span><span><strong>Understand the food</strong><small>Identity, quantity, temperature</small></span><span aria-hidden="true">↗</span></button>
+              <button type="button" class="system-node" data-enter-stage="2"><span class="system-node-index">02</span><span><strong>Define protection</strong><small>Food route, barrier, handling</small></span><span aria-hidden="true">↗</span></button>
+              <button type="button" class="system-node" data-enter-stage="4"><span class="system-node-index">03</span><span><strong>Screen structures</strong><small>Transfer, contact, service</small></span><span aria-hidden="true">↗</span></button>
+              <button type="button" class="system-node system-node-final" data-enter-stage="7"><span class="system-node-index">04</span><span><strong>Read the trace</strong><small>Decision status and gaps</small></span><span aria-hidden="true">↗</span></button>
+            </div>
+            <div class="system-footer"><span class="system-pulse"></span> Fresh produce and non-respiring foods follow distinct checks.</div>
           </div>
         </div>
       </main>
-      <footer class="welcome-bottom"><span>Food → Need → Structure → Evidence</span><span>Explore the method. Inspect real results when available.</span></footer>
+      <footer class="welcome-bottom"><span>FOOD → NEED → STRUCTURE → EVIDENCE</span><span>No decision without a visible source trail.</span></footer>
     </div>
     <div class="app-shell" hidden>
       <div class="workspace">

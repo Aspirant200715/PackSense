@@ -123,6 +123,10 @@ try {
   assert.equal(layout.intro, true, "dedicated introduction is visible first");
   assert.equal(layout.appHidden, true, "workspace is not crowded into the introduction");
   assert.notEqual(layout.connection, "Checking", "backend status resolved");
+  assert.match(await evaluate("document.querySelector('#welcome-screen h1').textContent"), /Food first\.\s*Evidence always\./);
+  assert.equal(await evaluate("document.querySelectorAll('#welcome-screen .system-node[data-enter-stage]').length"), 4);
+  assert.equal(await evaluate("document.querySelectorAll('#welcome-screen .hero-schematic svg .schema-layer').length"), 3);
+  assert.equal(await evaluate("document.querySelector('#welcome-screen .welcome-enter').classList.contains('button-light')"), true, "the tour remains the primary entry when evaluation is unavailable");
   const hasPublishedCatalogue = await evaluate("document.querySelector('#backend-indicator').dataset.state === 'published_catalogue'");
 
   if (hasPublishedCatalogue) {
@@ -167,6 +171,13 @@ try {
   if (process.env.PACKSENSE_SCREENSHOT) {
     const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
     await writeFile(process.env.PACKSENSE_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
+  }
+
+  if (viewportWidth > 650) {
+    await evaluate("document.querySelector('#welcome-screen .system-node[data-enter-stage=\"4\"]').click()");
+    assert.equal(await evaluate("document.querySelector('#guide-stage-caption').textContent"), "Step 5 of 8", "landing stage links open their actual walkthrough stop");
+    await evaluate("document.querySelector('[data-welcome]').click()");
+    assert.equal(await evaluate("document.querySelector('#welcome-screen').hidden"), false);
   }
 
   await evaluate("document.querySelector('[data-enter-app]').click()");

@@ -1171,6 +1171,25 @@ PackSense must continue to withhold a real package or shelf-life claim.
   seal/handling evidence, and food-specific performance evidence. This slice
   does not train a material-prediction model.
 
+### 2026-09-28 — give the introduction a clearer visual entry point
+
+- On `feat/landing-intro-refresh` from `main`, redesigned only the welcome
+  screen. A larger editorial headline, concise explanation, layered-package
+  schematic, and four stage links make the food-to-evidence method visible
+  without fabricating a scenario, package result, or model output. The evidence
+  gate uses an inspection symbol rather than a pass mark.
+- The entry actions now reflect backend capability: **Evaluate a food** becomes
+  primary when both real reference masters are configured; otherwise the
+  guided **Explore PackSense** tour remains primary. The smaller mobile layout
+  keeps the schematic while collapsing the optional stage links to avoid a
+  long first screen. No dataset, backend decision gate, prediction status, or
+  catalogue record was changed.
+- Local verification: 244 Python tests and 26 Node tests passed. Headless
+  browser smoke passed at 320, 390, and 1440 px with the unconfigured service,
+  and real-master browser intake passed at 390 and 1440 px. Checks cover the
+  primary action, stage navigation, and horizontal overflow. CI and PR review
+  are separate from these local checks.
+
 ### Template for the next entry
 
 Add a dated heading, then record:

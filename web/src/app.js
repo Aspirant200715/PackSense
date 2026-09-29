@@ -636,6 +636,11 @@ function renderBackendState() {
   $("#setup-open-results").hidden = !state.report;
   $("#nav-evaluate").hidden = !state.canEvaluate;
   $("#start-evaluation").hidden = !state.canEvaluate;
+  $(".welcome-enter").classList.toggle("button-light", !state.canEvaluate);
+  $(".welcome-enter").classList.toggle("button-secondary", state.canEvaluate);
+  $("#hero-tour-hint").textContent = state.canEvaluate
+    ? "Or explore the method through a short, interactive tour."
+    : "Start with a short, interactive tour of the decision path.";
   $("#run-path-form-note").hidden = !state.canEvaluate;
   $("#studio-form-button").hidden = !state.canEvaluate;
   $("#studio-setup-button").hidden = state.canEvaluate;
